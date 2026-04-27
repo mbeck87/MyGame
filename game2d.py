@@ -1,4 +1,4 @@
-#!/home/jixo/test/venv/bin/python3
+#!/home/jixo/GTA/venv/bin/python3
 import pygame, random, math, sys
 
 pygame.init()
