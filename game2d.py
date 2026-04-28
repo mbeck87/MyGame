@@ -1264,42 +1264,66 @@ def draw_world_bg(surf, cam):
     # Straßen: Gehsteige liegen als eigener Ring um die Fahrbahn.
     sidewalk_total = ROAD_W + SIDEWALK_W * 2
     road_ext = sidewalk_total // 2
-    rx = ROAD_LO - road_ext - cam[0]
-    rw = ROAD_HI_X - ROAD_LO + road_ext * 2
-    ry = ROAD_LO - road_ext - cam[1]
-    rh = ROAD_HI_Y - ROAD_LO + road_ext * 2
+    road_half = ROAD_W // 2
+    # Pro Straße: Asphalt-Spanne (a0,a1) und Gehsteigstreifen-Spanne (s0,s1).
+    # Perimeter-Straßen reichen bis zur äußeren Asphalt-/Gehsteigkante der
+    # gegenüberliegenden Perimeterstraße — so entsteht eine saubere L-Ecke.
+    # Innere Straßen enden an der inneren Asphaltkante des Perimeters: dort
+    # läuft der äußere Perimeter-Gehsteig durch und man sieht ein T-Stück.
+    def h_extents(y):
+        if y == ROAD_LO or y == ROAD_HI_Y:
+            return (ROAD_LO - road_half, ROAD_HI_X + road_half,
+                    ROAD_LO - road_ext, ROAD_HI_X + road_ext)
+        return (ROAD_LO + road_half, ROAD_HI_X - road_half,
+                ROAD_LO + road_half, ROAD_HI_X - road_half)
+    def v_extents(x):
+        if x == ROAD_LO or x == ROAD_HI_X:
+            return (ROAD_LO - road_half, ROAD_HI_Y + road_half,
+                    ROAD_LO - road_ext, ROAD_HI_Y + road_ext)
+        return (ROAD_LO + road_half, ROAD_HI_Y - road_half,
+                ROAD_LO + road_half, ROAD_HI_Y - road_half)
     for y in roads_h:
         sy = y - cam[1]
         if -sidewalk_total-20 < sy < H+sidewalk_total+20:
-            pygame.draw.rect(surf, SIDEW, (rx, sy - sidewalk_total//2, rw, sidewalk_total))
+            _, _, s0, s1 = h_extents(y)
+            pygame.draw.rect(surf, SIDEW, (s0 - cam[0], sy - sidewalk_total//2, s1 - s0, sidewalk_total))
     for x in roads_v:
         sx = x - cam[0]
         if -sidewalk_total-20 < sx < W+sidewalk_total+20:
-            pygame.draw.rect(surf, SIDEW, (sx - sidewalk_total//2, ry, sidewalk_total, rh))
+            _, _, s0, s1 = v_extents(x)
+            pygame.draw.rect(surf, SIDEW, (sx - sidewalk_total//2, s0 - cam[1], sidewalk_total, s1 - s0))
     for y in roads_h:
         sy = y - cam[1]
         if -ROAD_W < sy < H+ROAD_W:
-            pygame.draw.rect(surf, ASPHALT, (rx, sy - ROAD_W//2, rw, ROAD_W))
-            pygame.draw.line(surf, (125, 125, 130), (rx, sy - ROAD_W//2), (rx + rw, sy - ROAD_W//2), 2)
-            pygame.draw.line(surf, (125, 125, 130), (rx, sy + ROAD_W//2), (rx + rw, sy + ROAD_W//2), 2)
+            a0, a1, _, _ = h_extents(y)
+            ax = a0 - cam[0]
+            aw = a1 - a0
+            pygame.draw.rect(surf, ASPHALT, (ax, sy - ROAD_W//2, aw, ROAD_W))
+            pygame.draw.line(surf, (125, 125, 130), (ax, sy - ROAD_W//2), (ax + aw, sy - ROAD_W//2), 2)
+            pygame.draw.line(surf, (125, 125, 130), (ax, sy + ROAD_W//2), (ax + aw, sy + ROAD_W//2), 2)
     for x in roads_v:
         sx = x - cam[0]
         if -ROAD_W < sx < W+ROAD_W:
-            pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, ry, ROAD_W, rh))
-            pygame.draw.line(surf, (125, 125, 130), (sx - ROAD_W//2, ry), (sx - ROAD_W//2, ry + rh), 2)
-            pygame.draw.line(surf, (125, 125, 130), (sx + ROAD_W//2, ry), (sx + ROAD_W//2, ry + rh), 2)
+            a0, a1, _, _ = v_extents(x)
+            ay = a0 - cam[1]
+            ah = a1 - a0
+            pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, ay, ROAD_W, ah))
+            pygame.draw.line(surf, (125, 125, 130), (sx - ROAD_W//2, ay), (sx - ROAD_W//2, ay + ah), 2)
+            pygame.draw.line(surf, (125, 125, 130), (sx + ROAD_W//2, ay), (sx + ROAD_W//2, ay + ah), 2)
     draw_crosswalks(surf, cam)
     for y in roads_h:
         sy = y - cam[1]
         if -10 < sy < H+10:
-            for dx in range(ROAD_LO - road_ext, ROAD_HI_X + road_ext, 50):
+            a0, a1, _, _ = h_extents(y)
+            for dx in range(a0, a1, 50):
                 sx = dx - cam[0]
                 if -30 < sx < W:
                     pygame.draw.rect(surf, LINE, (sx, sy - 2, 28, 4))
     for x in roads_v:
         sx = x - cam[0]
         if -10 < sx < W+10:
-            for dy in range(ROAD_LO - road_ext, ROAD_HI_Y + road_ext, 50):
+            a0, a1, _, _ = v_extents(x)
+            for dy in range(a0, a1, 50):
                 sy = dy - cam[1]
                 if -30 < sy < H:
                     pygame.draw.rect(surf, LINE, (sx - 2, sy, 4, 28))
