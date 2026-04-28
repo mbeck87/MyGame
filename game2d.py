@@ -1,5 +1,5 @@
 #!/home/jixo/GTA/venv/bin/python3
-import pygame, random, math, sys
+import pygame, random, math, sys, json, os
 
 pygame.init()
 W, H = 1280, 800
@@ -8,6 +8,91 @@ pygame.display.set_caption("Mini GTA 2D")
 clock = pygame.time.Clock()
 FONT = pygame.font.SysFont("arial", 20, bold=True)
 BIG  = pygame.font.SysFont("arial", 64, bold=True)
+MED  = pygame.font.SysFont("arial", 32, bold=True)
+
+# ── Scoreboard ───────────────────────────────────────────
+SCORES_FILE = os.path.join(os.path.dirname(__file__), "scores.json")
+
+def load_data():
+    try:
+        with open(SCORES_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {"scores": [], "last_name": "Spieler"}
+
+def save_score(name, money):
+    data = load_data()
+    if isinstance(data, list):          # altes Format migrieren
+        data = {"scores": data, "last_name": name}
+    data["last_name"] = name
+    data.setdefault("scores", []).append({"name": name, "money": money})
+    data["scores"].sort(key=lambda s: s["money"], reverse=True)
+    data["scores"] = data["scores"][:20]
+    with open(SCORES_FILE, "w") as f:
+        json.dump(data, f)
+    return data["scores"]
+
+def load_scores():
+    data = load_data()
+    if isinstance(data, list):
+        return data
+    return data.get("scores", [])
+
+def load_last_name():
+    data = load_data()
+    if isinstance(data, dict):
+        return data.get("last_name", "Spieler")
+    return "Spieler"
+
+def save_last_name(name):
+    data = load_data()
+    if isinstance(data, list):
+        data = {"scores": data, "last_name": name}
+    data["last_name"] = name
+    with open(SCORES_FILE, "w") as f:
+        json.dump(data, f)
+
+def name_input_screen():
+    """Zeigt Namenseingabe; gibt eingegebenen Namen zurück."""
+    name = load_last_name()
+    cursor_vis = True
+    cursor_timer = 0.0
+    clk = pygame.time.Clock()
+    while True:
+        dt = clk.tick(60) / 1000
+        cursor_timer += dt
+        if cursor_timer >= 0.5:
+            cursor_timer = 0.0
+            cursor_vis = not cursor_vis
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_RETURN and name.strip():
+                    save_last_name(name.strip())
+                    return name.strip()
+                elif e.key == pygame.K_BACKSPACE:
+                    name = name[:-1]
+                elif e.key == pygame.K_ESCAPE:
+                    pygame.quit(); sys.exit()
+                elif len(name) < 18 and e.unicode.isprintable() and e.unicode != '':
+                    name += e.unicode
+        screen.fill((20, 20, 30))
+        t = BIG.render("Mini GTA 2D", 1, (220, 60, 60))
+        screen.blit(t, (W//2 - t.get_width()//2, H//2 - 180))
+        t2 = MED.render("Dein Name:", 1, (200, 200, 200))
+        screen.blit(t2, (W//2 - t2.get_width()//2, H//2 - 80))
+        disp = name + ("|" if cursor_vis else " ")
+        box_w = 340
+        pygame.draw.rect(screen, (50, 50, 70), (W//2 - box_w//2, H//2 - 30, box_w, 48), border_radius=6)
+        pygame.draw.rect(screen, (120, 120, 200), (W//2 - box_w//2, H//2 - 30, box_w, 48), 2, border_radius=6)
+        nt = MED.render(disp, 1, (255, 255, 255))
+        screen.blit(nt, (W//2 - nt.get_width()//2, H//2 - 22))
+        hint = FONT.render("[ENTER] Starten   [ESC] Beenden", 1, (140, 140, 160))
+        screen.blit(hint, (W//2 - hint.get_width()//2, H//2 + 40))
+        pygame.display.flip()
+
+player_name = name_input_screen()
 
 # ── Farben ───────────────────────────────────────────────
 ASPHALT = (55, 55, 60)
@@ -417,6 +502,7 @@ class Car:
                     cops.remove(c)
                     corpses.append((make_corpse(c), c.x, c.y, c.angle))
                     spawn_blood(c.x, c.y, 20)
+                    player.money += random.randint(40, 80)
         for c in cars:
             if c is self or c.dead: continue
             if math.hypot(c.x-self.x, c.y-self.y) < R + 10:
@@ -427,7 +513,7 @@ class Car:
             if player.hp <= 0:
                 corpses.append((make_corpse(player), player.x, player.y, player.angle))
                 spawn_blood(player.x, player.y, 24)
-                game_over = True
+                trigger_game_over()
         if in_car is self:
             in_car = None
         # Feuer- und Rauchwolke
@@ -445,6 +531,8 @@ class Car:
         scorch.fill((20, 20, 20, 200))
         wreck_surf.blit(scorch, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
         wrecks.append((wreck_surf, self.x, self.y, self.angle, list(self.dents)))
+        if not self.is_cop:
+            player.money += random.randint(20, 50)
 
     def update_fx(self, dt):
         if self.dead: return
@@ -707,7 +795,7 @@ class Car:
         if player.hp <= 0:
             corpses.append((make_corpse(player), player.x, player.y, player.angle))
             spawn_blood(player.x, player.y, 22)
-            game_over = True
+            trigger_game_over()
         return True
 
     def hit_pedestrians(self, speed_mag):
@@ -1108,17 +1196,38 @@ player.crime_timer = 0
 player.aim_angle = 0  # separater Zielwinkel (Maus) — dreht den Sprite NICHT
 in_car = None
 weapon = 1  # 0 Fäuste, 1 Pistole, 2 SMG, 3 Schrot, 4 MG
-ammo = {1: 80, 2: 200, 3: 30, 4: 400}
-WPN_NAMES = ['Fäuste','Pistole','SMG','Schrotflinte','MG']
-WPN_RATE  = [0.5, 0.4, 0.08, 0.85, 0.05]
-WPN_DMG   = [25, 35, 15, 80, 28]
-WPN_PEL   = [1, 1, 1, 6, 1]
-WPN_SPRD  = [0, 0.03, 0.08, 0.22, 0.06]
-WPN_AUTO  = [False, False, True, False, True]
+ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
+unlocked_weapons = {0, 1}  # Fäuste + Pistole von Anfang an
+WPN_NAMES = ['Fäuste','Pistole','SMG','Schrotflinte','MG','Raketenwerfer']
+WPN_RATE  = [0.5, 0.4, 0.08, 0.85, 0.05, 1.6]
+WPN_DMG   = [25, 35, 15, 80, 28, 0]   # Rakete: Schaden in do_explosion()
+WPN_PEL   = [1, 1, 1, 6, 1, 1]
+WPN_SPRD  = [0, 0.03, 0.08, 0.22, 0.06, 0]
+WPN_AUTO  = [False, False, True, False, True, False]
 fire_cd = 0
 cop_spawn = 0
 
 # ── Blut & Leichen ───────────────────────────────────────
+# ── Pickups ──────────────────────────────────────────────
+# Jeder Eintrag: [x, y, kind, respawn_cd]
+# kind: 'hp' | 2 (SMG) | 3 (Schrot) | 4 (MG)
+PICKUP_AMMO   = {2: 60, 3: 10, 4: 120, 5: 3}
+PICKUP_COLOR  = {'hp': (40,220,80), 2: (220,210,40), 3: (220,120,40), 4: (210,40,40), 5: (180,60,255)}
+PICKUP_LABEL  = {'hp': 'HP', 2: 'SMG', 3: 'SG', 4: 'MG', 5: 'RPG'}
+PICKUP_RESPAWN = 20.0   # Sekunden bis zur Wiederkehr
+
+_pickup_defs = (
+    [('hp', None)] * 22 +
+    [(2,   None)] * 6 +
+    [(3,   None)] * 4 +
+    [(4,   None)] * 3 +
+    [(5,   None)] * 2
+)
+pickups = []
+for _kind, _ in _pickup_defs:
+    _px, _py = safe_spawn()
+    pickups.append([_px, _py, _kind, 0.0])
+
 blood_splats = []   # (x, y, radius, color) — persistent auf Boden
 corpses = []        # (sprite, x, y, angle)
 blood_particles = [] # (x, y, vx, vy, ttl, r)
@@ -1341,6 +1450,56 @@ def draw_world_bg(surf, cam):
                     pygame.draw.rect(surf, LINE, (sx - 2, sy, 4, 28))
     draw_traffic_lights(surf, cam)
 
+rockets = []  # [x, y, vx, vy, ttl]  — Spieler-Raketen
+
+def trigger_game_over():
+    global game_over, score_saved, final_scores
+    if game_over:
+        return
+    game_over = True
+    if not score_saved:
+        score_saved = True
+        scores = save_score(player_name, player.money)
+        # Eigenen Eintrag markieren (erster Treffer von unten für Gleichstände)
+        marked = False
+        for e in reversed(scores):
+            if not marked and e["name"] == player_name and e["money"] == player.money:
+                e["_just_added"] = True
+                marked = True
+        final_scores = scores
+
+def do_explosion(x, y, radius=130, dmg=200):
+    explosions.append([x, y, 0, 0.5, radius])
+    spawn_blood(x, y, 28)
+    for c in list(cars):
+        if c.dead: continue
+        if math.hypot(c.x-x, c.y-y) < radius:
+            c.take_damage(dmg)
+    for p in list(peds):
+        if math.hypot(p.x-x, p.y-y) < radius:
+            p.hp -= dmg
+            if p.hp <= 0:
+                peds.remove(p)
+                corpses.append((make_corpse(p), p.x, p.y, p.angle))
+                spawn_blood(p.x, p.y, 20)
+                player.money += random.randint(20, 55)
+                player.wanted = min(5, player.wanted + 1)
+                player.crime_timer = 30
+    for c in list(cops):
+        if math.hypot(c.x-x, c.y-y) < radius:
+            c.hp -= dmg
+            if c.hp <= 0:
+                cops.remove(c)
+                corpses.append((make_corpse(c), c.x, c.y, c.angle))
+                spawn_blood(c.x, c.y, 24)
+                player.money += random.randint(50, 100)
+                player.wanted = min(5, player.wanted + 1)
+                player.crime_timer = 30
+    dist = math.hypot(player.x-x, player.y-y)
+    if dist < radius and not game_over:
+        player.hp -= int(dmg * max(0.0, 1 - dist/radius))
+        spawn_blood(player.x, player.y, 8)
+
 # ── Spielschleife ────────────────────────────────────────
 def fire():
     global fire_cd
@@ -1354,6 +1513,10 @@ def fire():
     else:
         ax, ay = player.x, player.y
         ang = player.aim_angle
+    if weapon == 5:
+        rad = math.radians(ang)
+        rockets.append([ax, ay, math.sin(rad)*480, -math.cos(rad)*480, 2.0])
+        return
     for _ in range(WPN_PEL[weapon]):
         a = ang + random.uniform(-WPN_SPRD[weapon], WPN_SPRD[weapon]) * 57
         rad = math.radians(a)
@@ -1369,6 +1532,8 @@ cam = [0, 0]
 traffic_time = 0.0
 running = True
 game_over = False
+score_saved = False
+final_scores = []
 
 while running:
     dt = clock.tick(60) / 1000
@@ -1381,8 +1546,10 @@ while running:
             if game_over and e.key == pygame.K_r:
                 import os
                 os.execv(sys.executable, [sys.executable] + sys.argv)
-            if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5):
-                weapon = e.key - pygame.K_1
+            if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6):
+                w = e.key - pygame.K_1
+                if w in unlocked_weapons:
+                    weapon = w
             if e.key == pygame.K_e and not game_over:
                 if in_car:
                     player.x, player.y = exit_car_position(in_car)
@@ -1442,7 +1609,7 @@ while running:
                     blood_particles.append([player.x, player.y,
                                             math.cos(a)*sp_, math.sin(a)*sp_,
                                             random.uniform(0.3, 0.7), random.randint(2,4)])
-                game_over = True
+                trigger_game_over()
 
         # Kamera
         tx = (in_car.x if in_car else player.x) - W//2
@@ -1512,7 +1679,7 @@ while running:
                     if player.hp <= 0:
                         corpses.append((make_corpse(player), player.x, player.y, player.angle))
                         spawn_blood(player.x, player.y, 22)
-                        game_over = True
+                        trigger_game_over()
                     continue
             else:
                 hit_any = False
@@ -1580,6 +1747,41 @@ while running:
             if ex[2] >= ex[3]:
                 explosions.remove(ex)
 
+        # Raketen
+        for r in list(rockets):
+            r[0] += r[2]*dt; r[1] += r[3]*dt; r[4] -= dt
+            hit = r[4] <= 0
+            rr = pygame.Rect(r[0]-5, r[1]-5, 10, 10)
+            if not hit and any(rr.colliderect(b[0]) for b in buildings):
+                hit = True
+            if not hit:
+                for c in cars:
+                    if c is not in_car and not c.dead and rr.colliderect(c.rect()):
+                        hit = True; break
+                for p in peds:
+                    if rr.colliderect(p.rect()): hit = True; break
+                for c in cops:
+                    if rr.colliderect(c.rect()): hit = True; break
+            if hit:
+                do_explosion(r[0], r[1])
+                rockets.remove(r)
+                player.wanted = min(5, player.wanted + 1)
+                player.crime_timer = 30
+
+        # Pickups: Respawn-Timer & Aufsammeln
+        for pk in pickups:
+            if pk[3] > 0:
+                pk[3] = max(0.0, pk[3] - dt)
+                continue
+            if math.hypot(player.x - pk[0], player.y - pk[1]) < 22:
+                kind = pk[2]
+                if kind == 'hp':
+                    player.hp = min(100, player.hp + 30)
+                else:
+                    unlocked_weapons.add(kind)
+                    ammo[kind] = ammo.get(kind, 0) + PICKUP_AMMO[kind]
+                pk[3] = PICKUP_RESPAWN
+
         # Blut-Partikel updaten
         for bp in list(blood_particles):
             bp[4] -= dt
@@ -1600,6 +1802,17 @@ while running:
         sx, sy = int(bs[0]-icam[0]), int(bs[1]-icam[1])
         if -20 < sx < W+20 and -20 < sy < H+20:
             pygame.draw.circle(screen, bs[3], (sx, sy), bs[2])
+    # Pickups
+    for pk in pickups:
+        if pk[3] > 0:
+            continue
+        sx, sy = int(pk[0] - icam[0]), int(pk[1] - icam[1])
+        if -30 < sx < W+30 and -30 < sy < H+30:
+            col = PICKUP_COLOR[pk[2]]
+            pygame.draw.rect(screen, (0,0,0), (sx-13, sy-13, 26, 26), border_radius=5)
+            pygame.draw.rect(screen, col,     (sx-11, sy-11, 22, 22), border_radius=4)
+            lbl = FONT.render(PICKUP_LABEL[pk[2]], 1, (255,255,255))
+            screen.blit(lbl, (sx - lbl.get_width()//2, sy - lbl.get_height()//2))
     # Leichen
     for cs, cx, cy, ca in corpses:
         if view.collidepoint(cx, cy):
@@ -1639,6 +1852,14 @@ while running:
     # Bullets
     for b in bullets:
         pygame.draw.circle(screen, (255,230,80), (int(b[0]-icam[0]), int(b[1]-icam[1])), 3)
+    # Raketen
+    for r in rockets:
+        ang_r = math.degrees(math.atan2(r[2], -r[3]))
+        rsurf = pygame.Surface((18, 8), pygame.SRCALPHA)
+        pygame.draw.ellipse(rsurf, (255,140,30), (0,0,18,8))
+        pygame.draw.ellipse(rsurf, (255,240,100), (0,1,10,6))
+        rot = pygame.transform.rotate(rsurf, -ang_r)
+        screen.blit(rot, rot.get_rect(center=(int(r[0]-icam[0]), int(r[1]-icam[1]))))
     # Feuer-Partikel
     for fp in fire_particles:
         t = max(0.0, fp[4] / fp[5])
@@ -1675,7 +1896,7 @@ while running:
     screen.blit(FONT.render(f"Munition {a}", 1, (255,255,255)), (10, 100))
     for i in range(player.wanted):
         draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-    screen.blit(FONT.render("WASD bewegen | Maus zielen | LMB / SPACE schießen | E Auto | F rauben | 1-5 Waffe (5=MG)",
+    screen.blit(FONT.render("WASD bewegen | Maus zielen | LMB/SPACE schießen | E Auto | F rauben | 1-6 Waffe (6=RPG)",
                             1, (230,230,230)), (10, H-26))
     if in_car:
         screen.blit(FONT.render(f"{int(abs(in_car.spd)*0.36*10)} km/h", 1, (255,255,255)), (W-140, 14))
@@ -1694,12 +1915,23 @@ while running:
         pygame.draw.line(screen, (255,255,255), (mx,my-12), (mx,my+12), 1)
 
     if game_over:
-        s = pygame.Surface((W,H), pygame.SRCALPHA); s.fill((0,0,0,160))
-        screen.blit(s, (0,0))
-        t = BIG.render("GAME OVER", 1, (240,60,60))
-        screen.blit(t, (W//2 - t.get_width()//2, H//2 - 60))
-        t2 = FONT.render("[R] Neu starten   [ESC] Beenden", 1, (255,255,255))
-        screen.blit(t2, (W//2 - t2.get_width()//2, H//2 + 10))
+        overlay = pygame.Surface((W, H), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 185))
+        screen.blit(overlay, (0, 0))
+        t = BIG.render("GAME OVER", 1, (240, 60, 60))
+        screen.blit(t, (W//2 - t.get_width()//2, 30))
+        # Scoreboard
+        hdr = MED.render("── Highscores ──", 1, (255, 210, 40))
+        screen.blit(hdr, (W//2 - hdr.get_width()//2, 130))
+        for i, entry in enumerate(final_scores[:10]):
+            is_me = (entry.get("_just_added"))
+            col = (255, 230, 80) if is_me else ((255,255,255) if i < 3 else (190,190,190))
+            rank_sym = ["1.", "2.", "3."][i] if i < 3 else f"{i+1}."
+            line = f"{rank_sym:<4} {entry['name']:<18} ${entry['money']:>8}"
+            lt = FONT.render(line, 1, col)
+            screen.blit(lt, (W//2 - lt.get_width()//2, 175 + i * 30))
+        t2 = FONT.render("[R] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
+        screen.blit(t2, (W//2 - t2.get_width()//2, H - 50))
 
     pygame.display.flip()
 
