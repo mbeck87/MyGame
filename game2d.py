@@ -228,14 +228,36 @@ class Car:
         if abs(self.spd) > 5:
             self.angle += steer * 110 * dt * (self.spd/self.max_spd)
         rad = math.radians(self.angle)
-        nx = self.x + math.sin(rad) * self.spd * dt
-        ny = self.y - math.cos(rad) * self.spd * dt
-        # Kollision mit Häusern
-        old_rect = self.rect()
-        test = pygame.Rect(nx - self.w//2, ny - self.h//2, self.w, self.h)
-        hit = any(test.colliderect(b[0]) for b in buildings)
-        if hit:
-            self.spd *= -0.3
+        dx = math.sin(rad) * self.spd * dt
+        dy = -math.cos(rad) * self.spd * dt
+        nx, ny = self.x + dx, self.y + dy
+        # GTA-Style Wand-Sliding: Velocity wird auf Wand projiziert, Auto richtet sich an Wand aus
+        tx = pygame.Rect(nx - self.w//2, self.y - self.h//2, self.w, self.h)
+        hit_x = any(tx.colliderect(b[0]) for b in buildings)
+        ty = pygame.Rect(self.x - self.w//2, ny - self.h//2, self.w, self.h)
+        hit_y = any(ty.colliderect(b[0]) for b in buildings)
+        mag = math.hypot(dx, dy) or 1
+        if hit_x and hit_y:
+            # Frontalcrash (Ecke / direkt): hart bremsen + leichter Rückstoß
+            self.spd *= -0.2
+        elif hit_x or hit_y:
+            # Senkrechter Anteil zur Wand (perp), parallel-Anteil bleibt erhalten
+            if hit_x:
+                perp, par = abs(dx) / mag, abs(dy) / mag
+                # Auto in Y-Richtung weiterfahren lassen
+                self.y = ny
+                # Winkel sanft zur Wand-Richtung (vertikal) drehen
+                target = 0 if dy < 0 else 180
+            else:
+                perp, par = abs(dy) / mag, abs(dx) / mag
+                self.x = nx
+                target = 90 if dx > 0 else 270
+            # Reibung: nur leichter Verlust beim Streifen, härter bei steilem Winkel
+            # perp=0 (parallel) → spd*0.98, perp=1 (frontal) → spd*0.55
+            self.spd *= 1.0 - 0.43 * perp
+            # Winkel langsam zur Wandrichtung ziehen (wie an Leitplanke abgleiten)
+            diff = ((target - self.angle + 180) % 360) - 180
+            self.angle += diff * min(1.0, perp * 6 * dt)
         else:
             self.x, self.y = nx, ny
         # Weltgrenzen
