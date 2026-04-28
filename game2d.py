@@ -28,6 +28,16 @@ SKIN    = (235, 195, 160)
 WORLD_W, WORLD_H = 4000, 4000
 BLOCK   = 400      # Stadtblockgröße
 ROAD_W  = 90       # Straßenbreite
+WATER_W = 220      # Wasserring-Breite am Kartenrand
+BEACH_W = 110      # Sandstrand-Breite zwischen Wasser und Stadt
+INNER_LO   = WATER_W + BEACH_W
+INNER_HI_X = WORLD_W - WATER_W - BEACH_W
+INNER_HI_Y = WORLD_H - WATER_W - BEACH_W
+
+WATER_DEEP = (28, 70, 130)
+WATER_MID  = (40, 100, 160)
+WATER_LITE = (95, 160, 210)
+SAND       = (225, 205, 155)
 
 # ── Sprite-Generatoren ───────────────────────────────────
 def make_car_sprite(body_col, w=46, h=78):
@@ -76,34 +86,48 @@ def make_cop_car_sprite():
     return s
 
 def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False):
-    # phase: -1 (links vor), 0 (mitte), +1 (rechts vor); Arme gegengleich
-    s = pygame.Surface((24, 26), pygame.SRCALPHA)
-    pygame.draw.ellipse(s, (0,0,0,90), (3, 20, 18, 6))
-    # Beine: das vordere Bein länger / weiter unten
-    l_off = 2 if phase < 0 else (-1 if phase > 0 else 0)
-    r_off = 2 if phase > 0 else (-1 if phase < 0 else 0)
-    l_h = 8 + (1 if phase != 0 else 0)
-    r_h = 8 + (1 if phase != 0 else 0)
-    pygame.draw.rect(s, (40,40,80), (7, 14 + l_off, 4, l_h))
-    pygame.draw.rect(s, (40,40,80), (13, 14 + r_off, 4, r_h))
-    pygame.draw.rect(s, (20,20,20), (6, 14 + l_off + l_h, 5, 3))
-    pygame.draw.rect(s, (20,20,20), (13, 14 + r_off + r_h, 5, 3))
-    # Torso
-    pygame.draw.rect(s, shirt_col, (5, 8, 14, 8), border_radius=2)
-    # Arme: gegenphasig schwingen
-    al_off = -r_off  # gegengleich zu rechtem Bein
-    ar_off = -l_off
-    pygame.draw.rect(s, shirt_col, (3, 9 + al_off, 3, 6))
-    pygame.draw.rect(s, shirt_col, (18, 9 + ar_off, 3, 6))
-    pygame.draw.rect(s, skin, (3, 14 + al_off, 3, 2))
-    pygame.draw.rect(s, skin, (18, 14 + ar_off, 3, 2))
-    # Kopf
-    pygame.draw.circle(s, skin, (12, 5), 4)
-    pygame.draw.arc(s, hair, (8, 1, 8, 7), 3.14, 6.28, 2)
+    # GTA2-Style Top-Down: "vorn" = -y (oben). Sprite kann beliebig rotiert werden,
+    # ohne dass der Passant je auf dem Kopf steht.
+    # phase: -1 / 0 / +1  -> Bein/Arm-Swing
+    s = pygame.Surface((20, 24), pygame.SRCALPHA)
+    cx, cy = 10, 12
+    pants = (40, 40, 80)
+    boot  = (20, 20, 20)
+
+    # Schatten unter der Figur
+    pygame.draw.ellipse(s, (0, 0, 0, 90), (3, cy + 3, 14, 7))
+
+    # Beine schwingen in Laufrichtung (vor/zurück) — gegenphasig
+    leg_l_y = cy + 3 - phase * 3
+    leg_r_y = cy + 3 + phase * 3
+    pygame.draw.rect(s, pants, (cx - 3, leg_l_y, 2, 5))
+    pygame.draw.rect(s, pants, (cx + 1, leg_r_y, 2, 5))
+    pygame.draw.rect(s, boot,  (cx - 3, leg_l_y + 5, 2, 2))
+    pygame.draw.rect(s, boot,  (cx + 1, leg_r_y + 5, 2, 2))
+
+    # Torso als Oval (Schultern von oben)
+    pygame.draw.ellipse(s, shirt_col, (cx - 5, cy - 3, 10, 9))
+    hl = tuple(min(255, c + 30) for c in shirt_col)
+    pygame.draw.ellipse(s, hl, (cx - 4, cy - 2, 8, 3))
+
+    # Arme schwingen gegenphasig zu den Beinen
+    arm_l_y = cy + phase * 2
+    arm_r_y = cy - phase * 2
+    pygame.draw.rect(s, shirt_col, (cx - 7, arm_l_y, 2, 4))
+    pygame.draw.rect(s, shirt_col, (cx + 5, arm_r_y, 2, 4))
+    pygame.draw.rect(s, skin,      (cx - 7, arm_l_y + 4, 2, 2))
+    pygame.draw.rect(s, skin,      (cx + 5, arm_r_y + 4, 2, 2))
+
+    # Kopf von oben: Haarkranz, davor Gesichts-/Hautstreifen nach vorn
+    head_y = cy - 5
+    pygame.draw.circle(s, hair, (cx, head_y), 4)
+    pygame.draw.circle(s, skin, (cx, head_y - 1), 3)
+
     if is_cop:
-        pygame.draw.rect(s, COP_DARK, (8, 1, 8, 3))
-        pygame.draw.rect(s, COP_DARK, (7, 3, 10, 1))
-        pygame.draw.rect(s, (230,200,60), (10, 10, 2, 2))
+        # Polizeimütze von oben + Schirm nach vorn
+        pygame.draw.circle(s, COP_DARK, (cx, head_y), 4)
+        pygame.draw.rect(s, COP_DARK, (cx - 4, head_y - 4, 8, 3))
+        pygame.draw.rect(s, (230, 200, 60), (cx - 1, head_y - 1, 2, 2))
     return s
 
 def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False):
@@ -165,24 +189,39 @@ def make_building(w_cells, h_cells, seed):
     return s
 
 # ── Welt: Kacheln & Kollisionsboxen ──────────────────────
-buildings = []   # (rect, surface)
+buildings = []   # (rect, surface)  — nur Häuser (surface immer gesetzt)
 roads_h = []     # horizontale Straßen y-Koordinaten
 roads_v = []     # vertikale Straßen x-Koordinaten
 
+# Wasser-Ring (tödlich, NICHT-festes Hindernis: Spieler/Autos können reinfahren und sterben)
+WATER_RECTS = [
+    pygame.Rect(0, 0, WORLD_W, WATER_W),
+    pygame.Rect(0, WORLD_H - WATER_W, WORLD_W, WATER_W),
+    pygame.Rect(0, 0, WATER_W, WORLD_H),
+    pygame.Rect(WORLD_W - WATER_W, 0, WATER_W, WORLD_H),
+]
+def in_water(x, y):
+    return x < WATER_W or x > WORLD_W - WATER_W or y < WATER_W or y > WORLD_H - WATER_W
+
+# Straßen nur innerhalb der Stadt (vor dem Strand)
 for y in range(0, WORLD_H, BLOCK):
-    roads_h.append(y)
+    if INNER_LO <= y <= INNER_HI_Y:
+        roads_h.append(y)
 for x in range(0, WORLD_W, BLOCK):
-    roads_v.append(x)
+    if INNER_LO <= x <= INNER_HI_X:
+        roads_v.append(x)
 
 random.seed(7)
 seed = 0
 for bx in range(0, WORLD_W, BLOCK):
     for by in range(0, WORLD_H, BLOCK):
         # Block-Inneres bebauen mit 1-4 Häusern
-        x0 = bx + ROAD_W//2 + 14
-        y0 = by + ROAD_W//2 + 14
-        x1 = bx + BLOCK - ROAD_W//2 - 14
-        y1 = by + BLOCK - ROAD_W//2 - 14
+        x0 = max(bx + ROAD_W//2 + 14, INNER_LO + 12)
+        y0 = max(by + ROAD_W//2 + 14, INNER_LO + 12)
+        x1 = min(bx + BLOCK - ROAD_W//2 - 14, INNER_HI_X - 12)
+        y1 = min(by + BLOCK - ROAD_W//2 - 14, INNER_HI_Y - 12)
+        if x1 - x0 < 60 or y1 - y0 < 60:
+            continue
         cur_y = y0
         while cur_y < y1 - 60:
             cur_x = x0
@@ -200,6 +239,9 @@ for bx in range(0, WORLD_W, BLOCK):
                 cur_x += bw + random.randint(4, 14)
             cur_y += row_h * 32 + random.randint(8, 18)
 
+# Hindernisse für KI/NPCs: Häuser + Wasser (NPCs sollen nicht ins Wasser laufen)
+AI_OBSTACLES = list(buildings) + [(r, None) for r in WATER_RECTS]
+
 # ── Spieler / Fahrzeug / NPCs ────────────────────────────
 class Car:
     def __init__(self, x, y, body, is_cop=False):
@@ -210,15 +252,121 @@ class Car:
         self.is_cop = is_cop
         self.sprite = make_cop_car_sprite() if is_cop else make_car_sprite(body)
         self.w, self.h = self.sprite.get_size()
+        self.max_hp = 200
         self.hp = 200
+        self.dents = []          # (relx, rely, radius)
+        self.burning = False
+        self.burn_timer = 0.0
+        self.dead = False
+        self._smoke_cd = 0.0
+        self._fire_cd = 0.0
         # KI
         self.ai_spd = random.uniform(80, 160)
         self.turn_cd = random.uniform(2, 6)
+
+    def take_damage(self, dmg):
+        if self.dead or dmg <= 0: return
+        self.hp -= dmg
+        # Beulen / Schmauchspuren bei Treffern
+        n = max(1, int(dmg // 18))
+        for _ in range(min(n, 4)):
+            if len(self.dents) >= 35: break
+            rx = random.uniform(-self.w*0.42, self.w*0.42)
+            ry = random.uniform(-self.h*0.42, self.h*0.42)
+            self.dents.append((rx, ry, random.randint(3, 6)))
+        if self.hp <= 0 and not self.burning:
+            self.hp = 0
+            self.burning = True
+            self.burn_timer = random.uniform(2.5, 4.0)
+
+    def explode(self):
+        global in_car, game_over
+        self.dead = True
+        explosions.append([self.x, self.y, 0.0, 0.55, 150])
+        # Druckwelle
+        R = 130
+        for p in list(peds):
+            if math.hypot(p.x-self.x, p.y-self.y) < R:
+                p.hp -= 90
+                spawn_blood(p.x, p.y, 6)
+                if p.hp <= 0:
+                    peds.remove(p)
+                    corpses.append((make_corpse(p), p.x, p.y, p.angle))
+                    spawn_blood(p.x, p.y, 18)
+        for c in list(cops):
+            if math.hypot(c.x-self.x, c.y-self.y) < R:
+                c.hp -= 90
+                spawn_blood(c.x, c.y, 6)
+                if c.hp <= 0:
+                    cops.remove(c)
+                    corpses.append((make_corpse(c), c.x, c.y, c.angle))
+                    spawn_blood(c.x, c.y, 20)
+        for c in cars:
+            if c is self or c.dead: continue
+            if math.hypot(c.x-self.x, c.y-self.y) < R + 10:
+                c.take_damage(110)
+        # Spielerschaden / Auswurf
+        if math.hypot(player.x-self.x, player.y-self.y) < R:
+            player.hp -= 95 if in_car is self else 60
+            if player.hp <= 0:
+                corpses.append((make_corpse(player), player.x, player.y, player.angle))
+                spawn_blood(player.x, player.y, 24)
+                game_over = True
+        if in_car is self:
+            in_car = None
+        # Feuer- und Rauchwolke
+        for _ in range(45):
+            a = random.uniform(0, 6.28); s = random.uniform(80, 320)
+            fire_particles.append([self.x, self.y, math.cos(a)*s, math.sin(a)*s,
+                                   random.uniform(0.4, 0.9), 0.9, random.randint(4, 8)])
+        for _ in range(35):
+            a = random.uniform(0, 6.28); s = random.uniform(40, 180)
+            smoke_particles.append([self.x, self.y, math.cos(a)*s, math.sin(a)*s - 30,
+                                    random.uniform(1.8, 3.5), 3.5, random.randint(6, 11)])
+        # Wrack zurücklassen
+        wreck_surf = self.sprite.copy()
+        scorch = pygame.Surface(wreck_surf.get_size(), pygame.SRCALPHA)
+        scorch.fill((20, 20, 20, 200))
+        wreck_surf.blit(scorch, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
+        wrecks.append((wreck_surf, self.x, self.y, self.angle, list(self.dents)))
+
+    def update_fx(self, dt):
+        if self.dead: return
+        if self.burning:
+            self.burn_timer -= dt
+            self._fire_cd -= dt
+            if self._fire_cd <= 0:
+                self._fire_cd = 0.04
+                fire_particles.append([self.x + random.uniform(-12, 12),
+                                       self.y + random.uniform(-15, 15),
+                                       random.uniform(-25, 25), random.uniform(-70, -25),
+                                       random.uniform(0.3, 0.6), 0.6, random.randint(3, 6)])
+            self._smoke_cd -= dt
+            if self._smoke_cd <= 0:
+                self._smoke_cd = 0.08
+                smoke_particles.append([self.x, self.y, random.uniform(-15, 15),
+                                        random.uniform(-55, -25), random.uniform(1.5, 2.8), 2.8,
+                                        random.randint(5, 9)])
+            if self.burn_timer <= 0:
+                self.explode()
+        elif self.hp < self.max_hp * 0.6:
+            self._smoke_cd -= dt
+            heavy = self.hp < self.max_hp * 0.3
+            rate = 0.10 if heavy else 0.28
+            if self._smoke_cd <= 0:
+                self._smoke_cd = rate
+                col_r = random.randint(4, 8) if heavy else random.randint(3, 6)
+                smoke_particles.append([self.x, self.y, random.uniform(-10, 10),
+                                        random.uniform(-45, -18), random.uniform(1.2, 2.2), 2.2, col_r])
 
     def rect(self):
         return pygame.Rect(self.x - self.w//2, self.y - self.h//2, self.w, self.h)
 
     def update(self, dt, accel=0, steer=0):
+        if self.dead:
+            self.spd = 0
+            return
+        prev_spd = self.spd
         if accel > 0:
             self.spd = min(self.max_spd, self.spd + 260 * dt)
         elif accel < 0:
@@ -240,6 +388,8 @@ class Car:
         if hit_x and hit_y:
             # Frontalcrash (Ecke / direkt): hart bremsen + leichter Rückstoß
             self.spd *= -0.2
+            if abs(prev_spd) > 60:
+                self.take_damage(abs(prev_spd) * 0.09)
         elif hit_x or hit_y:
             # Senkrechter Anteil zur Wand (perp), parallel-Anteil bleibt erhalten
             if hit_x:
@@ -258,6 +408,8 @@ class Car:
             # Winkel langsam zur Wandrichtung ziehen (wie an Leitplanke abgleiten)
             diff = ((target - self.angle + 180) % 360) - 180
             self.angle += diff * min(1.0, perp * 6 * dt)
+            if abs(prev_spd) > 80 and perp > 0.25:
+                self.take_damage(abs(prev_spd) * perp * 0.045)
         else:
             self.x, self.y = nx, ny
         # Weltgrenzen
@@ -271,7 +423,7 @@ class Car:
         ny = self.y - math.cos(rad) * self.ai_spd * dt
         test = pygame.Rect(nx - self.w//2, ny - self.h//2, self.w, self.h)
         # Hindernisse: Häuser + andere Autos
-        blocked = any(test.colliderect(b[0]) for b in buildings)
+        blocked = any(test.colliderect(b[0]) for b in AI_OBSTACLES)
         if not blocked:
             for c in cars:
                 if c is self: continue
@@ -279,9 +431,6 @@ class Car:
                     blocked = True; break
         # Auch Spieler/eigenes Auto meiden
         if not blocked and in_car and test.colliderect(in_car.rect()):
-            blocked = True
-        # Weltgrenzen
-        if nx < 60 or nx > WORLD_W-60 or ny < 60 or ny > WORLD_H-60:
             blocked = True
         self.turn_cd -= dt
         if blocked or self.turn_cd <= 0:
@@ -294,6 +443,14 @@ class Car:
         rot = pygame.transform.rotate(self.sprite, -self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
+        if self.dents:
+            rad = math.radians(self.angle)
+            cs, sn = math.cos(rad), math.sin(rad)
+            cx_ = self.x - cam[0]; cy_ = self.y - cam[1]
+            for dx_, dy_, dr_ in self.dents:
+                wx = dx_ * cs - dy_ * sn
+                wy = dx_ * sn + dy_ * cs
+                pygame.draw.circle(surf, (25, 25, 28), (int(cx_ + wx), int(cy_ + wy)), dr_)
 
 class Ped:
     def __init__(self, x, y, is_cop=False):
@@ -330,11 +487,12 @@ class Ped:
 
     def try_move(self, nx, ny):
         # Achsen-getrennte Kollision -> kann an Wänden entlang gleiten
+        # NPCs meiden auch Wasser
         rx = pygame.Rect(nx-10, self.y-10, 20, 20)
-        if not any(rx.colliderect(b[0]) for b in buildings):
+        if not any(rx.colliderect(b[0]) for b in AI_OBSTACLES):
             self.x = nx
         ry = pygame.Rect(self.x-10, ny-10, 20, 20)
-        if not any(ry.colliderect(b[0]) for b in buildings):
+        if not any(ry.colliderect(b[0]) for b in AI_OBSTACLES):
             self.y = ny
 
     def update(self, dt, target):
@@ -373,19 +531,19 @@ class Ped:
 # ── Spawning ─────────────────────────────────────────────
 def safe_spawn():
     while True:
-        x = random.randint(100, WORLD_W-100)
-        y = random.randint(100, WORLD_H-100)
+        x = random.randint(INNER_LO + 30, INNER_HI_X - 30)
+        y = random.randint(INNER_LO + 30, INNER_HI_Y - 30)
         r = pygame.Rect(x-15, y-15, 30, 30)
         if not any(r.colliderect(b[0]) for b in buildings):
             return x, y
 
 def road_spawn():
     if random.random() < 0.5:
-        x = random.randint(100, WORLD_W-100)
+        x = random.randint(INNER_LO + 30, INNER_HI_X - 30)
         y = random.choice(roads_h) + random.choice([-25, 25])
     else:
         x = random.choice(roads_v) + random.choice([-25, 25])
-        y = random.randint(100, WORLD_H-100)
+        y = random.randint(INNER_LO + 30, INNER_HI_Y - 30)
     return x, y
 
 cars = []
@@ -410,6 +568,7 @@ player.hp = 100
 player.money = 0
 player.wanted = 0
 player.crime_timer = 0
+player.aim_angle = 0  # separater Zielwinkel (Maus) — dreht den Sprite NICHT
 in_car = None
 weapon = 1  # 0 Fäuste, 1 Pistole, 2 SMG, 3 Schrot, 4 MG
 ammo = {1: 80, 2: 200, 3: 30, 4: 400}
@@ -426,6 +585,10 @@ cop_spawn = 0
 blood_splats = []   # (x, y, radius, color) — persistent auf Boden
 corpses = []        # (sprite, x, y, angle)
 blood_particles = [] # (x, y, vx, vy, ttl, r)
+smoke_particles = [] # [x, y, vx, vy, ttl, max_ttl, r]
+fire_particles  = [] # [x, y, vx, vy, ttl, max_ttl, r]
+explosions      = [] # [x, y, t, max_t, max_r]
+wrecks          = [] # (sprite, x, y, angle, dents)  — ausgebrannte Karosserien
 
 def make_corpse(ped):
     s = ped.sprite.copy()
@@ -450,37 +613,69 @@ def spawn_blood(x, y, amount=14):
 
 # ── Hintergrund vorrendern ───────────────────────────────
 def draw_world_bg(surf, cam):
-    surf.fill(GRASS)
-    # Bürgersteige (horizontal & vertikal)
+    surf.fill(WATER_DEEP)
+    # Strand-Ring (zwischen Wasser und Stadt)
+    beach_rect = pygame.Rect(WATER_W - cam[0], WATER_W - cam[1],
+                             WORLD_W - 2*WATER_W, WORLD_H - 2*WATER_W)
+    pygame.draw.rect(surf, SAND, beach_rect)
+    # Innere Stadt: Gras
+    inner_rect = pygame.Rect(INNER_LO - cam[0], INNER_LO - cam[1],
+                             INNER_HI_X - INNER_LO, INNER_HI_Y - INNER_LO)
+    pygame.draw.rect(surf, GRASS, inner_rect)
+    # Wellen (statisches Muster, nur im Wasser)
+    wx0 = max(0, int(cam[0]))
+    wy0 = max(0, int(cam[1]))
+    wx1 = min(WORLD_W, int(cam[0]) + W)
+    wy1 = min(WORLD_H, int(cam[1]) + H)
+    for wy in range(wy0 - (wy0 % 28), wy1, 28):
+        for wx in range(wx0 - (wx0 % 36), wx1, 36):
+            if WATER_W < wx < WORLD_W - WATER_W and WATER_W < wy < WORLD_H - WATER_W:
+                continue
+            sx, sy = wx - cam[0], wy - cam[1]
+            off = 6 if (wy // 28) % 2 else 0
+            pygame.draw.line(surf, WATER_LITE,
+                             (sx + 4 + off, sy + 12), (sx + 14 + off, sy + 12), 2)
+            pygame.draw.line(surf, WATER_MID,
+                             (sx + 18 + off, sy + 18), (sx + 26 + off, sy + 18), 1)
+    # Sand-Textur (vereinzelte dunklere Flecken am Strand)
+    for i in range(0, WORLD_W, 60):
+        if not (WATER_W <= i <= WORLD_W - WATER_W): continue
+        for edge in (WATER_W + 25, WORLD_H - WATER_W - 28):
+            sx, sy = i - cam[0], edge - cam[1]
+            if -10 < sx < W and -10 < sy < H:
+                pygame.draw.circle(surf, (200, 180, 130), (int(sx), int(sy)), 2)
+    # Straßen (Bürgersteig + Asphalt + Linien) — strikt innerhalb der Stadt
+    rx = INNER_LO - cam[0]
+    rw = INNER_HI_X - INNER_LO
+    ry = INNER_LO - cam[1]
+    rh = INNER_HI_Y - INNER_LO
     for y in roads_h:
         sy = y - cam[1]
         if -ROAD_W-20 < sy < H+ROAD_W+20:
-            pygame.draw.rect(surf, SIDEW, (-cam[0], sy - ROAD_W//2 - 8, WORLD_W, ROAD_W + 16))
+            pygame.draw.rect(surf, SIDEW, (rx, sy - ROAD_W//2 - 8, rw, ROAD_W + 16))
     for x in roads_v:
         sx = x - cam[0]
         if -ROAD_W-20 < sx < W+ROAD_W+20:
-            pygame.draw.rect(surf, SIDEW, (sx - ROAD_W//2 - 8, -cam[1], ROAD_W + 16, WORLD_H))
-    # Asphalt
+            pygame.draw.rect(surf, SIDEW, (sx - ROAD_W//2 - 8, ry, ROAD_W + 16, rh))
     for y in roads_h:
         sy = y - cam[1]
         if -ROAD_W < sy < H+ROAD_W:
-            pygame.draw.rect(surf, ASPHALT, (-cam[0], sy - ROAD_W//2, WORLD_W, ROAD_W))
+            pygame.draw.rect(surf, ASPHALT, (rx, sy - ROAD_W//2, rw, ROAD_W))
     for x in roads_v:
         sx = x - cam[0]
         if -ROAD_W < sx < W+ROAD_W:
-            pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, -cam[1], ROAD_W, WORLD_H))
-    # Mittellinien gestrichelt
+            pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, ry, ROAD_W, rh))
     for y in roads_h:
         sy = y - cam[1]
         if -10 < sy < H+10:
-            for dx in range(0, WORLD_W, 50):
+            for dx in range(INNER_LO, INNER_HI_X, 50):
                 sx = dx - cam[0]
                 if -30 < sx < W:
                     pygame.draw.rect(surf, LINE, (sx, sy - 2, 28, 4))
     for x in roads_v:
         sx = x - cam[0]
         if -10 < sx < W+10:
-            for dy in range(0, WORLD_H, 50):
+            for dy in range(INNER_LO, INNER_HI_Y, 50):
                 sy = dy - cam[1]
                 if -30 < sy < H:
                     pygame.draw.rect(surf, LINE, (sx - 2, sy, 4, 28))
@@ -497,7 +692,7 @@ def fire():
         ang = in_car.angle
     else:
         ax, ay = player.x, player.y
-        ang = player.angle
+        ang = player.aim_angle
     for _ in range(WPN_PEL[weapon]):
         a = ang + random.uniform(-WPN_SPRD[weapon], WPN_SPRD[weapon]) * 57
         rad = math.radians(a)
@@ -556,6 +751,9 @@ while running:
             steer = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
             in_car.update(dt, accel, steer)
             player.x, player.y = in_car.x, in_car.y
+            # Wasser tötet: Auto explodiert beim Eintauchen
+            if in_water(in_car.x, in_car.y):
+                in_car.explode()
         else:
             sp = 220
             dx = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
@@ -567,9 +765,22 @@ while running:
                 pr = pygame.Rect(nx-10, ny-10, 20, 20)
                 if not any(pr.colliderect(b[0]) for b in buildings):
                     player.x, player.y = nx, ny
-            player.angle = aim_to_mouse()
+                # Sprite folgt der Laufrichtung (GTA2-Style), nicht dem Mauszeiger
+                player.angle = math.degrees(math.atan2(dx, -dy))
+            player.aim_angle = aim_to_mouse()
             if keys[pygame.K_SPACE] or (pygame.mouse.get_pressed()[0] and WPN_AUTO[weapon]):
                 if fire_cd <= 0: fire()
+            # Ertrinken im Wasser
+            if in_water(player.x, player.y):
+                player.hp = 0
+                corpses.append((make_corpse(player), player.x, player.y, player.angle))
+                # blaue Spritzer statt Blut
+                for _ in range(20):
+                    a = random.uniform(0, 6.28); sp_ = random.uniform(40, 180)
+                    blood_particles.append([player.x, player.y,
+                                            math.cos(a)*sp_, math.sin(a)*sp_,
+                                            random.uniform(0.3, 0.7), random.randint(2,4)])
+                game_over = True
 
         # Kamera
         tx = (in_car.x if in_car else player.x) - W//2
@@ -623,6 +834,10 @@ while running:
             if any(br.colliderect(bd[0]) for bd in buildings):
                 bullets.remove(b); continue
             if b[5]:  # cop bullet -> player
+                if in_car and br.colliderect(in_car.rect()):
+                    in_car.take_damage(b[6] * 0.6)
+                    bullets.remove(b)
+                    continue
                 if br.colliderect(player.rect()):
                     player.hp -= b[6]
                     spawn_blood(player.x, player.y, 6)
@@ -634,6 +849,13 @@ while running:
                     continue
             else:
                 hit_any = False
+                # Auto-Treffer (außer das Auto, in dem der Spieler sitzt)
+                for c in cars:
+                    if c is in_car or c.dead: continue
+                    if br.colliderect(c.rect()):
+                        c.take_damage(b[6] * 0.5)
+                        bullets.remove(b); hit_any = True; break
+                if hit_any: continue
                 for p in list(peds):
                     if br.colliderect(p.rect()):
                         p.hp -= b[6]; p.state = 'flee'
@@ -658,6 +880,35 @@ while running:
                             player.wanted = min(5, player.wanted + 1)
                             player.crime_timer = 30
                         bullets.remove(b); break
+
+        # Auto-FX (Rauch, Feuer, Explosion)
+        for c in list(cars):
+            c.update_fx(dt)
+            if c.dead:
+                cars.remove(c)
+                # Ersatz spawnen, damit Verkehr nicht ausstirbt
+                nx, ny = road_spawn()
+                col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
+                cars.append(Car(nx, ny, col))
+        # Rauch-Partikel
+        for sp_ in list(smoke_particles):
+            sp_[4] -= dt
+            if sp_[4] <= 0:
+                smoke_particles.remove(sp_); continue
+            sp_[0] += sp_[2]*dt; sp_[1] += sp_[3]*dt
+            sp_[2] *= 0.96; sp_[3] = sp_[3]*0.96 - 8*dt
+        # Feuer-Partikel
+        for fp in list(fire_particles):
+            fp[4] -= dt
+            if fp[4] <= 0:
+                fire_particles.remove(fp); continue
+            fp[0] += fp[2]*dt; fp[1] += fp[3]*dt
+            fp[2] *= 0.90; fp[3] *= 0.90
+        # Explosionen
+        for ex in list(explosions):
+            ex[2] += dt
+            if ex[2] >= ex[3]:
+                explosions.remove(ex)
 
         # Blut-Partikel updaten
         for bp in list(blood_particles):
@@ -685,10 +936,23 @@ while running:
             rot = pygame.transform.rotate(cs, -ca)
             r = rot.get_rect(center=(cx - icam[0], cy - icam[1]))
             screen.blit(rot, r)
-    # Häuser
+    # Häuser (Wasser-Rects haben surf=None und werden übersprungen)
     for rect, surf in buildings:
+        if surf is None: continue
         if view.colliderect(rect):
             screen.blit(surf, (rect.x - icam[0], rect.y - icam[1]))
+    # Wracks (unter Autos)
+    for ws, wx, wy, wa, wd in wrecks:
+        if view.collidepoint(wx, wy):
+            rot = pygame.transform.rotate(ws, -wa)
+            r = rot.get_rect(center=(wx - icam[0], wy - icam[1]))
+            screen.blit(rot, r)
+            rad = math.radians(wa); cs_, sn_ = math.cos(rad), math.sin(rad)
+            for dx_, dy_, dr_ in wd:
+                wxr = dx_ * cs_ - dy_ * sn_
+                wyr = dx_ * sn_ + dy_ * cs_
+                pygame.draw.circle(screen, (10,10,12),
+                                   (int(wx + wxr - icam[0]), int(wy + wyr - icam[1])), dr_)
     # Autos
     for c in cars: c.draw(screen, icam)
     # NPCs
@@ -705,6 +969,31 @@ while running:
     # Bullets
     for b in bullets:
         pygame.draw.circle(screen, (255,230,80), (int(b[0]-icam[0]), int(b[1]-icam[1])), 3)
+    # Feuer-Partikel
+    for fp in fire_particles:
+        t = max(0.0, fp[4] / fp[5])
+        # heiß (gelb) → kalt (rot)
+        col = (255, int(80 + 175 * t), int(40 * t))
+        r = max(1, int(fp[6] * (0.5 + 0.5*t)))
+        pygame.draw.circle(screen, col, (int(fp[0]-icam[0]), int(fp[1]-icam[1])), r)
+    # Rauch-Partikel
+    for sp_ in smoke_particles:
+        t = max(0.0, sp_[4] / sp_[5])
+        gv = int(60 + 110 * (1 - t))   # frisch dunkel, alt heller
+        alpha = int(200 * t)
+        r = max(1, int(sp_[6] * (1.4 - 0.4*t)))
+        srf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+        pygame.draw.circle(srf, (gv, gv, gv, alpha), (r, r), r)
+        screen.blit(srf, (int(sp_[0]-icam[0]-r), int(sp_[1]-icam[1]-r)))
+    # Explosions-Blitz
+    for ex in explosions:
+        t = ex[2] / ex[3]
+        r = int(ex[4] * (0.3 + 0.7*t))
+        a = int(220 * (1 - t))
+        srf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+        pygame.draw.circle(srf, (255, 200, 80, a), (r, r), r)
+        pygame.draw.circle(srf, (255, 240, 180, min(255, a+30)), (r, r), int(r*0.6))
+        screen.blit(srf, (int(ex[0]-icam[0]-r), int(ex[1]-icam[1]-r)))
 
     # HUD
     pygame.draw.rect(screen, (0,0,0), (10, 10, 220, 30))
@@ -719,6 +1008,13 @@ while running:
                             1, (230,230,230)), (10, H-26))
     if in_car:
         screen.blit(FONT.render(f"{int(abs(in_car.spd)*0.36*10)} km/h", 1, (255,255,255)), (W-140, 14))
+        # Auto-HP-Balken
+        pygame.draw.rect(screen, (0,0,0), (W-230, 50, 220, 22))
+        frac = max(0, in_car.hp) / in_car.max_hp
+        col = (60,200,60) if frac > 0.6 else ((230,180,40) if frac > 0.3 else (220,40,40))
+        pygame.draw.rect(screen, col, (W-228, 52, 216*frac, 18))
+        label = "BRENNT!" if in_car.burning else f"Auto {int(in_car.hp)}/{in_car.max_hp}"
+        screen.blit(FONT.render(label, 1, (255,255,255)), (W-225, 52))
     # Fadenkreuz
     if not in_car:
         mx, my = pygame.mouse.get_pos()
