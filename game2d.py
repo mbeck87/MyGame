@@ -25,19 +25,25 @@ COP_BLUE= (30, 60, 180)
 COP_DARK= (15, 30, 90)
 SKIN    = (235, 195, 160)
 
-WORLD_W, WORLD_H = 4000, 4000
-BLOCK   = 400      # Stadtblockgröße
-ROAD_W  = 90       # Straßenbreite
+WORLD_W, WORLD_H = 6000, 6000
+BLOCK   = 600      # Stadtblockgröße
+ROAD_W  = 118      # Fahrbahnbreite
+SIDEWALK_W = 34    # Gehsteigbreite je Straßenseite
 WATER_W = 220      # Wasserring-Breite am Kartenrand
 BEACH_W = 110      # Sandstrand-Breite zwischen Wasser und Stadt
 INNER_LO   = WATER_W + BEACH_W
 INNER_HI_X = WORLD_W - WATER_W - BEACH_W
 INNER_HI_Y = WORLD_H - WATER_W - BEACH_W
+ROAD_EDGE_MARGIN = BLOCK // 2
+ROAD_LO = INNER_LO + ROAD_EDGE_MARGIN
+ROAD_HI_X = INNER_HI_X - ROAD_EDGE_MARGIN
+ROAD_HI_Y = INNER_HI_Y - ROAD_EDGE_MARGIN
 
 WATER_DEEP = (28, 70, 130)
 WATER_MID  = (40, 100, 160)
 WATER_LITE = (95, 160, 210)
 SAND       = (225, 205, 155)
+TIRE_BLOOD = (135, 0, 0)
 
 # ── Sprite-Generatoren ───────────────────────────────────
 def make_car_sprite(body_col, w=46, h=78):
@@ -203,23 +209,128 @@ WATER_RECTS = [
 def in_water(x, y):
     return x < WATER_W or x > WORLD_W - WATER_W or y < WATER_W or y > WORLD_H - WATER_W
 
-# Straßen nur innerhalb der Stadt (vor dem Strand)
+def in_city(x, y, margin=0):
+    return (INNER_LO + margin <= x <= INNER_HI_X - margin and
+            INNER_LO + margin <= y <= INNER_HI_Y - margin)
+
+def rect_hits_city_edge(rect):
+    return (rect.left < INNER_LO or rect.right > INNER_HI_X or
+            rect.top < INNER_LO or rect.bottom > INNER_HI_Y)
+
+def rect_on_road(rect, margin=10):
+    cx, cy = rect.center
+    half = ROAD_W * 0.5 - margin
+    for y in roads_h:
+        if ROAD_LO <= cx <= ROAD_HI_X and abs(cy - y) <= half:
+            return True
+    for x in roads_v:
+        if ROAD_LO <= cy <= ROAD_HI_Y and abs(cx - x) <= half:
+            return True
+    return False
+
+def rect_hits_road_edge(rect):
+    return (rect.right < ROAD_LO or rect.left > ROAD_HI_X or
+            rect.bottom < ROAD_LO or rect.top > ROAD_HI_Y)
+
+def lane_center_for_car(angle, x, y):
+    heading = int(round(angle / 90.0)) * 90 % 360
+    lane_off = 28
+    if heading in (0, 180):
+        base = min(roads_v, key=lambda rx: abs(rx - x))
+        side = lane_off if heading == 0 else -lane_off
+        return base + side, y
+    base = min(roads_h, key=lambda ry: abs(ry - y))
+    side = lane_off if heading == 90 else -lane_off
+    return x, base + side
+
+def move_toward(current, target, max_step):
+    delta = target - current
+    if delta > max_step:
+        return current + max_step
+    if delta < -max_step:
+        return current - max_step
+    return target
+
+def nearest_road_x(x):
+    return min(roads_v, key=lambda rx: abs(rx - x))
+
+def nearest_road_y(y):
+    return min(roads_h, key=lambda ry: abs(ry - y))
+
+def intersection_zone_at(x, y, margin=18):
+    ix = nearest_road_x(x)
+    iy = nearest_road_y(y)
+    half = ROAD_W * 0.5 + margin
+    if abs(x - ix) <= half and abs(y - iy) <= half:
+        size = int(half * 2)
+        return ix, iy, pygame.Rect(int(ix - half), int(iy - half), size, size)
+    return None
+
+LIGHT_RED = 3.2
+LIGHT_RED_YELLOW = 0.75
+LIGHT_GREEN = 5.2
+LIGHT_YELLOW = 0.9
+
+def traffic_light_state(ix, iy):
+    cycle = (LIGHT_RED + LIGHT_RED_YELLOW + LIGHT_GREEN + LIGHT_YELLOW) * 2
+    offset = ((ix // BLOCK + iy // BLOCK) % 2) * (cycle * 0.5)
+    t = (traffic_time + offset) % cycle
+    phase = t % (cycle * 0.5)
+    active_axis = 'NS' if t < cycle * 0.5 else 'EW'
+    if phase < LIGHT_RED:
+        return active_axis, 'red'
+    if phase < LIGHT_RED + LIGHT_RED_YELLOW:
+        return active_axis, 'red_yellow'
+    if phase < LIGHT_RED + LIGHT_RED_YELLOW + LIGHT_GREEN:
+        return active_axis, 'green'
+    return active_axis, 'yellow'
+
+def traffic_light_allows(car):
+    zone = car.upcoming_intersection(82)
+    if not zone:
+        return True
+    ix, iy, rect = zone
+    if rect.collidepoint(car.x, car.y):
+        return True
+    axis, phase = traffic_light_state(ix, iy)
+    return phase in ('green', 'yellow') and ((axis == 'NS') == car.is_vertical())
+
+# Straßen nur innerhalb der Stadt, mit geschlossenem Innenring vor dem Strand.
+roads_h.extend([ROAD_LO, ROAD_HI_Y])
+roads_v.extend([ROAD_LO, ROAD_HI_X])
 for y in range(0, WORLD_H, BLOCK):
-    if INNER_LO <= y <= INNER_HI_Y:
+    if ROAD_LO < y < ROAD_HI_Y:
         roads_h.append(y)
 for x in range(0, WORLD_W, BLOCK):
-    if INNER_LO <= x <= INNER_HI_X:
+    if ROAD_LO < x < ROAD_HI_X:
         roads_v.append(x)
+roads_h[:] = sorted(set(roads_h))
+roads_v[:] = sorted(set(roads_v))
+
+def rect_overlaps_street_space(rect, buffer=14):
+    half = ROAD_W // 2 + SIDEWALK_W + buffer
+    road_x0 = ROAD_LO - half
+    road_x1 = ROAD_HI_X + half
+    road_y0 = ROAD_LO - half
+    road_y1 = ROAD_HI_Y + half
+    for y in roads_h:
+        if rect.right > road_x0 and rect.left < road_x1 and rect.bottom > y - half and rect.top < y + half:
+            return True
+    for x in roads_v:
+        if rect.bottom > road_y0 and rect.top < road_y1 and rect.right > x - half and rect.left < x + half:
+            return True
+    return False
 
 random.seed(7)
 seed = 0
 for bx in range(0, WORLD_W, BLOCK):
     for by in range(0, WORLD_H, BLOCK):
-        # Block-Inneres bebauen mit 1-4 Häusern
-        x0 = max(bx + ROAD_W//2 + 14, INNER_LO + 12)
-        y0 = max(by + ROAD_W//2 + 14, INNER_LO + 12)
-        x1 = min(bx + BLOCK - ROAD_W//2 - 14, INNER_HI_X - 12)
-        y1 = min(by + BLOCK - ROAD_W//2 - 14, INNER_HI_Y - 12)
+        # Block-Inneres bebauen: Fahrbahn -> Gehsteig -> Setback -> Häuser.
+        setback = ROAD_W//2 + SIDEWALK_W + 18
+        x0 = max(bx + setback, INNER_LO + SIDEWALK_W + 12)
+        y0 = max(by + setback, INNER_LO + SIDEWALK_W + 12)
+        x1 = min(bx + BLOCK - setback, INNER_HI_X - SIDEWALK_W - 12)
+        y1 = min(by + BLOCK - setback, INNER_HI_Y - SIDEWALK_W - 12)
         if x1 - x0 < 60 or y1 - y0 < 60:
             continue
         cur_y = y0
@@ -235,7 +346,8 @@ for bx in range(0, WORLD_W, BLOCK):
                 if cur_y + bhp > y1: break
                 surf = make_building(bw_cells, bh, seed); seed += 1
                 rect = pygame.Rect(cur_x, cur_y, bw - 4, bhp - 4)
-                buildings.append((rect, surf))
+                if not rect_overlaps_street_space(rect):
+                    buildings.append((rect, surf))
                 cur_x += bw + random.randint(4, 14)
             cur_y += row_h * 32 + random.randint(8, 18)
 
@@ -260,8 +372,12 @@ class Car:
         self.dead = False
         self._smoke_cd = 0.0
         self._fire_cd = 0.0
+        self.blood_trail = 0.0
+        self._trail_cd = 0.0
+        self.deployed_cops = 0
+        self.yield_timer = 0.0
         # KI
-        self.ai_spd = random.uniform(80, 160)
+        self.ai_spd = random.uniform(150, 240) if is_cop else random.uniform(80, 160)
         self.turn_cd = random.uniform(2, 6)
 
     def take_damage(self, dmg):
@@ -359,14 +475,258 @@ class Car:
                 smoke_particles.append([self.x, self.y, random.uniform(-10, 10),
                                         random.uniform(-45, -18), random.uniform(1.2, 2.2), 2.2, col_r])
 
+    def rect_at(self, x, y):
+        if abs(math.cos(math.radians(self.angle))) >= abs(math.sin(math.radians(self.angle))):
+            w, h = 34, 62
+        else:
+            w, h = 62, 34
+        return pygame.Rect(x - w//2, y - h//2, w, h)
+
     def rect(self):
-        return pygame.Rect(self.x - self.w//2, self.y - self.h//2, self.w, self.h)
+        return self.rect_at(self.x, self.y)
+
+    def look_rect(self, distance=78, width=44):
+        rad = math.radians(self.angle)
+        cx = self.x + math.sin(rad) * distance
+        cy = self.y - math.cos(rad) * distance
+        if self.is_vertical():
+            return pygame.Rect(cx - width//2, cy - 34, width, 68)
+        return pygame.Rect(cx - 34, cy - width//2, 68, width)
+
+    def overlaps_other_car(self):
+        own = self.rect()
+        for other in cars:
+            if other is self or other.dead:
+                continue
+            if own.colliderect(other.rect()):
+                return other
+        return None
+
+    def resolve_car_collision(self, other, controlled):
+        dx = self.x - other.x
+        dy = self.y - other.y
+        dist = math.hypot(dx, dy)
+        if dist < 0.001:
+            ang = math.radians(self.angle)
+            dx = math.sin(ang) or 0.001
+            dy = -math.cos(ang) or -0.001
+            dist = math.hypot(dx, dy)
+        nx = dx / dist
+        ny = dy / dist
+        own_rect = self.rect()
+        other_rect = other.rect()
+        overlap_x = min(own_rect.right, other_rect.right) - max(own_rect.left, other_rect.left)
+        overlap_y = min(own_rect.bottom, other_rect.bottom) - max(own_rect.top, other_rect.top)
+        if overlap_x <= 0 or overlap_y <= 0:
+            return
+        push = max(1.5, min(overlap_x, overlap_y, 10.0))
+        if controlled:
+            self.x += nx * push * 0.2
+            self.y += ny * push * 0.2
+            other.x -= nx * push * 0.55
+            other.y -= ny * push * 0.55
+        else:
+            self.x += nx * push * 0.28
+            self.y += ny * push * 0.28
+            other.x -= nx * push * 0.28
+            other.y -= ny * push * 0.28
+            if other is not in_car:
+                if id(self) < id(other):
+                    self.yield_timer = max(self.yield_timer, 0.22)
+                    self.spd *= 0.35
+                else:
+                    other.yield_timer = max(other.yield_timer, 0.22)
+                    other.spd *= 0.35
+        rel = self.spd - other.spd
+        impulse = max(16.0, abs(rel) * 0.28 + abs(self.spd) * 0.08)
+        self.spd = max(-self.max_spd * 0.4, min(self.max_spd, self.spd - impulse * 0.14))
+        other.spd = max(-other.max_spd * 0.4, min(other.max_spd, other.spd + impulse * (0.32 if controlled else 0.18)))
+        if controlled:
+            other.angle += max(-10, min(10, math.degrees(math.atan2(nx, -ny)) - other.angle)) * 0.05
+        else:
+            self.angle += random.uniform(-4, 4)
+        impact = max(abs(self.spd), abs(other.spd), abs(rel))
+        if impact > 75:
+            dmg = impact * (0.022 if controlled else 0.02)
+            self.take_damage(dmg)
+            other.take_damage(dmg * (0.85 if controlled else 1.0))
+
+    def _wheel_points(self):
+        rad = math.radians(self.angle)
+        cs, sn = math.cos(rad), math.sin(rad)
+        pts = []
+        for dx_, dy_ in ((-self.w*0.38, -self.h*0.28), (self.w*0.38, -self.h*0.28),
+                         (-self.w*0.38, self.h*0.28), (self.w*0.38, self.h*0.28)):
+            wx = self.x + dx_ * cs - dy_ * sn
+            wy = self.y + dx_ * sn + dy_ * cs
+            pts.append((wx, wy))
+        return pts
+
+    def is_vertical(self):
+        return abs(math.cos(math.radians(self.angle))) >= abs(math.sin(math.radians(self.angle)))
+
+    def upcoming_intersection(self, look_ahead=85):
+        rad = math.radians(self.angle)
+        px = self.x + math.sin(rad) * look_ahead
+        py = self.y - math.cos(rad) * look_ahead
+        return intersection_zone_at(px, py, margin=12)
+
+    def should_yield_at_intersection(self):
+        zone = self.upcoming_intersection()
+        if not zone:
+            return False
+        ix, iy, _ = zone
+        my_vertical = self.is_vertical()
+        my_dist = math.hypot(self.x - ix, self.y - iy)
+        for other in cars:
+            if other is self or other.dead:
+                continue
+            other_zone = other.upcoming_intersection(65)
+            if not other_zone:
+                other_zone = intersection_zone_at(other.x, other.y, margin=18)
+            if not other_zone:
+                continue
+            ox, oy, orect = other_zone
+            if abs(ox - ix) > 6 or abs(oy - iy) > 6:
+                continue
+            if other.is_vertical() == my_vertical:
+                continue
+            other_dist = math.hypot(other.x - ix, other.y - iy)
+            other_in_box = orect.collidepoint(other.x, other.y)
+            if other_in_box or other_dist + 10 < my_dist or (abs(other_dist - my_dist) <= 10 and id(other) < id(self)):
+                self.yield_timer = max(self.yield_timer, random.uniform(0.12, 0.28))
+                return True
+        return False
+
+    def car_ahead(self):
+        probe = self.look_rect(82, 46)
+        rad = math.radians(self.angle)
+        fx, fy = math.sin(rad), -math.cos(rad)
+        for other in cars:
+            if other is self or other.dead:
+                continue
+            diff = abs(((other.angle - self.angle + 180) % 360) - 180)
+            if diff > 35:
+                continue
+            ox, oy = other.x - self.x, other.y - self.y
+            ahead = ox * fx + oy * fy
+            if 0 < ahead < 105 and probe.colliderect(other.rect()):
+                return other
+        return None
+
+    def reserve_intersection(self, urgent=False):
+        zone = self.upcoming_intersection(92)
+        if not zone:
+            return True
+        ix, iy, _ = zone
+        key = (ix, iy)
+        owner = intersection_claims.get(key)
+        if owner is None or owner is self or owner.dead:
+            intersection_claims[key] = self
+            return True
+        if urgent and math.hypot(self.x - ix, self.y - iy) + 20 < math.hypot(owner.x - ix, owner.y - iy):
+            intersection_claims[key] = self
+            return True
+        self.yield_timer = max(self.yield_timer, 0.18)
+        return False
+
+    def near_road_end(self, margin=BLOCK):
+        heading = int(round(self.angle / 90.0)) * 90 % 360
+        if heading == 0:
+            return self.y < ROAD_LO + margin
+        if heading == 180:
+            return self.y > ROAD_HI_Y - margin
+        if heading == 90:
+            return self.x > ROAD_HI_X - margin
+        return self.x < ROAD_LO + margin
+
+    def choose_intersection_turn(self, allow_reverse=False):
+        heading = int(round(self.angle / 90.0)) * 90 % 360
+        reverse = (heading + 180) % 360
+        choices = []
+        for angle in (0, 90, 180, 270):
+            if not allow_reverse and angle == reverse:
+                continue
+            lx, ly = lane_center_for_car(angle, self.x, self.y)
+            rad = math.radians(angle)
+            tx = lx + math.sin(rad) * 120
+            ty = ly - math.cos(rad) * 120
+            test = self.rect_at(tx, ty)
+            if rect_on_road(self.rect_at(lx, ly)) and rect_on_road(test):
+                choices.append(angle)
+        if choices:
+            self.angle = random.choice(choices)
+            self.turn_cd = random.uniform(2.5, 6.0)
+            lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
+            self.x = move_toward(self.x, lane_x, 999)
+            self.y = move_toward(self.y, lane_y, 999)
+            return True
+        return False
+
+    def _leave_tire_trail(self, dt):
+        if self.blood_trail <= 0 or abs(self.spd) < 35:
+            self._trail_cd = 0
+            return
+        self.blood_trail = max(0.0, self.blood_trail - dt)
+        self._trail_cd -= dt
+        if self._trail_cd > 0:
+            return
+        self._trail_cd = 0.045
+        for wx, wy in self._wheel_points():
+            blood_splats.append((wx + random.uniform(-1.2, 1.2),
+                                 wy + random.uniform(-1.2, 1.2),
+                                 random.randint(2, 4), TIRE_BLOOD))
+
+    def _run_over_ped(self, ped, group, damage, is_cop=False):
+        global game_over
+        if not self.rect().colliderect(ped.rect()):
+            return False
+        ped.hp -= damage
+        ped.state = 'flee'
+        self.blood_trail = max(self.blood_trail, 3.5)
+        spawn_blood(ped.x, ped.y, 5 if is_cop else 4)
+        if ped.hp <= 0:
+            if ped in group:
+                group.remove(ped)
+            corpses.append((make_corpse(ped), ped.x, ped.y, ped.angle))
+            spawn_blood(ped.x, ped.y, 18 if is_cop else 16)
+            if self is in_car:
+                player.wanted = min(5, player.wanted + 1)
+                player.crime_timer = 30
+                if not is_cop:
+                    player.money += random.randint(10, 35)
+        return True
+
+    def _run_over_player(self, damage):
+        global game_over
+        if in_car is self or not self.rect().colliderect(player.rect()):
+            return False
+        player.hp -= damage
+        self.blood_trail = max(self.blood_trail, 4.0)
+        spawn_blood(player.x, player.y, 6)
+        if player.hp <= 0:
+            corpses.append((make_corpse(player), player.x, player.y, player.angle))
+            spawn_blood(player.x, player.y, 22)
+            game_over = True
+        return True
+
+    def hit_pedestrians(self, speed_mag):
+        if speed_mag < 85 or self.dead:
+            return
+        dmg = max(18, min(120, int(speed_mag * 0.45)))
+        for p in list(peds):
+            self._run_over_ped(p, peds, dmg, is_cop=False)
+        for c in list(cops):
+            self._run_over_ped(c, cops, dmg + 12, is_cop=True)
+        self._run_over_player(dmg + 10)
 
     def update(self, dt, accel=0, steer=0):
         if self.dead:
             self.spd = 0
             return
+        controlled = (self is in_car)
         prev_spd = self.spd
+        prev_x, prev_y = self.x, self.y
         if accel > 0:
             self.spd = min(self.max_spd, self.spd + 260 * dt)
         elif accel < 0:
@@ -380,10 +740,10 @@ class Car:
         dy = -math.cos(rad) * self.spd * dt
         nx, ny = self.x + dx, self.y + dy
         # GTA-Style Wand-Sliding: Velocity wird auf Wand projiziert, Auto richtet sich an Wand aus
-        tx = pygame.Rect(nx - self.w//2, self.y - self.h//2, self.w, self.h)
-        hit_x = any(tx.colliderect(b[0]) for b in buildings)
-        ty = pygame.Rect(self.x - self.w//2, ny - self.h//2, self.w, self.h)
-        hit_y = any(ty.colliderect(b[0]) for b in buildings)
+        tx = self.rect_at(nx, self.y)
+        hit_x = any(tx.colliderect(b[0]) for b in buildings) or (not controlled and not rect_on_road(tx))
+        ty = self.rect_at(self.x, ny)
+        hit_y = any(ty.colliderect(b[0]) for b in buildings) or (not controlled and not rect_on_road(ty))
         mag = math.hypot(dx, dy) or 1
         if hit_x and hit_y:
             # Frontalcrash (Ecke / direkt): hart bremsen + leichter Rückstoß
@@ -412,18 +772,110 @@ class Car:
                 self.take_damage(abs(prev_spd) * perp * 0.045)
         else:
             self.x, self.y = nx, ny
-        # Weltgrenzen
-        self.x = max(40, min(WORLD_W-40, self.x))
-        self.y = max(40, min(WORLD_H-40, self.y))
+        other = self.overlaps_other_car()
+        if other:
+            self.resolve_car_collision(other, controlled)
+        # Weltgrenzen / KI-Strandgrenzen
+        if controlled:
+            self.x = max(40, min(WORLD_W-40, self.x))
+            self.y = max(40, min(WORLD_H-40, self.y))
+        else:
+            self.x = max(ROAD_LO, min(ROAD_HI_X, self.x))
+            self.y = max(ROAD_LO, min(ROAD_HI_Y, self.y))
+        self.hit_pedestrians(abs(self.spd))
+        self._leave_tire_trail(dt)
 
     def ai_update(self, dt):
+        self.yield_timer = max(0.0, self.yield_timer - dt)
+        if self.is_cop:
+            target = in_car if in_car else player
+            dx = target.x - self.x
+            dy = target.y - self.y
+            dist = math.hypot(dx, dy) or 1
+            lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
+            self.x = move_toward(self.x, lane_x, 22 * dt)
+            self.y = move_toward(self.y, lane_y, 22 * dt)
+            desired = math.degrees(math.atan2(dx, -dy))
+            diff = ((desired - self.angle + 180) % 360) - 180
+            steer = max(-1, min(1, diff / 35))
+            target_spd = max(155, min(self.max_spd, 175 + player.wanted * 34))
+            if in_car and dist < 220:
+                target_spd = self.max_spd
+            accel = 1 if abs(self.spd) < target_spd else 0
+            ahead = self.car_ahead()
+            if ahead and ahead is not in_car:
+                accel = -1
+                steer *= 0.45
+            red_light = not traffic_light_allows(self)
+            if red_light or self.yield_timer > 0 or (dist > 110 and self.should_yield_at_intersection()) or not self.reserve_intersection(urgent=dist < 180):
+                accel = -1
+                steer *= 0.35
+            if abs(diff) > 115 and dist < 140:
+                accel = -1
+            speed_guess = max(105, abs(self.spd) + 70)
+            blocked = False
+            if accel >= 0:
+                forward_ang = self.angle + steer * 34
+                rad = math.radians(forward_ang)
+                nx = self.x + math.sin(rad) * speed_guess * dt * 1.2
+                ny = self.y - math.cos(rad) * speed_guess * dt * 1.2
+                test = self.rect_at(nx, ny)
+                blocked = any(test.colliderect(b[0]) for b in AI_OBSTACLES) or not rect_on_road(test)
+                if not blocked:
+                    for c in cars:
+                        if c is self or c.dead:
+                            continue
+                        if c.is_cop and in_car and c is not in_car and math.hypot(c.x - target.x, c.y - target.y) < 90:
+                            continue
+                        if test.colliderect(c.rect()):
+                            blocked = True
+                            break
+                if blocked:
+                    for alt in (-1.0, 1.0, -0.65, 0.65):
+                        ang2 = self.angle + alt * 52
+                        rad2 = math.radians(ang2)
+                        nx2 = self.x + math.sin(rad2) * speed_guess * dt
+                        ny2 = self.y - math.cos(rad2) * speed_guess * dt
+                        test2 = self.rect_at(nx2, ny2)
+                        clear = not any(test2.colliderect(b[0]) for b in AI_OBSTACLES) and rect_on_road(test2)
+                        if clear:
+                            clear = not any(test2.colliderect(c.rect()) for c in cars if c is not self and not c.dead)
+                        if clear:
+                            steer = alt
+                            blocked = False
+                            break
+                if blocked:
+                    accel = -1
+                    steer = -1 if diff > 0 else 1
+                    self.turn_cd = random.uniform(0.6, 1.2)
+            self.update(dt, accel, steer)
+            target_slow = (abs(in_car.spd) < 28) if in_car else True
+            if dist < 120 and target_slow and self.deployed_cops < 2 and len(cops) < player.wanted * 3:
+                side = -1 if random.random() < 0.5 else 1
+                ang = math.radians(self.angle + 90 * side)
+                px = self.x + math.sin(ang) * 34
+                py = self.y - math.cos(ang) * 34
+                pr = pygame.Rect(px - 10, py - 10, 20, 20)
+                if in_city(px, py, 8) and not any(pr.colliderect(b[0]) for b in AI_OBSTACLES):
+                    cop = Ped(px, py, is_cop=True)
+                    cop.shoot_tick = 0.35
+                    cops.append(cop)
+                    self.deployed_cops += 1
+                    self.spd *= 0.35
+            return
         # Auf Straße snappen-Test: in der Nähe einer Straße fahren
+        lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
+        self.x = move_toward(self.x, lane_x, 26 * dt)
+        self.y = move_toward(self.y, lane_y, 26 * dt)
+        if not traffic_light_allows(self) or self.yield_timer > 0 or self.should_yield_at_intersection() or self.car_ahead() or not self.reserve_intersection():
+            self.spd *= max(0.0, 1 - 2.6 * dt)
+            return
         rad = math.radians(self.angle)
         nx = self.x + math.sin(rad) * self.ai_spd * dt
         ny = self.y - math.cos(rad) * self.ai_spd * dt
-        test = pygame.Rect(nx - self.w//2, ny - self.h//2, self.w, self.h)
+        test = self.rect_at(nx, ny)
         # Hindernisse: Häuser + andere Autos
-        blocked = any(test.colliderect(b[0]) for b in AI_OBSTACLES)
+        blocked = any(test.colliderect(b[0]) for b in AI_OBSTACLES) or not rect_on_road(test)
         if not blocked:
             for c in cars:
                 if c is self: continue
@@ -433,11 +885,20 @@ class Car:
         if not blocked and in_car and test.colliderect(in_car.rect()):
             blocked = True
         self.turn_cd -= dt
-        if blocked or self.turn_cd <= 0:
-            self.angle = random.choice([0, 90, 180, 270])
-            self.turn_cd = random.uniform(3, 8)
+        if blocked:
+            self.spd *= max(0.0, 1 - 3.0 * dt)
+            self.yield_timer = max(self.yield_timer, 0.12)
             return
+        at_intersection = abs(self.x - nearest_road_x(self.x)) < 34 and abs(self.y - nearest_road_y(self.y)) < 34
+        if at_intersection and (self.turn_cd <= 0 or self.near_road_end()):
+            self.choose_intersection_turn(allow_reverse=self.near_road_end())
+        prev_x, prev_y = self.x, self.y
         self.x, self.y = nx, ny
+        other = self.overlaps_other_car()
+        if other:
+            self.resolve_car_collision(other, False)
+            self.turn_cd = random.uniform(1.2, 2.6)
+            self.angle = random.choice([0, 90, 180, 270])
 
     def draw(self, surf, cam):
         rot = pygame.transform.rotate(self.sprite, -self.angle)
@@ -530,27 +991,101 @@ class Ped:
 
 # ── Spawning ─────────────────────────────────────────────
 def safe_spawn():
-    while True:
+    for _ in range(300):
+        if random.random() < 0.5:
+            road_y = random.choice(roads_h)
+            side = -1 if random.random() < 0.5 else 1
+            x = random.randint(ROAD_LO + 30, ROAD_HI_X - 30)
+            y = int(road_y + side * (ROAD_W//2 + SIDEWALK_W//2))
+        else:
+            road_x = random.choice(roads_v)
+            side = -1 if random.random() < 0.5 else 1
+            x = int(road_x + side * (ROAD_W//2 + SIDEWALK_W//2))
+            y = random.randint(ROAD_LO + 30, ROAD_HI_Y - 30)
+        r = pygame.Rect(x-12, y-12, 24, 24)
+        if in_city(x, y, 20) and not any(r.colliderect(b[0]) for b in buildings):
+            return x, y
+    for _ in range(300):
         x = random.randint(INNER_LO + 30, INNER_HI_X - 30)
         y = random.randint(INNER_LO + 30, INNER_HI_Y - 30)
         r = pygame.Rect(x-15, y-15, 30, 30)
         if not any(r.colliderect(b[0]) for b in buildings):
             return x, y
+    return ROAD_LO, ROAD_LO
+
+def exit_car_position(car):
+    candidates = []
+    for side in (-1, 1):
+        ang = math.radians(car.angle + 90 * side)
+        candidates.append((car.x + math.sin(ang) * 48, car.y - math.cos(ang) * 48))
+    for back in (42, -42):
+        ang = math.radians(car.angle)
+        candidates.append((car.x - math.sin(ang) * back, car.y + math.cos(ang) * back))
+    for x, y in candidates:
+        r = pygame.Rect(x - 10, y - 10, 20, 20)
+        if in_city(x, y, 12) and not any(r.colliderect(b[0]) for b in buildings):
+            return x, y
+    return safe_spawn()
+
+def car_spawn_clear(x, y, margin=22):
+    r = pygame.Rect(x - 23, y - 39, 46, 78)
+    if rect_hits_city_edge(r):
+        return False
+    probe = r.inflate(margin * 2, margin * 2)
+    if any(probe.colliderect(b[0]) for b in buildings):
+        return False
+    if any(probe.colliderect(c.rect()) for c in cars):
+        return False
+    return True
 
 def road_spawn():
-    if random.random() < 0.5:
-        x = random.randint(INNER_LO + 30, INNER_HI_X - 30)
-        y = random.choice(roads_h) + random.choice([-25, 25])
-    else:
-        x = random.choice(roads_v) + random.choice([-25, 25])
-        y = random.randint(INNER_LO + 30, INNER_HI_Y - 30)
-    return x, y
+    for _ in range(200):
+        if random.random() < 0.5:
+            angle = random.choice([90, 270])
+            x = random.randint(ROAD_LO + 50, ROAD_HI_X - 50)
+            y = random.choice(roads_h) + (28 if angle == 90 else -28)
+        else:
+            angle = random.choice([0, 180])
+            x = random.choice(roads_v) + (28 if angle == 0 else -28)
+            y = random.randint(ROAD_LO + 50, ROAD_HI_Y - 50)
+        if car_spawn_clear(x, y):
+            return x, y, angle
+    for _ in range(200):
+        x = random.randint(INNER_LO + 60, INNER_HI_X - 60)
+        y = random.randint(INNER_LO + 60, INNER_HI_Y - 60)
+        if car_spawn_clear(x, y):
+            angle = random.choice([0, 90, 180, 270])
+            lx, ly = lane_center_for_car(angle, x, y)
+            return lx, ly, angle
+    return WORLD_W // 2, WORLD_H // 2, random.choice([0, 90, 180, 270])
+
+def cop_car_spawn_near(tx, ty):
+    for _ in range(180):
+        ang = random.uniform(0, math.tau)
+        dist = random.uniform(420, 760)
+        sx = tx + math.cos(ang) * dist
+        sy = ty + math.sin(ang) * dist
+        sx = max(ROAD_LO + 50, min(ROAD_HI_X - 50, sx))
+        sy = max(ROAD_LO + 50, min(ROAD_HI_Y - 50, sy))
+        if random.random() < 0.5:
+            angle = random.choice([90, 270])
+            x = int(sx)
+            y = random.choice(roads_h) + (28 if angle == 90 else -28)
+        else:
+            angle = random.choice([0, 180])
+            x = random.choice(roads_v) + (28 if angle == 0 else -28)
+            y = int(sy)
+        if car_spawn_clear(x, y, margin=30):
+            return x, y, angle
+    return road_spawn()
 
 cars = []
 for _ in range(50):
-    x, y = road_spawn()
+    x, y, angle = road_spawn()
     col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
-    cars.append(Car(x, y, col))
+    car = Car(x, y, col)
+    car.angle = angle
+    cars.append(car)
 
 peds = []
 for _ in range(60):
@@ -559,9 +1094,11 @@ for _ in range(60):
 
 cops = []
 bullets = []  # (x, y, vx, vy, ttl, from_cop)
+intersection_claims = {}
 
 # ── Spieler ──────────────────────────────────────────────
-player = Ped(WORLD_W//2, WORLD_H//2)
+player_x, player_y = safe_spawn()
+player = Ped(player_x, player_y)
 player.frames = make_ped_frames((40, 100, 200), hair=(30,20,15))
 player.sprite = player.frames[0]
 player.hp = 100
@@ -611,6 +1148,86 @@ def spawn_blood(x, y, amount=14):
         blood_splats.append((ox, oy, random.randint(4, 9),
                              (random.randint(110,160), 0, 0)))
 
+def draw_star(surf, x, y, outer_r, color, inner_color=(255, 235, 120)):
+    pts = []
+    inner_r = outer_r * 0.45
+    for i in range(10):
+        ang = -math.pi / 2 + i * math.pi / 5
+        r = outer_r if i % 2 == 0 else inner_r
+        pts.append((x + math.cos(ang) * r, y + math.sin(ang) * r))
+    pygame.draw.polygon(surf, color, pts)
+    pygame.draw.polygon(surf, inner_color, pts, 2)
+
+def draw_signal_head(surf, x, y, active, vertical=True):
+    pole_col = (55, 55, 58)
+    housing = (28, 30, 32)
+    rim = (8, 9, 10)
+    dim_red = (75, 20, 18)
+    dim_yellow = (78, 64, 22)
+    dim_green = (18, 70, 28)
+    red = (235, 40, 34) if active in ('red', 'red_yellow') else dim_red
+    yellow = (240, 190, 45) if active in ('yellow', 'red_yellow') else dim_yellow
+    green = (45, 225, 80) if active == 'green' else dim_green
+    if vertical:
+        pygame.draw.rect(surf, pole_col, (x - 2, y + 13, 4, 18))
+        box = pygame.Rect(x - 8, y - 16, 16, 32)
+        lights = [(x, y - 9, red), (x, y, yellow), (x, y + 9, green)]
+    else:
+        pygame.draw.rect(surf, pole_col, (x - 31, y - 2, 18, 4))
+        box = pygame.Rect(x - 16, y - 8, 32, 16)
+        lights = [(x - 9, y, red), (x, y, yellow), (x + 9, y, green)]
+    pygame.draw.rect(surf, housing, box, border_radius=4)
+    pygame.draw.rect(surf, rim, box, 1, border_radius=4)
+    for lx, ly, col in lights:
+        pygame.draw.circle(surf, rim, (int(lx), int(ly)), 4)
+        pygame.draw.circle(surf, col, (int(lx), int(ly)), 3)
+        if col not in (dim_red, dim_yellow, dim_green):
+            pygame.draw.circle(surf, tuple(min(255, c + 35) for c in col), (int(lx - 1), int(ly - 1)), 1)
+
+def draw_crosswalks(surf, cam):
+    stripe = (232, 232, 220)
+    stripe_w = 6
+    gap = 8
+    span = ROAD_W - 18
+    offset = ROAD_W // 2 + 10
+    for ix in roads_v:
+        sx = ix - cam[0]
+        if sx < -120 or sx > W + 120:
+            continue
+        for iy in roads_h:
+            sy = iy - cam[1]
+            if sy < -120 or sy > H + 120:
+                continue
+            y_top = sy - offset
+            y_bottom = sy + offset - stripe_w
+            x_left = sx - span // 2
+            for x in range(int(x_left), int(x_left + span), stripe_w + gap):
+                pygame.draw.rect(surf, stripe, (x, y_top, stripe_w, 18))
+                pygame.draw.rect(surf, stripe, (x, y_bottom, stripe_w, 18))
+            x_left_side = sx - offset
+            x_right_side = sx + offset - stripe_w
+            y_top_side = sy - span // 2
+            for y in range(int(y_top_side), int(y_top_side + span), stripe_w + gap):
+                pygame.draw.rect(surf, stripe, (x_left_side, y, 18, stripe_w))
+                pygame.draw.rect(surf, stripe, (x_right_side, y, 18, stripe_w))
+
+def draw_traffic_lights(surf, cam):
+    for ix in roads_v:
+        sx = ix - cam[0]
+        if sx < -80 or sx > W + 80:
+            continue
+        for iy in roads_h:
+            sy = iy - cam[1]
+            if sy < -80 or sy > H + 80:
+                continue
+            axis, phase = traffic_light_state(ix, iy)
+            ns_state = phase if axis == 'NS' else 'red'
+            ew_state = phase if axis == 'EW' else 'red'
+            ns_pos = (int(sx - ROAD_W//2 - SIDEWALK_W//2), int(sy - ROAD_W//2 - SIDEWALK_W//2))
+            ew_pos = (int(sx + ROAD_W//2 + SIDEWALK_W//2), int(sy - ROAD_W//2 - SIDEWALK_W//2))
+            draw_signal_head(surf, ns_pos[0], ns_pos[1], ns_state, vertical=True)
+            draw_signal_head(surf, ew_pos[0], ew_pos[1], ew_state, vertical=False)
+
 # ── Hintergrund vorrendern ───────────────────────────────
 def draw_world_bg(surf, cam):
     surf.fill(WATER_DEEP)
@@ -644,41 +1261,49 @@ def draw_world_bg(surf, cam):
             sx, sy = i - cam[0], edge - cam[1]
             if -10 < sx < W and -10 < sy < H:
                 pygame.draw.circle(surf, (200, 180, 130), (int(sx), int(sy)), 2)
-    # Straßen (Bürgersteig + Asphalt + Linien) — strikt innerhalb der Stadt
-    rx = INNER_LO - cam[0]
-    rw = INNER_HI_X - INNER_LO
-    ry = INNER_LO - cam[1]
-    rh = INNER_HI_Y - INNER_LO
+    # Straßen: Gehsteige liegen als eigener Ring um die Fahrbahn.
+    sidewalk_total = ROAD_W + SIDEWALK_W * 2
+    road_ext = sidewalk_total // 2
+    rx = ROAD_LO - road_ext - cam[0]
+    rw = ROAD_HI_X - ROAD_LO + road_ext * 2
+    ry = ROAD_LO - road_ext - cam[1]
+    rh = ROAD_HI_Y - ROAD_LO + road_ext * 2
     for y in roads_h:
         sy = y - cam[1]
-        if -ROAD_W-20 < sy < H+ROAD_W+20:
-            pygame.draw.rect(surf, SIDEW, (rx, sy - ROAD_W//2 - 8, rw, ROAD_W + 16))
+        if -sidewalk_total-20 < sy < H+sidewalk_total+20:
+            pygame.draw.rect(surf, SIDEW, (rx, sy - sidewalk_total//2, rw, sidewalk_total))
     for x in roads_v:
         sx = x - cam[0]
-        if -ROAD_W-20 < sx < W+ROAD_W+20:
-            pygame.draw.rect(surf, SIDEW, (sx - ROAD_W//2 - 8, ry, ROAD_W + 16, rh))
+        if -sidewalk_total-20 < sx < W+sidewalk_total+20:
+            pygame.draw.rect(surf, SIDEW, (sx - sidewalk_total//2, ry, sidewalk_total, rh))
     for y in roads_h:
         sy = y - cam[1]
         if -ROAD_W < sy < H+ROAD_W:
             pygame.draw.rect(surf, ASPHALT, (rx, sy - ROAD_W//2, rw, ROAD_W))
+            pygame.draw.line(surf, (125, 125, 130), (rx, sy - ROAD_W//2), (rx + rw, sy - ROAD_W//2), 2)
+            pygame.draw.line(surf, (125, 125, 130), (rx, sy + ROAD_W//2), (rx + rw, sy + ROAD_W//2), 2)
     for x in roads_v:
         sx = x - cam[0]
         if -ROAD_W < sx < W+ROAD_W:
             pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, ry, ROAD_W, rh))
+            pygame.draw.line(surf, (125, 125, 130), (sx - ROAD_W//2, ry), (sx - ROAD_W//2, ry + rh), 2)
+            pygame.draw.line(surf, (125, 125, 130), (sx + ROAD_W//2, ry), (sx + ROAD_W//2, ry + rh), 2)
+    draw_crosswalks(surf, cam)
     for y in roads_h:
         sy = y - cam[1]
         if -10 < sy < H+10:
-            for dx in range(INNER_LO, INNER_HI_X, 50):
+            for dx in range(ROAD_LO - road_ext, ROAD_HI_X + road_ext, 50):
                 sx = dx - cam[0]
                 if -30 < sx < W:
                     pygame.draw.rect(surf, LINE, (sx, sy - 2, 28, 4))
     for x in roads_v:
         sx = x - cam[0]
         if -10 < sx < W+10:
-            for dy in range(INNER_LO, INNER_HI_Y, 50):
+            for dy in range(ROAD_LO - road_ext, ROAD_HI_Y + road_ext, 50):
                 sy = dy - cam[1]
                 if -30 < sy < H:
                     pygame.draw.rect(surf, LINE, (sx - 2, sy, 4, 28))
+    draw_traffic_lights(surf, cam)
 
 # ── Spielschleife ────────────────────────────────────────
 def fire():
@@ -705,11 +1330,13 @@ def aim_to_mouse():
     return math.degrees(math.atan2(mx - cx, -(my - cy)))
 
 cam = [0, 0]
+traffic_time = 0.0
 running = True
 game_over = False
 
 while running:
     dt = clock.tick(60) / 1000
+    traffic_time += dt
 
     for e in pygame.event.get():
         if e.type == pygame.QUIT: running = False
@@ -722,8 +1349,7 @@ while running:
                 weapon = e.key - pygame.K_1
             if e.key == pygame.K_e and not game_over:
                 if in_car:
-                    player.x = in_car.x + 40
-                    player.y = in_car.y
+                    player.x, player.y = exit_car_position(in_car)
                     in_car = None
                 else:
                     for c in cars:
@@ -795,16 +1421,21 @@ while running:
                 player.wanted = max(0, player.wanted - 1)
                 player.crime_timer = 25
             cop_spawn -= dt
-            if cop_spawn <= 0 and len(cops) < player.wanted * 3:
+            active_cop_cars = sum(1 for c in cars if c.is_cop and not c.dead)
+            if cop_spawn <= 0 and active_cop_cars < max(1, player.wanted):
                 cop_spawn = max(2, 8 - player.wanted*1.5)
-                ang = random.uniform(0, 6.28)
-                cx = player.x + math.cos(ang) * 600
-                cy = player.y + math.sin(ang) * 600
-                cops.append(Ped(cx, cy, is_cop=True))
+                cx, cy, angle = cop_car_spawn_near(player.x, player.y)
+                car = Car(cx, cy, (245,245,250), is_cop=True)
+                car.angle = angle
+                cars.append(car)
         else:
             cops.clear()
+            for c in list(cars):
+                if c.is_cop and c is not in_car:
+                    cars.remove(c)
 
         # Verkehr
+        intersection_claims.clear()
         for c in cars:
             if c is in_car: continue
             c.ai_update(dt)
@@ -886,10 +1517,13 @@ while running:
             c.update_fx(dt)
             if c.dead:
                 cars.remove(c)
-                # Ersatz spawnen, damit Verkehr nicht ausstirbt
-                nx, ny = road_spawn()
-                col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
-                cars.append(Car(nx, ny, col))
+                if not c.is_cop:
+                    # Ersatz spawnen, damit Verkehr nicht ausstirbt
+                    nx, ny, angle = road_spawn()
+                    col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
+                    car = Car(nx, ny, col)
+                    car.angle = angle
+                    cars.append(car)
         # Rauch-Partikel
         for sp_ in list(smoke_particles):
             sp_[4] -= dt
@@ -1003,7 +1637,8 @@ while running:
     screen.blit(FONT.render(WPN_NAMES[weapon], 1, (240,220,80)), (10, 75))
     a = ammo.get(weapon, 0) if weapon != 0 else "∞"
     screen.blit(FONT.render(f"Munition {a}", 1, (255,255,255)), (10, 100))
-    screen.blit(FONT.render("★"*player.wanted, 1, (255,200,40)), (W//2-40, 14))
+    for i in range(player.wanted):
+        draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
     screen.blit(FONT.render("WASD bewegen | Maus zielen | LMB / SPACE schießen | E Auto | F rauben | 1-5 Waffe (5=MG)",
                             1, (230,230,230)), (10, H-26))
     if in_car:
