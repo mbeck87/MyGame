@@ -1194,22 +1194,30 @@ def draw_crosswalks(surf, cam):
         sx = ix - cam[0]
         if sx < -120 or sx > W + 120:
             continue
+        has_west = ix != ROAD_LO
+        has_east = ix != ROAD_HI_X
         for iy in roads_h:
             sy = iy - cam[1]
             if sy < -120 or sy > H + 120:
                 continue
+            has_north = iy != ROAD_LO
+            has_south = iy != ROAD_HI_Y
             y_top = sy - offset
             y_bottom = sy + offset - stripe_w
             x_left = sx - span // 2
             for x in range(int(x_left), int(x_left + span), stripe_w + gap):
-                pygame.draw.rect(surf, stripe, (x, y_top, stripe_w, 18))
-                pygame.draw.rect(surf, stripe, (x, y_bottom, stripe_w, 18))
+                if has_north:
+                    pygame.draw.rect(surf, stripe, (x, y_top, stripe_w, 18))
+                if has_south:
+                    pygame.draw.rect(surf, stripe, (x, y_bottom, stripe_w, 18))
             x_left_side = sx - offset
             x_right_side = sx + offset - stripe_w
             y_top_side = sy - span // 2
             for y in range(int(y_top_side), int(y_top_side + span), stripe_w + gap):
-                pygame.draw.rect(surf, stripe, (x_left_side, y, 18, stripe_w))
-                pygame.draw.rect(surf, stripe, (x_right_side, y, 18, stripe_w))
+                if has_west:
+                    pygame.draw.rect(surf, stripe, (x_left_side, y, 18, stripe_w))
+                if has_east:
+                    pygame.draw.rect(surf, stripe, (x_right_side, y, 18, stripe_w))
 
 def draw_traffic_lights(surf, cam):
     for ix in roads_v:
@@ -1219,6 +1227,10 @@ def draw_traffic_lights(surf, cam):
         for iy in roads_h:
             sy = iy - cam[1]
             if sy < -80 or sy > H + 80:
+                continue
+            # An Ecken (zwei Perimeterstraßen) keine Ampel.
+            is_corner = (ix in (ROAD_LO, ROAD_HI_X)) and (iy in (ROAD_LO, ROAD_HI_Y))
+            if is_corner:
                 continue
             axis, phase = traffic_light_state(ix, iy)
             ns_state = phase if axis == 'NS' else 'red'
