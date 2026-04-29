@@ -8,46 +8,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Venv aktivieren und Spiel starten
 source venv/bin/activate
 python game2d.py
+# oder
+python -m game2d.main
 ```
 
-Das Spiel läuft direkt ohne Build-Schritt. Abhängigkeiten: `pygame` (im venv vorinstalliert via Panda3D-Distribution).
+Abhängigkeiten: `pygame` (im venv vorinstalliert).
 
 ## Architektur
 
-Einzelne Datei: `game2d.py` (~1939 Zeilen), kein Modulsystem. Keine externen Assets — alle Grafiken werden prozedural zur Laufzeit gezeichnet.
+Das Spiel ist als Python-Paket `game2d/` strukturiert. `game2d.py` im Repo-Root ist nur ein 11-Zeilen-Shim, der `game2d.main:main()` aufruft.
 
-**Aufbau (grob):**
+```
+game2d/
+├── __init__.py
+├── main.py              # Einstiegspunkt: pygame init, GameState, Hauptschleife
+├── config.py            # W, H, WORLD_*, BLOCK, ROAD_W, Farben, WPN_*, PICKUP_*
+├── state.py             # @dataclass GameState + Singleton-Accessor (init/current)
+├── persistence.py       # scores.json, name_input_screen
+├── world/
+│   ├── geometry.py      # in_water, in_city, rect_on_road, lane_center_for_car, …
+│   ├── generation.py    # build_world() — Wasser-Ring, Straßenraster, Häuser
+│   ├── traffic.py       # LIGHT_*-Konstanten, traffic_light_state, _allows
+│   └── spawning.py      # safe_spawn, road_spawn, cop_car_spawn_near, exit_car_position
+├── entities/
+│   ├── car.py           # class Car
+│   └── ped.py           # class Ped
+├── render/
+│   ├── sprites.py       # make_car_sprite, make_ped_frames, make_building, …
+│   ├── world_bg.py      # draw_world_bg, draw_crosswalks, draw_traffic_lights
+│   └── hud.py           # draw_star
+└── systems/
+    ├── weapons.py       # fire(), aim_to_mouse()
+    └── effects.py       # spawn_blood, make_corpse, do_explosion, trigger_game_over
+```
 
-1. **Scoreboard** (~13): `scores.json` speichert Top-20-Scores + letzten Namen. `name_input_screen()` = Startbildschirm.
+Keine externen Assets — alle Grafiken werden prozedural zur Laufzeit gezeichnet.
 
-2. **Farb-Konstanten** (~97): Alle Farben als globale Tupel (`ASPHALT`, `GRASS`, `SKIN`, `COP_BLUE`, etc.).
+### Zentraler GameState
 
-3. **Sprite-Generatoren** (~133): Alle pygame.Surface-Objekte werden hier erzeugt — siehe Sprite-Spezifikationen.
+`game2d/state.py` definiert `@dataclass GameState` mit allen Spielzustands-Feldern: Listen (cars, peds, cops, bullets, rockets, particles, …), Spielerzustand (player, in_car, weapon, ammo, fire_cd, …), Welt-Geometrie (buildings, roads_h/v, AI_OBSTACLES, WATER_RECTS), Loop-State (cam, traffic_time, game_over, …).
 
-4. **Weltgenerierung** (~282): Grid aus BLOCK-px-Blöcken. Gebäude deterministisch per `random.seed(7)`. `buildings[]` als `(pygame.Rect, Surface)`-Tupel. `AI_OBSTACLES = buildings + WATER_RECTS`.
+Module greifen via `from game2d.state import current` auf den aktuellen `GameState` zu. `main.py` ruft einmalig `state.init(GameState(...))` auf, alle anderen Module nutzen `current()`.
 
-5. **Traffic-System** (~354): Ampeln mit 4 Phasen (red/red_yellow/green/yellow). `traffic_light_state(ix, iy)` → `(axis, phase)`.
+### Spielfluss in `main.py`
 
-6. **Klasse `Car`** (~443): `max_spd` 380 (Cop) / 320 (Normal). Bei `hp <= 0` → `burning` → `explode()`. Kollisions-Rect: 34×62 (vertikal) oder 62×34 (horizontal).
-
-7. **Klasse `Ped`** (~1004): Cops + Passanten. `state = 'wander' | 'flee'`. Cops: HP 200, Passanten: HP 60.
-
-8. **Spielschleife** (~1503): 60 FPS, Kamera Smooth-Follow. Wanted, Verkehr, NPCs, Bullets, Pickups, Render.
-
-**Wichtige Globals:** `player`, `in_car`, `weapon`, `ammo`, `cam`, `game_over`, `traffic_time`, `intersection_claims`.
-
-**Globale Listen:** `cars`, `peds`, `cops`, `bullets`, `blood_splats`, `blood_particles`, `corpses`, `wrecks`, `explosions`, `fire_particles`, `smoke_particles`.
+1. `pygame.init()`, Display + Fonts erzeugen
+2. `name_input_screen()` (Startbildschirm)
+3. `GameState` erzeugen, `state.init(state)` setzen
+4. `build_world(state)` baut Wasser, Straßen, Häuser, AI_OBSTACLES
+5. Initial-Verkehr (50 Autos) und NPCs (60) spawnen
+6. Spieler initialisieren, Pickups verteilen
+7. Hauptschleife (60 FPS): Events, Bewegung, KI, Bullets, Partikel, Rendering, HUD
 
 ## Sprite-Spezifikationen
 
 | Sprite | Größe | Funktion |
 |--------|-------|----------|
-| Auto (normal) | 46×78 px | `make_car_sprite(body_col)` |
-| Auto (Cop) | 46×78 px | `make_cop_car_sprite()` |
-| Fußgänger-Frame | 20×24 px | `_draw_ped_frame(...)` |
-| Gebäude-Zelle | 32×32 px | Basis für `make_building()` |
+| Auto (normal) | 46×78 px | `render.sprites.make_car_sprite(body_col)` |
+| Auto (Cop) | 46×78 px | `render.sprites.make_cop_car_sprite()` |
+| Fußgänger-Frame | 20×24 px | `render.sprites._draw_ped_frame(...)` |
+| Gebäude-Zelle | 32×32 px | Basis für `render.sprites.make_building()` |
 
-Sprite-Koordinatensystem: Y-Achse zeigt nach unten. Fußgänger-Sprites: "vorn" = -y (oben), werden beliebig rotiert.
+Sprite-Koordinatensystem: Y-Achse zeigt nach unten. Fußgänger-Sprites: "vorn" = -y (oben).
 
 ## Steuerung
 
@@ -62,7 +84,7 @@ Sprite-Koordinatensystem: Y-Achse zeigt nach unten. Fußgänger-Sprites: "vorn" 
 | R | Neustart (nach Game Over) |
 | ESC | Beenden |
 
-## Waffensystem
+## Waffensystem (`config.py`)
 
 | Index | Name | Rate (s) | Schaden | Pellets | Spread | Auto |
 |-------|------|----------|---------|---------|--------|------|
@@ -73,19 +95,19 @@ Sprite-Koordinatensystem: Y-Achse zeigt nach unten. Fußgänger-Sprites: "vorn" 
 | 4 | MG | 0.05 | 28 | 1 | 0.06 | Ja |
 | 5 | Raketenwerfer | 1.6 | 200 (Explosion) | 1 | 0 | Nein |
 
-Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten. `ammo = {1: 80, ...}`, Rakete spawnt `rockets[]`-Eintrag.
+Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten.
 
-## Spieler-Objekt (`player`)
+## Spieler-Objekt
 
-`player` ist eine `Ped`-Instanz mit extra Feldern:
-- `hp = 100` — Cops: 200, Passanten: 60, Autos: 200
+`state.player` ist eine `Ped`-Instanz mit Extra-Feldern:
+- `hp = 100` (Cops 200, Passanten 60, Autos 200)
 - `money`, `wanted` (0–5), `crime_timer`, `aim_angle`
 - Sprite: blau `(40, 100, 200)`, Haare dunkel `(30, 20, 15)`
 - Spieler-Sprite folgt Laufrichtung (WASD), **nicht** Mauszeiger — `aim_angle` steuert Schussrichtung separat
 
 ## Pickup-System
 
-`pickups[]` als `[x, y, kind, respawn_cd]`. Respawn nach 20s.
+`state.pickups` als `[x, y, kind, respawn_cd]`. Respawn nach 20s. Konstanten in `config.py` (`PICKUP_AMMO`, `PICKUP_COLOR`, `PICKUP_LABEL`, `PICKUP_RESPAWN`).
 
 | Kind | Farbe | Inhalt |
 |------|-------|--------|
@@ -95,18 +117,18 @@ Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten. `ammo = {1: 80, ...}`, 
 | 4 | Rot | MG +120 |
 | 5 | Lila | RPG +3 |
 
-## Render-Reihenfolge
+## Render-Reihenfolge (in `main.py`)
 
-1. Weltboden (`draw_world_bg`) — Wasser, Sand, Gras, Straßen, Ampeln
-2. `blood_splats` (permanent, unter allem)
-3. Pickups
-4. Leichen (`corpses`)
-5. Gebäude (`buildings`)
-6. Wracks (`wrecks`)
-7. Autos (`cars`)
-8. Passanten (`peds`), Cops (`cops`), Spieler
-9. Partikel: Blut, Bullets, Raketen, Feuer, Rauch, Explosionen
-10. HUD (HP-Balken, Geld, Waffe, Wanted-Sterne)
+1. `draw_world_bg(screen, icam)` — Wasser, Sand, Gras, Straßen, Ampeln
+2. `state.blood_splats` (permanent, unter allem)
+3. `state.pickups`
+4. `state.corpses`
+5. `state.buildings`
+6. `state.wrecks`
+7. `state.cars`
+8. `state.peds`, `state.cops`, Spieler
+9. Partikel: `blood_particles`, `bullets`, `rockets`, `fire_particles`, `smoke_particles`, `explosions`
+10. HUD (HP-Balken, Geld, Waffe, Wanted-Sterne, Game Over)
 
 ## Wanted-System
 
@@ -115,7 +137,7 @@ Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten. `ammo = {1: 80, ...}`, 
 - Cops spawnen per `cop_car_spawn_near()` in 420–760px Radius vom Spieler
 - Cop-Spawn-Rate: `max(2, 8 - wanted*1.5)` Sekunden zwischen Spawns
 - Bei `wanted == 0`: alle Cop-Autos + Fuß-Cops sofort entfernt
-- Wanted steigt bei: Passant überfahr/erschießen, Cop töten, Raub (F), Explosion
+- Wanted steigt bei: Passant überfahren/erschießen, Cop töten, Raub (F), Explosion
 
 ## Geld-System
 
@@ -136,33 +158,33 @@ Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten. `ammo = {1: 80, ...}`, 
 
 ## Game Over & Scoreboard
 
-- `trigger_game_over()` setzt `game_over = True`, speichert Score in `scores.json`
+- `trigger_game_over()` in `systems/effects.py` setzt `state.game_over = True`, speichert Score in `scores.json`
 - Top-20 werden gespeichert, eigener Eintrag wird gelb hervorgehoben
 - `scores.json` speichert auch `last_name` für Vorausfüllung beim nächsten Start
-- Neustart: `os.execv(sys.executable, ...)` — vollständiger Prozess-Neustart
+- Neustart (R): `os.execv(sys.executable, ...)` — vollständiger Prozess-Neustart
 
-## Spawning-Logik
+## Spawning-Logik (`world/spawning.py`)
 
 - `safe_spawn()` — findet freie Position für Fußgänger (bevorzugt Gehsteig)
 - `road_spawn()` — findet freie Fahrbahnposition + Ausrichtung für KI-Autos
 - `cop_car_spawn_near(tx, ty)` — spawnt Cop-Auto in 420–760px Umkreis
 - `exit_car_position(car)` — sucht freie Position seitlich/hinten vom Auto
 
-## Partikel-Formate
+## Partikel-Formate (Listen auf `state`)
 
 ```python
-bullets        = [x, y, vx, vy, ttl, from_cop, dmg]
-blood_particles= [x, y, vx, vy, ttl, radius]
-smoke_particles= [x, y, vx, vy, ttl, max_ttl, radius]
-fire_particles = [x, y, vx, vy, ttl, max_ttl, radius]
-explosions     = [x, y, t, max_t, max_radius]
-rockets        = [x, y, vx, vy, ttl]
-wrecks         = (sprite, x, y, angle, dents_list)
-corpses        = (sprite, x, y, angle)
-blood_splats   = (x, y, radius, color)
+bullets         = [x, y, vx, vy, ttl, from_cop, dmg]
+blood_particles = [x, y, vx, vy, ttl, radius]
+smoke_particles = [x, y, vx, vy, ttl, max_ttl, radius]
+fire_particles  = [x, y, vx, vy, ttl, max_ttl, radius]
+explosions      = [x, y, t, max_t, max_radius]
+rockets         = [x, y, vx, vy, ttl]
+wrecks          = (sprite, x, y, angle, dents_list)
+corpses         = (sprite, x, y, angle)
+blood_splats    = (x, y, radius, color)
 ```
 
-## Wichtige Konstanten
+## Wichtige Konstanten (`config.py`)
 
 ```python
 WORLD_W, WORLD_H = 6000, 6000
