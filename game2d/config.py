@@ -42,12 +42,12 @@ ROAD_HI_X  = INNER_HI_X - ROAD_EDGE_MARGIN
 ROAD_HI_Y  = INNER_HI_Y - ROAD_EDGE_MARGIN
 
 # ── Waffen-Definitionen ──────────────────────────────────
-WPN_NAMES = ['Fäuste', 'Pistole', 'SMG', 'Schrotflinte', 'MG', 'Raketenwerfer']
-WPN_RATE  = [0.5, 0.4, 0.08, 0.85, 0.05, 1.6]
-WPN_DMG   = [25, 35, 15, 80, 28, 0]   # Rakete: Schaden in do_explosion()
-WPN_PEL   = [1, 1, 1, 6, 1, 1]
-WPN_SPRD  = [0, 0.03, 0.08, 0.22, 0.06, 0]
-WPN_AUTO  = [False, False, True, False, True, False]
+WPN_NAMES = ['Fäuste', 'Pistole', 'SMG', 'Schrotflinte', 'MG', 'Raketenwerfer', 'Lichtschwert']
+WPN_RATE  = [0.5, 0.4, 0.08, 0.85, 0.05, 1.6, 0.55]
+WPN_DMG   = [25, 35, 15, 80, 28, 0, 145]   # Rakete: Schaden in do_explosion()
+WPN_PEL   = [1, 1, 1, 6, 1, 1, 1]
+WPN_SPRD  = [0, 0.03, 0.08, 0.22, 0.06, 0, 0]
+WPN_AUTO  = [False, False, True, False, True, False, False]
 
 # ── Pickup-Definitionen ──────────────────────────────────
 PICKUP_AMMO    = {2: 60, 3: 10, 4: 120, 5: 3}

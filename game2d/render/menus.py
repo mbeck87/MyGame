@@ -81,5 +81,5 @@ def draw_overlay_menu(screen, state, big, med, font):
     for i, line in enumerate(lines):
         img = font.render(line, 1, text_col)
         screen.blit(img, (box.x + 70, box.y + 150 + i * 30))
-    foot = font.render("[1-6] Buy/use   [ESC/P] Close", 1, muted_col)
+    foot = font.render("[1-7] Buy/use   [ESC/P] Close", 1, muted_col)
     screen.blit(foot, (W // 2 - foot.get_width() // 2, box.bottom - 42))

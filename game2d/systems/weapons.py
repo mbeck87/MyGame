@@ -25,12 +25,64 @@ def aim_to_mouse():
     return math.degrees(math.atan2(mx - cx, -(my - cy)))
 
 
+def _angle_diff(a, b):
+    return abs(((a - b + 180) % 360) - 180)
+
+
+def _lightsaber_swing():
+    s = current()
+    if s.in_car:
+        return
+    p = s.player
+    swing_range = 56
+    swing_arc = 78
+    s.lightsaber_swings.append([p.aim_angle, 0.0, 0.18])
+
+    for car in s.cars:
+        if car.dead or car is s.in_car:
+            continue
+        dx, dy = car.x - p.x, car.y - p.y
+        dist = math.hypot(dx, dy)
+        if dist <= swing_range + 12 and _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
+            car.take_damage(WPN_DMG[6])
+            audio.play('hit_metal', volume=0.7, pos=(car.x, car.y))
+            p.wanted = min(5, p.wanted + 1)
+            p.crime_timer = 30
+
+    for ped, group, reward in (
+        *((ped, s.peds, (15, 45)) for ped in list(s.peds)),
+        *((cop, s.cops, (50, 90)) for cop in list(s.cops)),
+    ):
+        dx, dy = ped.x - p.x, ped.y - p.y
+        dist = math.hypot(dx, dy)
+        if dist > swing_range or _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) > swing_arc * 0.5:
+            continue
+        from game2d.systems.effects import make_corpse, spawn_blood
+        from game2d.systems.services import add_money
+
+        ped.hp -= WPN_DMG[6]
+        ped.state = 'flee'
+        spawn_blood(ped.x, ped.y, 8)
+        audio.play('hit_flesh', pos=(ped.x, ped.y))
+        if ped.hp <= 0 and ped in group:
+            group.remove(ped)
+            s.corpses.append((make_corpse(ped), ped.x, ped.y, ped.angle))
+            spawn_blood(ped.x, ped.y, 20)
+            add_money(p, random.randint(*reward))
+            p.wanted = min(5, p.wanted + 1)
+            p.crime_timer = 30
+
+
 def fire():
     """Aktuelle Waffe abfeuern (state.weapon). Setzt state.fire_cd."""
     s = current()
     weapon = s.weapon
     if weapon == 0: return
-    if s.ammo[weapon] <= 0: return
+    if weapon != 6 and s.ammo[weapon] <= 0: return
+    if weapon == 6:
+        s.fire_cd = WPN_RATE[weapon]
+        _lightsaber_swing()
+        return
     s.ammo[weapon] -= 1
     s.fire_cd = WPN_RATE[weapon]
     if s.in_car:

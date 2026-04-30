@@ -86,9 +86,9 @@ def main():
     player.step_cd = 0.0
     state.player = player
     state.in_car = None
-    state.weapon = 1
-    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
-    state.unlocked_weapons = {0, 1}
+    state.weapon = 6
+    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+    state.unlocked_weapons = {0, 1, 6}
     state.fire_cd = 0
 
     # Pickups
@@ -141,7 +141,7 @@ def main():
                 if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g):
                     state.menu = None
                     continue
-                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key <= pygame.K_6:
+                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key <= pygame.K_7:
                     if state.menu == "shop":
                         buy_shop_item(state, e.key - pygame.K_0)
                     else:
@@ -169,7 +169,7 @@ def main():
                 if e.key == pygame.K_g and nearby_service(state) == "garage" and not state.game_over:
                     state.menu = "garage"
                     continue
-                if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6):
+                if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7):
                     w = e.key - pygame.K_1
                     if w in state.unlocked_weapons:
                         state.weapon = w
@@ -383,6 +383,10 @@ def main():
                 ex[2] += dt
                 if ex[2] >= ex[3]:
                     state.explosions.remove(ex)
+            for sw in list(state.lightsaber_swings):
+                sw[1] += dt
+                if sw[1] >= sw[2]:
+                    state.lightsaber_swings.remove(sw)
 
             for r in list(state.rockets):
                 r[0] += r[2]*dt; r[1] += r[3]*dt; r[4] -= dt
@@ -475,6 +479,28 @@ def main():
         for c in state.cops: c.draw(screen, icam)
         if not state.in_car:
             player.draw(screen, icam)
+        for sw in state.lightsaber_swings:
+            sx, sy = int(player.x - icam[0]), int(player.y - icam[1])
+            t = max(0.0, min(1.0, sw[1] / sw[2]))
+            center = sw[0]
+            blade_ang = math.radians(center - 42 + 84 * t)
+            base_x = sx + math.sin(math.radians(center)) * 16
+            base_y = sy - math.cos(math.radians(center)) * 16
+            tip_x = sx + math.sin(blade_ang) * 58
+            tip_y = sy - math.cos(blade_ang) * 58
+            start_ang = center - 42 + 84 * max(0.0, t - 0.42)
+            end_ang = center - 42 + 84 * t
+            outer = []
+            inner = []
+            for i in range(10):
+                a = math.radians(start_ang + (end_ang - start_ang) * (i / 9))
+                outer.append((int(sx + math.sin(a) * 58), int(sy - math.cos(a) * 58)))
+                inner.append((int(sx + math.sin(a) * 18), int(sy - math.cos(a) * 18)))
+            trail = outer + list(reversed(inner))
+            pygame.draw.polygon(screen, (30, 205, 255), trail)
+            pygame.draw.lines(screen, (140, 245, 255), False, outer, 3)
+            pygame.draw.line(screen, (120, 245, 255), (base_x, base_y), (tip_x, tip_y), 5)
+            pygame.draw.line(screen, (250, 255, 255), (base_x, base_y), (tip_x, tip_y), 2)
         for bp in state.blood_particles:
             pygame.draw.circle(screen, (180, 0, 0),
                                (int(bp[0]-icam[0]), int(bp[1]-icam[1])), bp[5])
@@ -516,11 +542,11 @@ def main():
         screen.blit(FONT.render(f"HP {int(player.hp)}", 1, (255,255,255)), (16, 14))
         screen.blit(FONT.render(f"${player.money}", 1, (60,230,80)), (10, 50))
         screen.blit(FONT.render(WPN_NAMES[state.weapon], 1, (240,220,80)), (10, 75))
-        a = state.ammo.get(state.weapon, 0) if state.weapon != 0 else "∞"
+        a = state.ammo.get(state.weapon, 0) if state.weapon not in (0, 6) else "∞"
         screen.blit(FONT.render(f"Munition {a}", 1, (255,255,255)), (10, 100))
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-6 Waffe",
+        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-7 Waffe",
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
         if state.in_car:

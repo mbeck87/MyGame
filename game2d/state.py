@@ -47,6 +47,7 @@ class GameState:
     smoke_particles: list = field(default_factory=list)
     fire_particles:  list = field(default_factory=list)
     explosions:      list = field(default_factory=list)
+    lightsaber_swings: list = field(default_factory=list)
     wrecks:          list = field(default_factory=list)
     corpses:         list = field(default_factory=list)
 
