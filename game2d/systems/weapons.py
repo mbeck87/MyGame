@@ -37,6 +37,7 @@ def _lightsaber_swing():
     swing_range = 56
     swing_arc = 78
     s.lightsaber_swings.append([p.aim_angle, 0.0, 0.18])
+    audio.play('lightsaber_swing', pos=(p.x, p.y))
 
     for car in s.cars:
         if car.dead or car is s.in_car:

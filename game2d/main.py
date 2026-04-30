@@ -276,6 +276,9 @@ def main():
                 state.roadblocks.clear()
                 for c in list(state.cars):
                     if c.is_cop and c is not state.in_car:
+                        if c._siren_channel is not None:
+                            audio.stop_loop(c._siren_channel)
+                            c._siren_channel = None
                         state.cars.remove(c)
 
             state.intersection_claims.clear()

@@ -86,8 +86,12 @@ def init():
     _initialized = True
 
 
-def _volume_for(pos, base):
-    """Distanz-Falloff zum Spieler. ``pos=None`` → keine Abschwächung."""
+def _volume_for(pos, base, max_dist=None):
+    """Distanz-Falloff zum Spieler. ``pos=None`` → keine Abschwächung.
+
+    ``max_dist`` überschreibt den globalen Hörradius pro Aufruf — z.B.
+    für Sirenen, die einen kleineren Radius haben sollen als Schüsse.
+    """
     if pos is None:
         return base
     s = current()
@@ -96,14 +100,15 @@ def _volume_for(pos, base):
     dx = pos[0] - s.player.x
     dy = pos[1] - s.player.y
     dist = math.hypot(dx, dy)
-    if dist >= MAX_HEARING_DIST:
+    md = max_dist if max_dist is not None else MAX_HEARING_DIST
+    if dist >= md:
         return 0.0
     # Quadratischer Falloff: nahe Sounds bleiben laut, ferne fallen schneller.
-    falloff = (1.0 - dist / MAX_HEARING_DIST) ** 1.6
+    falloff = (1.0 - dist / md) ** 1.6
     return max(0.0, min(1.0, base * falloff))
 
 
-def play(category, volume=1.0, pos=None):
+def play(category, volume=1.0, pos=None, max_dist=None):
     """One-shot abspielen.
 
     Parameter:
@@ -111,6 +116,8 @@ def play(category, volume=1.0, pos=None):
     - ``volume``: 0..1, lokaler Volume-Multiplier vor Master/Distanz.
     - ``pos``: ``(world_x, world_y)`` für Distanz-Falloff. ``None`` = UI-Sound,
       voller Volume * Master.
+    - ``max_dist``: optionaler Hörradius in Welt-Pixeln (überschreibt
+      ``MAX_HEARING_DIST`` für diesen Aufruf).
     """
     if not _initialized:
         return
@@ -118,7 +125,7 @@ def play(category, volume=1.0, pos=None):
     if not sounds:
         return
     snd = random.choice(sounds)
-    vol = _volume_for(pos, volume * MASTER_VOL)
+    vol = _volume_for(pos, volume * MASTER_VOL, max_dist)
     if vol < 0.005:
         return
     ch = pygame.mixer.find_channel(True)
@@ -129,7 +136,7 @@ def play(category, volume=1.0, pos=None):
     ch.set_volume(vol)
 
 
-def start_loop(category, pos=None, volume=1.0):
+def start_loop(category, pos=None, volume=1.0, max_dist=None):
     """Sound als Loop starten und ``Channel`` zurückgeben."""
     if not _initialized:
         return None
@@ -140,17 +147,17 @@ def start_loop(category, pos=None, volume=1.0):
     ch = pygame.mixer.find_channel(True)
     if ch is None:
         return None
-    vol = _volume_for(pos, volume * MASTER_VOL)
+    vol = _volume_for(pos, volume * MASTER_VOL, max_dist)
     ch.play(snd, loops=-1)
     ch.set_volume(vol)
     return ch
 
 
-def update_loop(channel, pos=None, volume=1.0):
+def update_loop(channel, pos=None, volume=1.0, max_dist=None):
     """Lautstärke eines laufenden Loops aktualisieren."""
     if channel is None or not _initialized:
         return
-    vol = _volume_for(pos, volume * MASTER_VOL)
+    vol = _volume_for(pos, volume * MASTER_VOL, max_dist)
     channel.set_volume(vol)
 
 

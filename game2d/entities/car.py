@@ -44,6 +44,7 @@ class Car:
         self.yield_timer = 0.0
         self.ai_spd = random.uniform(150, 240) if is_cop else random.uniform(80, 160)
         self.turn_cd = random.uniform(2, 6)
+        self._siren_channel = None
 
     def take_damage(self, dmg):
         if self.dead or dmg <= 0: return
@@ -62,6 +63,9 @@ class Car:
     def explode(self):
         s = current()
         self.dead = True
+        if self._siren_channel is not None:
+            audio.stop_loop(self._siren_channel)
+            self._siren_channel = None
         s.explosions.append([self.x, self.y, 0.0, 0.55, 150])
         audio.play('explosion', pos=(self.x, self.y))
         if s.in_car is self:
@@ -113,8 +117,20 @@ class Car:
             s.player.money += random.randint(20, 50)
 
     def update_fx(self, dt):
-        if self.dead: return
+        if self.dead:
+            if self._siren_channel is not None:
+                audio.stop_loop(self._siren_channel)
+                self._siren_channel = None
+            return
         s = current()
+        if self.is_cop and s.in_car is not self:
+            if self._siren_channel is None or not self._siren_channel.get_busy():
+                self._siren_channel = audio.start_loop('siren', pos=(self.x, self.y), volume=0.55, max_dist=600)
+            else:
+                audio.update_loop(self._siren_channel, pos=(self.x, self.y), volume=0.55, max_dist=600)
+        elif self._siren_channel is not None:
+            audio.stop_loop(self._siren_channel)
+            self._siren_channel = None
         if self.burning:
             self.burn_timer -= dt
             self._fire_cd -= dt

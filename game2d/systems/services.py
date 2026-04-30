@@ -5,6 +5,7 @@ import random
 import pygame
 
 from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y
+from game2d.systems import audio
 
 
 SHOP_ITEMS = {
@@ -186,6 +187,9 @@ def lose_cops_after_repaint(state):
     state.roadblocks.clear()
     for car in list(state.cars):
         if car.is_cop and car is not state.in_car:
+            if car._siren_channel is not None:
+                audio.stop_loop(car._siren_channel)
+                car._siren_channel = None
             state.cars.remove(car)
     set_message(state, "Repainted - cops lost")
 
