@@ -48,7 +48,7 @@ def trigger_game_over():
         state.final_scores = scores
 
 
-def do_explosion(x, y, radius=130, dmg=200):
+def do_explosion(x, y, radius=140, dmg=500):
     state = current()
     state.explosions.append([x, y, 0, 0.5, radius])
     audio.play('explosion', pos=(x, y))

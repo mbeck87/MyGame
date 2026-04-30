@@ -14,6 +14,8 @@ from game2d.config import (
 )
 from game2d.persistence import name_input_screen
 from game2d.render.hud import draw_star
+from game2d.render.menus import draw_hint, draw_overlay_menu, draw_service_markers
+from game2d.render.minimap import draw_minimap
 from game2d.render.sprites import make_ped_frames
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
@@ -26,6 +28,10 @@ from game2d.entities.car import Car
 from game2d.entities.ped import Ped
 from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
+)
+from game2d.systems.services import (
+    buy_shop_item, cop_damage_for_wanted, cop_fire_rate_for_wanted,
+    escalate_police, init_services, nearby_service, use_garage_item,
 )
 from game2d.systems.weapons import fire, aim_to_mouse
 from game2d.systems import audio
@@ -94,33 +100,30 @@ def main():
     for kind, _ in pickup_defs:
         px, py = safe_spawn()
         state.pickups.append([px, py, kind, 0.0])
+    init_services(state)
 
     cop_spawn = 0.0
     prev_wanted = 0
 
     while state.running:
         dt = clock.tick(60) / 1000
-        state.traffic_time += dt
-        if player.wanted > prev_wanted:
-            audio.play('wanted_up')
-        prev_wanted = player.wanted
+        if state.message_timer > 0:
+            state.message_timer = max(0.0, state.message_timer - dt)
+        if not state.menu:
+            state.traffic_time += dt
+            if player.wanted > prev_wanted:
+                audio.play('wanted_up')
+            prev_wanted = player.wanted
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 state.running = False
                 continue
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
-                if state.game_over:
-                    state.running = False
-                elif state.menu == 'options':
-                    state.menu = 'pause'
-                elif state.menu == 'pause':
-                    state.menu = None
-                else:
-                    state.menu = 'pause'
-                    audio.set_engine(False)
-                continue
-            if state.menu:
+
+            if state.menu in ("pause", "options"):
+                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p):
+                    state.menu = None if state.menu == "pause" else "pause"
+                    continue
                 action = menu_ctrl.handle_event(e, state)
                 if action == 'resume':
                     state.menu = None
@@ -131,9 +134,39 @@ def main():
                 elif action == 'exit':
                     state.running = False
                 continue
+
+            if state.menu in ("shop", "garage"):
+                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g):
+                    state.menu = None
+                    continue
+                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key <= pygame.K_6:
+                    if state.menu == "shop":
+                        buy_shop_item(state, e.key - pygame.K_0)
+                    else:
+                        use_garage_item(state, e.key - pygame.K_0)
+                    continue
+                continue
+
             if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    if state.game_over:
+                        state.running = False
+                    else:
+                        state.menu = "pause"
+                        audio.set_engine(False)
+                    continue
+                if e.key == pygame.K_p and not state.game_over:
+                    state.menu = "pause"
+                    audio.set_engine(False)
+                    continue
                 if state.game_over and e.key == pygame.K_r:
                     os.execv(sys.executable, [sys.executable] + sys.argv)
+                if e.key == pygame.K_b and nearby_service(state) == "shop" and not state.game_over:
+                    state.menu = "shop"
+                    continue
+                if e.key == pygame.K_g and nearby_service(state) == "garage" and not state.game_over:
+                    state.menu = "garage"
+                    continue
                 if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6):
                     w = e.key - pygame.K_1
                     if w in state.unlocked_weapons:
@@ -159,7 +192,7 @@ def main():
                             player.crime_timer = 30
                             audio.play('robbery', pos=(p.x, p.y))
                             break
-            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over:
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over and not state.paused and not state.menu:
                 if state.fire_cd <= 0 and not WPN_AUTO[state.weapon]:
                     fire()
 
@@ -224,14 +257,18 @@ def main():
                     player.crime_timer = 25
                 cop_spawn -= dt
                 active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead)
-                if cop_spawn <= 0 and active_cop_cars < max(1, player.wanted):
-                    cop_spawn = max(2, 8 - player.wanted*1.5)
+                cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
+                if cop_spawn <= 0 and active_cop_cars < cop_limit:
+                    cop_spawn = max(1.2, 8 - player.wanted*1.35)
                     cx, cy, angle = cop_car_spawn_near(player.x, player.y)
                     car = Car(cx, cy, (245,245,250), is_cop=True)
                     car.angle = angle
+                    car.max_spd += max(0, player.wanted - 3) * 30
                     state.cars.append(car)
+                escalate_police(state)
             else:
                 state.cops.clear()
+                state.roadblocks.clear()
                 for c in list(state.cars):
                     if c.is_cop and c is not state.in_car:
                         state.cars.remove(c)
@@ -239,6 +276,7 @@ def main():
             state.intersection_claims.clear()
             for c in state.cars:
                 if c is state.in_car: continue
+                if c in state.roadblocks: continue
                 c.ai_update(dt)
 
             player.animate(dt)
@@ -250,10 +288,11 @@ def main():
                 wants_shoot = c.update(dt, player)
                 c.animate(dt)
                 if wants_shoot:
-                    c.shoot_tick = 1.5
+                    c.shoot_tick = cop_fire_rate_for_wanted(player.wanted)
                     dx, dy = player.x - c.x, player.y - c.y
                     d = math.hypot(dx, dy) or 1
-                    state.bullets.append([c.x, c.y, dx/d*700, dy/d*700, 0.8, True, 12])
+                    state.bullets.append([c.x, c.y, dx/d*700, dy/d*700, 0.8, True,
+                                          cop_damage_for_wanted(player.wanted)])
                     audio.play('cop_shoot', pos=(c.x, c.y))
 
             for b in list(state.bullets):
@@ -417,6 +456,7 @@ def main():
             if surf is None: continue
             if view.colliderect(rect):
                 screen.blit(surf, (rect.x - icam[0], rect.y - icam[1]))
+        draw_service_markers(screen, state, icam, FONT)
         for ws, wx, wy, wa, wd in state.wrecks:
             if view.collidepoint(wx, wy):
                 rot = pygame.transform.rotate(ws, -wa)
@@ -468,6 +508,7 @@ def main():
             screen.blit(srf, (int(ex[0]-icam[0]-r), int(ex[1]-icam[1]-r)))
 
         # HUD
+        service = nearby_service(state)
         pygame.draw.rect(screen, (0,0,0), (10, 10, 220, 30))
         pygame.draw.rect(screen, (200,40,40), (12, 12, 216*max(0,player.hp)/100, 26))
         screen.blit(FONT.render(f"HP {int(player.hp)}", 1, (255,255,255)), (16, 14))
@@ -477,16 +518,18 @@ def main():
         screen.blit(FONT.render(f"Munition {a}", 1, (255,255,255)), (10, 100))
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-        screen.blit(FONT.render("WASD bewegen | Maus zielen | LMB/SPACE schießen | E Auto | F rauben | 1-6 Waffe (6=RPG)",
+        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-6 Waffe",
                                 1, (230,230,230)), (10, H-26))
+        draw_minimap(screen, state, FONT)
         if state.in_car:
-            screen.blit(FONT.render(f"{int(abs(state.in_car.spd)*0.36*10)} km/h", 1, (255,255,255)), (W-140, 14))
-            pygame.draw.rect(screen, (0,0,0), (W-230, 50, 220, 22))
+            screen.blit(FONT.render(f"{int(abs(state.in_car.spd)*0.36*10)} km/h", 1, (255,255,255)), (W-140, 238))
+            pygame.draw.rect(screen, (0,0,0), (W-230, 272, 220, 22))
             frac = max(0, state.in_car.hp) / state.in_car.max_hp
             col = (60,200,60) if frac > 0.6 else ((230,180,40) if frac > 0.3 else (220,40,40))
-            pygame.draw.rect(screen, col, (W-228, 52, 216*frac, 18))
+            pygame.draw.rect(screen, col, (W-228, 274, 216*frac, 18))
             label = "BRENNT!" if state.in_car.burning else f"Auto {int(state.in_car.hp)}/{state.in_car.max_hp}"
-            screen.blit(FONT.render(label, 1, (255,255,255)), (W-225, 52))
+            screen.blit(FONT.render(label, 1, (255,255,255)), (W-225, 274))
+        draw_hint(screen, state, service, FONT)
         if not state.in_car:
             mx, my = pygame.mouse.get_pos()
             pygame.draw.circle(screen, (255,255,255), (mx,my), 8, 1)
@@ -510,8 +553,10 @@ def main():
                 screen.blit(lt, (W//2 - lt.get_width()//2, 175 + i * 30))
             t2 = FONT.render("[R] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
             screen.blit(t2, (W//2 - t2.get_width()//2, H - 50))
+        else:
+            draw_overlay_menu(screen, state, BIG, MED, FONT)
 
-        if state.menu:
+        if state.menu in ("pause", "options"):
             menu_ctrl.draw(screen, BIG, MED, FONT, state)
 
         pygame.display.flip()

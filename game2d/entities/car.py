@@ -29,8 +29,8 @@ class Car:
         self.is_cop = is_cop
         self.sprite = make_cop_car_sprite() if is_cop else make_car_sprite(body)
         self.w, self.h = self.sprite.get_size()
-        self.max_hp = 200
-        self.hp = 200
+        self.max_hp = 500
+        self.hp = 500
         self.dents = []
         self.burning = False
         self.burn_timer = 0.0

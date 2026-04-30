@@ -50,10 +50,18 @@ class GameState:
     wrecks:          list = field(default_factory=list)
     corpses:         list = field(default_factory=list)
 
+    # Service locations and police extras.
+    garages: list = field(default_factory=list)          # [(x, y), ...]
+    shops:   list = field(default_factory=list)          # [(x, y), ...]
+    roadblocks: list = field(default_factory=list)       # [Car, ...]
+
     # ── Loop / Frame ────────────────────────────────────────────────
     cam: list = field(default_factory=lambda: [0, 0])
     traffic_time: float = 0.0
     running: bool = True
+    paused: bool = False
+    message: str = ""
+    message_timer: float = 0.0
     game_over: bool = False
     score_saved: bool = False
     final_scores: list = field(default_factory=list)
