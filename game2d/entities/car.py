@@ -25,8 +25,9 @@ class Car:
         self.x, self.y = x, y
         self.angle = random.choice([0, 90, 180, 270])
         self.spd = 0
-        self.max_spd = 380 if is_cop else 320
+        self.max_spd = 400 if is_cop else 320
         self.is_cop = is_cop
+        self.is_roadblock = False
         self.sprite = make_cop_car_sprite() if is_cop else make_car_sprite(body)
         self.w, self.h = self.sprite.get_size()
         self.max_hp = 500
@@ -562,6 +563,8 @@ class Car:
             self.angle = random.choice([0, 90, 180, 270])
 
     def draw(self, surf, cam):
+        if self.is_roadblock:
+            self.draw_roadblock_markers(surf, cam)
         rot = pygame.transform.rotate(self.sprite, -self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
@@ -573,3 +576,22 @@ class Car:
                 wx = dx_ * cs - dy_ * sn
                 wy = dx_ * sn + dy_ * cs
                 pygame.draw.circle(surf, (25, 25, 28), (int(cx_ + wx), int(cy_ + wy)), dr_)
+
+    def draw_roadblock_markers(self, surf, cam):
+        rad = math.radians(self.angle)
+        cs, sn = math.cos(rad), math.sin(rad)
+        cx = self.x - cam[0]
+        cy = self.y - cam[1]
+        barrier = pygame.Surface((126, 14), pygame.SRCALPHA)
+        pygame.draw.rect(barrier, (235, 235, 230), (0, 0, 126, 14), border_radius=3)
+        for x in range(-14, 128, 22):
+            pygame.draw.polygon(barrier, (220, 40, 35), [(x, 14), (x + 13, 14), (x + 31, 0), (x + 18, 0)])
+        rot_barrier = pygame.transform.rotate(barrier, -self.angle)
+        surf.blit(rot_barrier, rot_barrier.get_rect(center=(cx, cy)))
+        for offset in (-72, -48, 48, 72):
+            wx = offset * cs
+            wy = offset * sn
+            x = int(cx + wx)
+            y = int(cy + wy)
+            pygame.draw.polygon(surf, (245, 120, 25), [(x, y - 9), (x - 7, y + 8), (x + 7, y + 8)])
+            pygame.draw.rect(surf, (245, 245, 245), (x - 5, y + 1, 10, 3))

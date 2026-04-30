@@ -30,6 +30,7 @@ from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
 )
 from game2d.systems.services import (
+    add_money,
     buy_shop_item, cop_damage_for_wanted, cop_fire_rate_for_wanted,
     escalate_police, init_services, nearby_service, use_garage_item,
 )
@@ -78,6 +79,7 @@ def main():
     player.sprite = player.frames[0]
     player.hp = 100
     player.money = 0
+    player.total_money_earned = 0
     player.wanted = 0
     player.crime_timer = 0
     player.aim_angle = 0
@@ -186,7 +188,7 @@ def main():
                 if e.key == pygame.K_f and not state.in_car and not state.game_over:
                     for p in state.peds:
                         if math.hypot(p.x-player.x, p.y-player.y) < 35:
-                            player.money += random.randint(15, 50)
+                            add_money(player, random.randint(15, 50))
                             p.state = 'flee'
                             player.wanted = min(5, player.wanted + 1)
                             player.crime_timer = 30
@@ -336,7 +338,7 @@ def main():
                                 state.peds.remove(p)
                                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                                 spawn_blood(p.x, p.y, 20)
-                                player.money += random.randint(15, 60)
+                                add_money(player, random.randint(15, 60))
                                 player.wanted = min(5, player.wanted + 1)
                                 player.crime_timer = 30
                             state.bullets.remove(b); hit_any=True; break
@@ -522,7 +524,8 @@ def main():
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
         if state.in_car:
-            screen.blit(FONT.render(f"{int(abs(state.in_car.spd)*0.36*10)} km/h", 1, (255,255,255)), (W-140, 238))
+            kmh = int(abs(state.in_car.spd) * 0.5)
+            screen.blit(FONT.render(f"{kmh} km/h", 1, (255,255,255)), (W-140, 238))
             pygame.draw.rect(screen, (0,0,0), (W-230, 272, 220, 22))
             frac = max(0, state.in_car.hp) / state.in_car.max_hp
             col = (60,200,60) if frac > 0.6 else ((230,180,40) if frac > 0.3 else (220,40,40))

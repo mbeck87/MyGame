@@ -17,9 +17,9 @@ SHOP_ITEMS = {
 }
 
 GARAGE_ITEMS = {
-    1: ("Repair car", 250, "repair"),
-    2: ("Repaint car", 180, "repaint"),
-    3: ("Wanted -2", 900, "clear_wanted"),
+    1: ("Repair car", 150, "repair"),
+    2: ("Repaint car", 80, "repaint"),
+    3: ("Wanted -2", 300, "clear_wanted"),
 }
 
 
@@ -76,6 +76,11 @@ def set_message(state, text, seconds=2.0):
     state.message_timer = seconds
 
 
+def add_money(player, amount):
+    player.money += amount
+    player.total_money_earned = getattr(player, "total_money_earned", 0) + amount
+
+
 def spend(state, price):
     if state.player.money < price:
         set_message(state, "Not enough money")
@@ -124,8 +129,7 @@ def use_garage_item(state, key):
             (random.randint(70, 230), random.randint(70, 230), random.randint(70, 230))
         )
         state.in_car.dents.clear()
-        state.player.wanted = max(0, state.player.wanted - 1)
-        state.player.crime_timer = 25
+        lose_cops_after_repaint(state)
     elif action == "clear_wanted":
         state.player.wanted = max(0, state.player.wanted - 2)
         state.player.crime_timer = 25
@@ -156,15 +160,31 @@ def escalate_police(state):
         from game2d.entities.car import Car
         from game2d.world.spawning import cop_car_spawn_near
 
-        x, y, angle = cop_car_spawn_near(state.player.x, state.player.y)
+        target = state.in_car if state.in_car else state.player
+        x, y, angle = cop_car_spawn_near(target.x, target.y)
         car = Car(x, y, (245, 245, 250), is_cop=True)
         car.angle = (angle + 90) % 360
         car.spd = 0
         car.ai_spd = 0
         car.max_spd = 260
         car.yield_timer = 1.5
+        car.is_roadblock = True
         state.cars.append(car)
         state.roadblocks.append(car)
+
+
+def lose_cops_after_repaint(state):
+    """Repaint hides the player while they stay in the repainted car."""
+    if not state.in_car:
+        return
+    state.player.wanted = 0
+    state.player.crime_timer = 0
+    state.cops.clear()
+    state.roadblocks.clear()
+    for car in list(state.cars):
+        if car.is_cop and car is not state.in_car:
+            state.cars.remove(car)
+    set_message(state, "Repainted - cops lost")
 
 
 def cop_damage_for_wanted(wanted):

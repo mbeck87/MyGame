@@ -95,7 +95,7 @@ def cop_car_spawn_near(tx, ty):
     s = current()
     for _ in range(180):
         ang = random.uniform(0, math.tau)
-        dist = random.uniform(420, 760)
+        dist = random.uniform(260, 520)
         sx = tx + math.cos(ang) * dist
         sy = ty + math.sin(ang) * dist
         sx = max(ROAD_LO + 50, min(ROAD_HI_X - 50, sx))

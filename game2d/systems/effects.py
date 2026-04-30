@@ -6,6 +6,7 @@ import pygame
 from game2d.state import current
 from game2d.persistence import save_score
 from game2d.systems import audio
+from game2d.systems.services import add_money
 
 
 def make_corpse(ped):
@@ -39,10 +40,11 @@ def trigger_game_over():
     audio.play('game_over')
     if not state.score_saved:
         state.score_saved = True
-        scores = save_score(state.player_name, state.player.money)
+        score_money = getattr(state.player, "total_money_earned", state.player.money)
+        scores = save_score(state.player_name, score_money)
         marked = False
         for e in reversed(scores):
-            if not marked and e["name"] == state.player_name and e["money"] == state.player.money:
+            if not marked and e["name"] == state.player_name and e["money"] == score_money:
                 e["_just_added"] = True
                 marked = True
         state.final_scores = scores
@@ -64,7 +66,7 @@ def do_explosion(x, y, radius=140, dmg=500):
                 state.peds.remove(p)
                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                 spawn_blood(p.x, p.y, 20)
-                state.player.money += random.randint(20, 55)
+                add_money(state.player, random.randint(20, 55))
                 state.player.wanted = min(5, state.player.wanted + 1)
                 state.player.crime_timer = 30
     for c in list(state.cops):
@@ -74,7 +76,7 @@ def do_explosion(x, y, radius=140, dmg=500):
                 state.cops.remove(c)
                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                 spawn_blood(c.x, c.y, 24)
-                state.player.money += random.randint(50, 100)
+                add_money(state.player, random.randint(50, 100))
                 state.player.wanted = min(5, state.player.wanted + 1)
                 state.player.crime_timer = 30
     dist = math.hypot(state.player.x-x, state.player.y-y)
