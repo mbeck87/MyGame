@@ -12,9 +12,21 @@ SETTINGS_PATH = os.path.join(
     'settings.json',
 )
 
+RESOLUTIONS = ['1280x720', '1280x800', '1600x900', '1920x1080', '2560x1440']
+
 DEFAULTS = {
     'sfx_volume': 0.5,
+    'resolution': '1280x800',
 }
+
+
+def parse_resolution(value):
+    """``"1280x800"`` -> ``(1280, 800)``. Fällt bei Parser-Fehler auf 1280x800 zurück."""
+    try:
+        a, b = str(value).lower().split('x')
+        return int(a), int(b)
+    except (ValueError, AttributeError):
+        return 1280, 800
 
 
 def load():
@@ -29,6 +41,8 @@ def load():
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         pass
     out['sfx_volume'] = max(0.0, min(1.0, float(out['sfx_volume'])))
+    if out['resolution'] not in RESOLUTIONS:
+        out['resolution'] = DEFAULTS['resolution']
     return out
 
 

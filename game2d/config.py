@@ -1,7 +1,11 @@
 """Globale Konstanten: Fenstergröße, Welt-Geometrie, Farben."""
+from game2d import settings as _settings
 
 # ── Fenster ──────────────────────────────────────────────
-W, H = 1280, 800
+# Fenstergröße wird beim Import aus ``settings.json`` gelesen, damit alle
+# Module, die ``W``/``H`` direkt importieren, einen konsistenten Wert sehen.
+# Änderungen über das Options-Menü erfordern einen Neustart des Prozesses.
+W, H = _settings.parse_resolution(_settings.load().get('resolution', '1280x800'))
 
 # ── Farben ───────────────────────────────────────────────
 ASPHALT  = (55, 55, 60)

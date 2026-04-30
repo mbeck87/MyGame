@@ -133,6 +133,9 @@ def main():
                     state.menu = 'options'
                 elif action == 'back':
                     state.menu = 'pause'
+                elif action == 'apply_resolution':
+                    pygame.quit()
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
                 elif action == 'exit':
                     state.running = False
                 continue
