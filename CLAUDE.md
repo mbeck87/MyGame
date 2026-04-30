@@ -2,6 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Arbeitsweise
+
+Beim Hinzufügen von neuem Code immer genau auf die unten beschriebene Architektur achten und neue Funktionalität strukturkonform an der richtigen Stelle einfügen (passendes Modul in `game2d/`, Zugriff auf Zustand via `state.current()`, keine Umgehung der bestehenden Aufteilung).
+
+## Sound-Assets
+
+Wenn neue Sounds gebraucht werden:
+
+1. **Runterladen** von kenney.nl (CC0, kein Account, keine Attribution): `https://kenney.nl/assets/category:Audio` — passendes Audio-Pack auswählen, ZIP runterladen.
+2. **Ablegen** als `.ogg` in `game2d/assets/sfx/` mit Namensschema `<category>_<variant>.ogg` (z.B. `door_open_a.ogg`, `door_open_b.ogg`). Mehrere Varianten = `audio.play(...)` würfelt zufällig.
+3. **Implementieren**: `audio.play("category", pos=(x, y))` aus `game2d/systems/audio.py` an der passenden Stelle aufrufen. `audio.init()` lädt alle SFX automatisch beim Start ein, neue Kategorien sind sofort verfügbar.
+
+Für Loop-Sounds (z.B. fliegende Geschosse, Motor): `audio.start_loop(...)` / `update_loop(...)` / `stop_loop(...)`. Master-Lautstärke regelt der User per ESC → Options-Slider, persistiert in `settings.json`.
+
+**Wichtig (pygame-CE-Bug):** `Channel.set_volume(left, right)` (2-arg) setzt nur Panning, NICHT die Master-Lautstärke des Kanals. Daher in `audio.py` immer `Channel.set_volume(value)` (single-arg) verwenden — und zwar NACH `Channel.play(snd)`, weil `play()` die Channel-Volume zurücksetzt.
+
 ## Starten
 
 ```bash
@@ -178,7 +194,7 @@ blood_particles = [x, y, vx, vy, ttl, radius]
 smoke_particles = [x, y, vx, vy, ttl, max_ttl, radius]
 fire_particles  = [x, y, vx, vy, ttl, max_ttl, radius]
 explosions      = [x, y, t, max_t, max_radius]
-rockets         = [x, y, vx, vy, ttl]
+rockets         = [x, y, vx, vy, ttl, audio_channel]
 wrecks          = (sprite, x, y, angle, dents_list)
 corpses         = (sprite, x, y, angle)
 blood_splats    = (x, y, radius, color)

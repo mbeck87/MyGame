@@ -61,6 +61,10 @@ class GameState:
     # ── Player-Identität ────────────────────────────────────────────
     player_name: str = "Spieler"
 
+    # ── Menü / Settings ─────────────────────────────────────────────
+    menu: Optional[str] = None                           # None | 'pause' | 'options'
+    settings: dict = field(default_factory=dict)
+
 
 # ── Singleton-Accessor ──────────────────────────────────────────────
 _singleton: Optional[GameState] = None

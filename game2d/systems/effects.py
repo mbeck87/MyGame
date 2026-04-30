@@ -5,6 +5,7 @@ import pygame
 
 from game2d.state import current
 from game2d.persistence import save_score
+from game2d.systems import audio
 
 
 def make_corpse(ped):
@@ -34,6 +35,8 @@ def trigger_game_over():
     if state.game_over:
         return
     state.game_over = True
+    audio.set_engine(False)
+    audio.play('game_over')
     if not state.score_saved:
         state.score_saved = True
         scores = save_score(state.player_name, state.player.money)
@@ -48,6 +51,7 @@ def trigger_game_over():
 def do_explosion(x, y, radius=130, dmg=200):
     state = current()
     state.explosions.append([x, y, 0, 0.5, radius])
+    audio.play('explosion', pos=(x, y))
     spawn_blood(x, y, 28)
     for c in list(state.cars):
         if c.dead: continue

@@ -16,6 +16,7 @@ from game2d.world.geometry import (
 )
 from game2d.world.traffic import traffic_light_allows
 from game2d.systems.effects import spawn_blood, make_corpse, trigger_game_over
+from game2d.systems import audio
 from game2d.entities.ped import Ped
 
 
@@ -61,6 +62,9 @@ class Car:
         s = current()
         self.dead = True
         s.explosions.append([self.x, self.y, 0.0, 0.55, 150])
+        audio.play('explosion', pos=(self.x, self.y))
+        if s.in_car is self:
+            audio.set_engine(False)
         R = 130
         for p in list(s.peds):
             if math.hypot(p.x-self.x, p.y-self.y) < R:
@@ -213,6 +217,9 @@ class Car:
             dmg = impact * (0.022 if controlled else 0.02)
             self.take_damage(dmg)
             other.take_damage(dmg * (0.85 if controlled else 1.0))
+            cx = (self.x + other.x) * 0.5
+            cy = (self.y + other.y) * 0.5
+            audio.play('crash', volume=min(1.0, impact / 260.0), pos=(cx, cy))
 
     def _wheel_points(self):
         rad = math.radians(self.angle)

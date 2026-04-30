@@ -5,6 +5,15 @@ import pygame
 
 from game2d.config import WPN_RATE, WPN_DMG, WPN_PEL, WPN_SPRD
 from game2d.state import current
+from game2d.systems import audio
+
+
+_SHOT_SOUND = {
+    1: 'shoot_pistol',
+    2: 'shoot_smg',
+    3: 'shoot_shotgun',
+    4: 'shoot_mg',
+}
 
 
 def aim_to_mouse():
@@ -30,9 +39,13 @@ def fire():
     else:
         ax, ay = s.player.x, s.player.y
         ang = s.player.aim_angle
+    snd = _SHOT_SOUND.get(weapon)
+    if snd:
+        audio.play(snd, pos=(ax, ay))
     if weapon == 5:
         rad = math.radians(ang)
-        s.rockets.append([ax, ay, math.sin(rad)*480, -math.cos(rad)*480, 2.0])
+        ch = audio.start_loop('shoot_rocket', pos=(ax, ay))
+        s.rockets.append([ax, ay, math.sin(rad)*480, -math.cos(rad)*480, 2.0, ch])
         return
     for _ in range(WPN_PEL[weapon]):
         a = ang + random.uniform(-WPN_SPRD[weapon], WPN_SPRD[weapon]) * 57

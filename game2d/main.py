@@ -28,10 +28,16 @@ from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
 )
 from game2d.systems.weapons import fire, aim_to_mouse
+from game2d.systems import audio
+from game2d import settings as settings_mod
+from game2d.ui.menu import MenuController
 
 
 def main():
     pygame.init()
+    audio.init()
+    settings = settings_mod.load()
+    audio.MASTER_VOL = settings['sfx_volume']
     screen = pygame.display.set_mode((W, H))
     pygame.display.set_caption("Mini GTA 2D")
     clock = pygame.time.Clock()
@@ -42,8 +48,10 @@ def main():
     player_name = name_input_screen(screen, W, H, BIG, MED, FONT)
 
     state = GameState(player_name=player_name)
+    state.settings = settings
     state_init(state)
     build_world(state)
+    menu_ctrl = MenuController(W, H, settings)
 
     # Initial-Verkehr und NPCs
     for _ in range(50):
@@ -67,6 +75,7 @@ def main():
     player.wanted = 0
     player.crime_timer = 0
     player.aim_angle = 0
+    player.step_cd = 0.0
     state.player = player
     state.in_car = None
     state.weapon = 1
@@ -87,17 +96,42 @@ def main():
         state.pickups.append([px, py, kind, 0.0])
 
     cop_spawn = 0.0
+    prev_wanted = 0
 
     while state.running:
         dt = clock.tick(60) / 1000
         state.traffic_time += dt
+        if player.wanted > prev_wanted:
+            audio.play('wanted_up')
+        prev_wanted = player.wanted
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 state.running = False
-            if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_ESCAPE:
+                continue
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                if state.game_over:
                     state.running = False
+                elif state.menu == 'options':
+                    state.menu = 'pause'
+                elif state.menu == 'pause':
+                    state.menu = None
+                else:
+                    state.menu = 'pause'
+                    audio.set_engine(False)
+                continue
+            if state.menu:
+                action = menu_ctrl.handle_event(e, state)
+                if action == 'resume':
+                    state.menu = None
+                elif action == 'open_options':
+                    state.menu = 'options'
+                elif action == 'back':
+                    state.menu = 'pause'
+                elif action == 'exit':
+                    state.running = False
+                continue
+            if e.type == pygame.KEYDOWN:
                 if state.game_over and e.key == pygame.K_r:
                     os.execv(sys.executable, [sys.executable] + sys.argv)
                 if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6):
@@ -108,10 +142,13 @@ def main():
                     if state.in_car:
                         player.x, player.y = exit_car_position(state.in_car)
                         state.in_car = None
+                        audio.play('door_close', pos=(player.x, player.y))
+                        audio.set_engine(False)
                     else:
                         for c in state.cars:
                             if math.hypot(c.x-player.x, c.y-player.y) < 60:
                                 state.in_car = c
+                                audio.play('door_open', pos=(c.x, c.y))
                                 break
                 if e.key == pygame.K_f and not state.in_car and not state.game_over:
                     for p in state.peds:
@@ -120,12 +157,13 @@ def main():
                             p.state = 'flee'
                             player.wanted = min(5, player.wanted + 1)
                             player.crime_timer = 30
+                            audio.play('robbery', pos=(p.x, p.y))
                             break
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over:
                 if state.fire_cd <= 0 and not WPN_AUTO[state.weapon]:
                     fire()
 
-        if not state.game_over:
+        if not state.game_over and not state.menu:
             keys = pygame.key.get_pressed()
             state.fire_cd = max(0, state.fire_cd - dt)
 
@@ -134,9 +172,15 @@ def main():
                 steer = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
                 state.in_car.update(dt, accel, steer)
                 player.x, player.y = state.in_car.x, state.in_car.y
+                if state.in_car and not state.in_car.dead:
+                    audio.set_engine(True, throttle=accel,
+                                     speed_norm=abs(state.in_car.spd) / state.in_car.max_spd)
+                else:
+                    audio.set_engine(False)
                 if in_water(state.in_car.x, state.in_car.y):
                     state.in_car.explode()
             else:
+                audio.set_engine(False)
                 sp = 220
                 dx = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
                 dy = (1 if keys[pygame.K_s] else 0) - (1 if keys[pygame.K_w] else 0)
@@ -148,6 +192,12 @@ def main():
                     if not any(pr.colliderect(b[0]) for b in state.buildings):
                         player.x, player.y = nx, ny
                     player.angle = math.degrees(math.atan2(dx, -dy))
+                    player.step_cd -= dt
+                    if player.step_cd <= 0:
+                        player.step_cd = 0.34
+                        audio.play('footstep', volume=0.45, pos=(player.x, player.y))
+                else:
+                    player.step_cd = 0.0
                 player.aim_angle = aim_to_mouse()
                 if keys[pygame.K_SPACE] or (pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]):
                     if state.fire_cd <= 0:
@@ -204,6 +254,7 @@ def main():
                     dx, dy = player.x - c.x, player.y - c.y
                     d = math.hypot(dx, dy) or 1
                     state.bullets.append([c.x, c.y, dx/d*700, dy/d*700, 0.8, True, 12])
+                    audio.play('cop_shoot', pos=(c.x, c.y))
 
             for b in list(state.bullets):
                 b[0] += b[2]*dt; b[1] += b[3]*dt; b[4] -= dt
@@ -215,11 +266,13 @@ def main():
                 if b[5]:
                     if state.in_car and br.colliderect(state.in_car.rect()):
                         state.in_car.take_damage(b[6] * 0.6)
+                        audio.play('hit_metal', volume=0.6, pos=(b[0], b[1]))
                         state.bullets.remove(b)
                         continue
                     if br.colliderect(player.rect()):
                         player.hp -= b[6]
                         spawn_blood(player.x, player.y, 6)
+                        audio.play('hurt', pos=(player.x, player.y))
                         state.bullets.remove(b)
                         if player.hp <= 0:
                             state.corpses.append((make_corpse(player), player.x, player.y, player.angle))
@@ -232,12 +285,14 @@ def main():
                         if c is state.in_car or c.dead: continue
                         if br.colliderect(c.rect()):
                             c.take_damage(b[6] * 0.5)
+                            audio.play('hit_metal', volume=0.55, pos=(b[0], b[1]))
                             state.bullets.remove(b); hit_any = True; break
                     if hit_any: continue
                     for p in list(state.peds):
                         if br.colliderect(p.rect()):
                             p.hp -= b[6]; p.state = 'flee'
                             spawn_blood(p.x, p.y, 4)
+                            audio.play('hit_flesh', pos=(p.x, p.y))
                             if p.hp <= 0:
                                 state.peds.remove(p)
                                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
@@ -251,6 +306,7 @@ def main():
                         if br.colliderect(c.rect()):
                             c.hp -= b[6]
                             spawn_blood(c.x, c.y, 5)
+                            audio.play('hit_flesh', pos=(c.x, c.y))
                             if c.hp <= 0:
                                 state.cops.remove(c)
                                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
@@ -302,10 +358,13 @@ def main():
                     for c in state.cops:
                         if rr.colliderect(c.rect()): hit = True; break
                 if hit:
+                    audio.stop_loop(r[5])
                     do_explosion(r[0], r[1])
                     state.rockets.remove(r)
                     player.wanted = min(5, player.wanted + 1)
                     player.crime_timer = 30
+                else:
+                    audio.update_loop(r[5], pos=(r[0], r[1]))
 
             for pk in state.pickups:
                 if pk[3] > 0:
@@ -315,9 +374,11 @@ def main():
                     kind = pk[2]
                     if kind == 'hp':
                         player.hp = min(100, player.hp + 30)
+                        audio.play('pickup_hp')
                     else:
                         state.unlocked_weapons.add(kind)
                         state.ammo[kind] = state.ammo.get(kind, 0) + PICKUP_AMMO[kind]
+                        audio.play('pickup_weapon')
                     pk[3] = PICKUP_RESPAWN
 
             for bp in list(state.blood_particles):
@@ -449,6 +510,9 @@ def main():
                 screen.blit(lt, (W//2 - lt.get_width()//2, 175 + i * 30))
             t2 = FONT.render("[R] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
             screen.blit(t2, (W//2 - t2.get_width()//2, H - 50))
+
+        if state.menu:
+            menu_ctrl.draw(screen, BIG, MED, FONT, state)
 
         pygame.display.flip()
 
