@@ -105,7 +105,6 @@ def main():
     init_services(state)
 
     cop_spawn = 0.0
-    prev_wanted = 0
 
     while state.running:
         dt = clock.tick(60) / 1000
@@ -113,9 +112,6 @@ def main():
             state.message_timer = max(0.0, state.message_timer - dt)
         if not state.menu:
             state.traffic_time += dt
-            if player.wanted > prev_wanted:
-                audio.play('wanted_up')
-            prev_wanted = player.wanted
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
@@ -340,6 +336,7 @@ def main():
                             p.hp -= b[6]; p.state = 'flee'
                             spawn_blood(p.x, p.y, 4)
                             audio.play('hit_flesh', pos=(p.x, p.y))
+                            audio.play('scream', pos=(p.x, p.y))
                             if p.hp <= 0:
                                 state.peds.remove(p)
                                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
@@ -354,6 +351,7 @@ def main():
                             c.hp -= b[6]
                             spawn_blood(c.x, c.y, 5)
                             audio.play('hit_flesh', pos=(c.x, c.y))
+                            audio.play('scream', pos=(c.x, c.y))
                             if c.hp <= 0:
                                 state.cops.remove(c)
                                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))

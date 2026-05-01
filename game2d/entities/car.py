@@ -374,6 +374,7 @@ class Car:
         ped.state = 'flee'
         self.blood_trail = max(self.blood_trail, 3.5)
         spawn_blood(ped.x, ped.y, 5 if is_cop else 4)
+        audio.play('scream', pos=(ped.x, ped.y))
         if ped.hp <= 0:
             if ped in group:
                 group.remove(ped)
