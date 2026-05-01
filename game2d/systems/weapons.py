@@ -78,9 +78,8 @@ def fire():
     """Aktuelle Waffe abfeuern (state.weapon). Setzt state.fire_cd."""
     s = current()
     weapon = s.weapon
-    if weapon == 0: return
-    if weapon != 6 and s.ammo[weapon] <= 0: return
-    if weapon == 6:
+    if weapon != 0 and s.ammo[weapon] <= 0: return
+    if weapon == 0:
         s.fire_cd = WPN_RATE[weapon]
         _lightsaber_swing()
         return

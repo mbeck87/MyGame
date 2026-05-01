@@ -10,13 +10,13 @@ from game2d.config import (
     W, H,
     WORLD_W, WORLD_H,
     WPN_NAMES, WPN_AUTO,
-    PICKUP_AMMO, PICKUP_COLOR, PICKUP_LABEL, PICKUP_RESPAWN,
+    PICKUP_AMMO, PICKUP_RESPAWN,
 )
 from game2d.persistence import name_input_screen
 from game2d.render.hud import draw_star
 from game2d.render.menus import draw_hint, draw_overlay_menu, draw_service_markers
 from game2d.render.minimap import draw_minimap
-from game2d.render.sprites import make_ped_frames
+from game2d.render.sprites import make_ped_frames, get_pickup_icon
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
@@ -86,9 +86,9 @@ def main():
     player.step_cd = 0.0
     state.player = player
     state.in_car = None
-    state.weapon = 6
-    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
-    state.unlocked_weapons = {0, 1, 6}
+    state.weapon = 0
+    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
+    state.unlocked_weapons = {0, 1}
     state.fire_cd = 0
 
     # Pickups
@@ -451,12 +451,9 @@ def main():
             if pk[3] > 0:
                 continue
             sx, sy = int(pk[0] - icam[0]), int(pk[1] - icam[1])
-            if -30 < sx < W+30 and -30 < sy < H+30:
-                col = PICKUP_COLOR[pk[2]]
-                pygame.draw.rect(screen, (0,0,0), (sx-13, sy-13, 26, 26), border_radius=5)
-                pygame.draw.rect(screen, col,     (sx-11, sy-11, 22, 22), border_radius=4)
-                lbl = FONT.render(PICKUP_LABEL[pk[2]], 1, (255,255,255))
-                screen.blit(lbl, (sx - lbl.get_width()//2, sy - lbl.get_height()//2))
+            if -40 < sx < W+40 and -40 < sy < H+40:
+                icon = get_pickup_icon(pk[2])
+                screen.blit(icon, (sx - 18, sy - 18))
         for cs, cx, cy, ca in state.corpses:
             if view.collidepoint(cx, cy):
                 rot = pygame.transform.rotate(cs, -ca)
@@ -546,9 +543,26 @@ def main():
         pygame.draw.rect(screen, (200,40,40), (12, 12, 216*max(0,player.hp)/100, 26))
         screen.blit(FONT.render(f"HP {int(player.hp)}", 1, (255,255,255)), (16, 14))
         screen.blit(FONT.render(f"${player.money}", 1, (60,230,80)), (10, 50))
-        screen.blit(FONT.render(WPN_NAMES[state.weapon], 1, (240,220,80)), (10, 75))
-        a = state.ammo.get(state.weapon, 0) if state.weapon not in (0, 6) else "∞"
-        screen.blit(FONT.render(f"Munition {a}", 1, (255,255,255)), (10, 100))
+        for wi, wname in enumerate(WPN_NAMES):
+            wy = 75 + wi * 22
+            selected = wi == state.weapon
+            unlocked = wi in state.unlocked_weapons
+            if not unlocked:
+                col = (80, 80, 80)
+                ammo_txt = ""
+            elif wi == 0:
+                col = (100, 220, 255)
+                ammo_txt = "∞"
+            else:
+                ammo = state.ammo.get(wi, 0)
+                col = (60, 220, 80) if ammo > 0 else (220, 60, 60)
+                ammo_txt = str(ammo)
+            prefix = f"{wi+1} "
+            label = f"{prefix}{wname}" + (f"  {ammo_txt}" if ammo_txt else "")
+            if selected:
+                tw = FONT.size(label)[0]
+                pygame.draw.rect(screen, (60, 60, 0), (8, wy - 1, tw + 6, 20))
+            screen.blit(FONT.render(label, 1, col), (10, wy))
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
         screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-7 Waffe",

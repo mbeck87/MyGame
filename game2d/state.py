@@ -30,7 +30,7 @@ class GameState:
     intersection_claims: dict = field(default_factory=dict)
 
     # ── Waffen & Spieler-State ──────────────────────────────────────
-    weapon: int = 1
+    weapon: int = 0
     ammo: dict = field(default_factory=lambda: {1: 80, 2: 0, 3: 0, 4: 0, 5: 0})
     unlocked_weapons: set = field(default_factory=lambda: {0, 1})
     fire_cd: float = 0.0

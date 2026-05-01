@@ -104,14 +104,14 @@ Sprite-Koordinatensystem: Y-Achse zeigt nach unten. Fußgänger-Sprites: "vorn" 
 
 | Index | Name | Rate (s) | Schaden | Pellets | Spread | Auto |
 |-------|------|----------|---------|---------|--------|------|
-| 0 | Fäuste | 0.5 | 25 | 1 | 0 | Nein |
+| 0 | Lichtschwert | 0.55 | 145 | 1 | 0 | Nein |
 | 1 | Pistole | 0.4 | 35 | 1 | 0.03 | Nein |
 | 2 | SMG | 0.08 | 15 | 1 | 0.08 | Ja |
 | 3 | Schrotflinte | 0.85 | 80 | 6 | 0.22 | Nein |
 | 4 | MG | 0.05 | 28 | 1 | 0.06 | Ja |
 | 5 | Raketenwerfer | 1.6 | 200 (Explosion) | 1 | 0 | Nein |
 
-Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten.
+Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten. Index 0 (Lichtschwert) hat unendliche Munition.
 
 ## Spieler-Objekt
 
