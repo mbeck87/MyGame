@@ -54,7 +54,7 @@ class GameState:
     # Service locations and police extras.
     garages: list = field(default_factory=list)          # [(x, y), ...]
     shops:   list = field(default_factory=list)          # [(x, y), ...]
-    roadblocks: list = field(default_factory=list)       # [Car, ...]
+    roadblocks: list = field(default_factory=list)       # [Roadblock, ...]
 
     # ── Loop / Frame ────────────────────────────────────────────────
     cam: list = field(default_factory=lambda: [0, 0])

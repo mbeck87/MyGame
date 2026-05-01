@@ -99,6 +99,49 @@ def draw_traffic_lights(surf, cam):
             draw_signal_head(surf, ew_pos[0], ew_pos[1], ew_state, vertical=False)
 
 
+def draw_center_line_dashes(surf, cam, horizontal, center, start, end):
+    dash_len = 28
+    dash_gap = 22
+    pos = start
+    while pos < end:
+        dash_end = min(pos + dash_len, end)
+        if dash_end > pos:
+            if horizontal:
+                sx = pos - cam[0]
+                sy = center - cam[1]
+                if -dash_len < sx < W:
+                    pygame.draw.rect(surf, LINE, (sx, sy - 2, dash_end - pos, 4))
+            else:
+                sx = center - cam[0]
+                sy = pos - cam[1]
+                if -dash_len < sy < H:
+                    pygame.draw.rect(surf, LINE, (sx - 2, sy, 4, dash_end - pos))
+        pos += dash_len + dash_gap
+
+
+def draw_center_lines(surf, cam):
+    s = current()
+    intersection_gap = ROAD_W // 2 + 12
+    for y in s.roads_h:
+        sy = y - cam[1]
+        if not (-10 < sy < H + 10):
+            continue
+        for x0, x1 in zip(s.roads_v, s.roads_v[1:]):
+            start = x0 + intersection_gap
+            end = x1 - intersection_gap
+            if end > start:
+                draw_center_line_dashes(surf, cam, True, y, start, end)
+    for x in s.roads_v:
+        sx = x - cam[0]
+        if not (-10 < sx < W + 10):
+            continue
+        for y0, y1 in zip(s.roads_h, s.roads_h[1:]):
+            start = y0 + intersection_gap
+            end = y1 - intersection_gap
+            if end > start:
+                draw_center_line_dashes(surf, cam, False, x, start, end)
+
+
 def draw_world_bg(surf, cam):
     s = current()
     surf.fill(WATER_DEEP)
@@ -175,20 +218,5 @@ def draw_world_bg(surf, cam):
             pygame.draw.line(surf, (125, 125, 130), (sx - ROAD_W//2, ay), (sx - ROAD_W//2, ay + ah), 2)
             pygame.draw.line(surf, (125, 125, 130), (sx + ROAD_W//2, ay), (sx + ROAD_W//2, ay + ah), 2)
     draw_crosswalks(surf, cam)
-    for y in s.roads_h:
-        sy = y - cam[1]
-        if -10 < sy < H+10:
-            a0, a1, _, _ = h_extents(y)
-            for dx in range(a0, a1, 50):
-                sx = dx - cam[0]
-                if -30 < sx < W:
-                    pygame.draw.rect(surf, LINE, (sx, sy - 2, 28, 4))
-    for x in s.roads_v:
-        sx = x - cam[0]
-        if -10 < sx < W+10:
-            a0, a1, _, _ = v_extents(x)
-            for dy in range(a0, a1, 50):
-                sy = dy - cam[1]
-                if -30 < sy < H:
-                    pygame.draw.rect(surf, LINE, (sx - 2, sy, 4, 28))
+    draw_center_lines(surf, cam)
     draw_traffic_lights(surf, cam)

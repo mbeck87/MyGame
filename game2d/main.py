@@ -257,7 +257,7 @@ def main():
                     player.wanted = max(0, player.wanted - 1)
                     player.crime_timer = 25
                 cop_spawn -= dt
-                active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead)
+                active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead and not getattr(c, "is_roadblock_support", False))
                 cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
                 if cop_spawn <= 0 and active_cop_cars < cop_limit:
                     cop_spawn = max(1.2, 8 - player.wanted*1.35)
@@ -479,6 +479,7 @@ def main():
                     pygame.draw.circle(screen, (10,10,12),
                                        (int(wx + wxr - icam[0]), int(wy + wyr - icam[1])), dr_)
         for c in state.cars: c.draw(screen, icam)
+        for roadblock in state.roadblocks: roadblock.draw(screen, icam)
         for p in state.peds: p.draw(screen, icam)
         for c in state.cops: c.draw(screen, icam)
         if not state.in_car:

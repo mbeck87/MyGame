@@ -1,7 +1,10 @@
 """Small world overview rendered into the HUD."""
 import pygame
 
-from game2d.config import W, WORLD_W, WORLD_H, ROAD_W, WATER_W
+from game2d.config import (
+    W, WORLD_W, WORLD_H, ROAD_W, SIDEWALK_W, WATER_W,
+    INNER_LO, INNER_HI_X, INNER_HI_Y, ROAD_LO, ROAD_HI_X, ROAD_HI_Y,
+)
 from game2d.systems.services import garage_layout
 
 
@@ -23,33 +26,63 @@ def _local_rect(world_rect, rect):
     return pygame.Rect(x, y, w, h)
 
 
+def _world_rect(x, y, w, h, rect):
+    lx, ly = _local_point(x, y, rect)
+    lw = max(1, int((w / WORLD_W) * rect.w))
+    lh = max(1, int((h / WORLD_H) * rect.h))
+    return pygame.Rect(lx, ly, lw, lh)
+
+
 def draw_minimap(screen, state, font):
     rect = pygame.Rect(W - 236, 10, 216, 216)
     panel = pygame.Surface(rect.size, pygame.SRCALPHA)
-    panel.fill((30, 68, 36, 220))
-
-    water_px = max(2, int((WATER_W / WORLD_W) * rect.w))
-    pygame.draw.rect(panel, (24, 62, 115), (0, 0, rect.w, water_px))
-    pygame.draw.rect(panel, (24, 62, 115), (0, rect.h - water_px, rect.w, water_px))
-    pygame.draw.rect(panel, (24, 62, 115), (0, 0, water_px, rect.h))
-    pygame.draw.rect(panel, (24, 62, 115), (rect.w - water_px, 0, water_px, rect.h))
+    panel.fill((24, 62, 115, 220))
+    pygame.draw.rect(panel, (195, 175, 120), _world_rect(WATER_W, WATER_W, WORLD_W - 2 * WATER_W, WORLD_H - 2 * WATER_W, rect))
+    pygame.draw.rect(panel, (30, 68, 36), _world_rect(INNER_LO, INNER_LO, INNER_HI_X - INNER_LO, INNER_HI_Y - INNER_LO, rect))
 
     road_px = max(3, int((ROAD_W / WORLD_W) * rect.w))
+    sidewalk_total = ROAD_W + SIDEWALK_W * 2
+    road_half = ROAD_W // 2
+
+    def h_extents(y):
+        if y == ROAD_LO or y == ROAD_HI_Y:
+            return ROAD_LO - road_half, ROAD_HI_X + road_half
+        return ROAD_LO + road_half, ROAD_HI_X - road_half
+
+    def v_extents(x):
+        if x == ROAD_LO or x == ROAD_HI_X:
+            return ROAD_LO - road_half, ROAD_HI_Y + road_half
+        return ROAD_LO + road_half, ROAD_HI_Y - road_half
 
     for x in state.roads_v:
         mx, _ = _local_point(x, 0, rect)
-        pygame.draw.rect(panel, (64, 64, 68), (mx - road_px // 2, 0, road_px, rect.h))
+        y0, y1 = v_extents(x)
+        _, my0 = _local_point(0, y0, rect)
+        _, my1 = _local_point(0, y1, rect)
+        pygame.draw.rect(panel, (64, 64, 68), (mx - road_px // 2, my0, road_px, my1 - my0))
     for y in state.roads_h:
         _, my = _local_point(0, y, rect)
-        pygame.draw.rect(panel, (64, 64, 68), (0, my - road_px // 2, rect.w, road_px))
+        x0, x1 = h_extents(y)
+        mx0, _ = _local_point(x0, 0, rect)
+        mx1, _ = _local_point(x1, 0, rect)
+        pygame.draw.rect(panel, (64, 64, 68), (mx0, my - road_px // 2, mx1 - mx0, road_px))
 
     line_col = (205, 190, 70)
-    for x in state.roads_v:
-        mx, _ = _local_point(x, 0, rect)
-        pygame.draw.line(panel, line_col, (mx, 0), (mx, rect.h), 1)
+    gap = max(2, road_px // 2 + 1)
     for y in state.roads_h:
         _, my = _local_point(0, y, rect)
-        pygame.draw.line(panel, line_col, (0, my), (rect.w, my), 1)
+        for x0, x1 in zip(state.roads_v, state.roads_v[1:]):
+            mx0, _ = _local_point(x0, 0, rect)
+            mx1, _ = _local_point(x1, 0, rect)
+            if mx1 - gap > mx0 + gap:
+                pygame.draw.line(panel, line_col, (mx0 + gap, my), (mx1 - gap, my), 1)
+    for x in state.roads_v:
+        mx, _ = _local_point(x, 0, rect)
+        for y0, y1 in zip(state.roads_h, state.roads_h[1:]):
+            _, my0 = _local_point(0, y0, rect)
+            _, my1 = _local_point(0, y1, rect)
+            if my1 - gap > my0 + gap:
+                pygame.draw.line(panel, line_col, (mx, my0 + gap), (mx, my1 - gap), 1)
 
     for building_rect, _ in state.buildings:
         br = _local_rect(building_rect, rect)
@@ -73,6 +106,8 @@ def draw_minimap(screen, state, font):
     for c in state.cars:
         if c.is_cop and not c.dead:
             pygame.draw.circle(screen, (80, 120, 255), _map_point(c.x, c.y, rect), 2)
+    for roadblock in state.roadblocks:
+        pygame.draw.circle(screen, (235, 70, 55), _map_point(roadblock.x, roadblock.y, rect), 3)
 
     actor = state.in_car if state.in_car else state.player
     pygame.draw.circle(screen, (255, 235, 70), _map_point(actor.x, actor.y, rect), 5)

@@ -5,6 +5,7 @@ import sys
 import pygame
 
 SCORES_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scores.json")
+MAX_HIGH_SCORES = 10
 
 
 def load_data():
@@ -22,7 +23,7 @@ def save_score(name, money):
     data["last_name"] = name
     data.setdefault("scores", []).append({"name": name, "money": money})
     data["scores"].sort(key=lambda s: s["money"], reverse=True)
-    data["scores"] = data["scores"][:20]
+    data["scores"] = data["scores"][:MAX_HIGH_SCORES]
     with open(SCORES_FILE, "w") as f:
         json.dump(data, f)
     return data["scores"]

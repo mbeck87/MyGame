@@ -4,7 +4,7 @@ import random
 
 import pygame
 
-from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y
+from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W
 from game2d.systems import audio
 
 
@@ -151,30 +151,111 @@ def garage_lines(in_car):
     return lines
 
 
+class Roadblock:
+    def __init__(self, x, y, road_axis):
+        self.x = x
+        self.y = y
+        self.road_axis = road_axis
+        if road_axis == "v":
+            self.rect = pygame.Rect(0, 0, ROAD_W + 34, 24)
+        else:
+            self.rect = pygame.Rect(0, 0, 24, ROAD_W + 34)
+        self.rect.center = (int(x), int(y))
+
+    def draw(self, surf, cam):
+        cx = self.x - cam[0]
+        cy = self.y - cam[1]
+        barrier = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        pygame.draw.rect(barrier, (238, 238, 230), barrier.get_rect(), border_radius=3)
+        pygame.draw.rect(barrier, (55, 55, 60), barrier.get_rect().inflate(-6, -14), border_radius=2)
+        if self.road_axis == "v":
+            for x in range(-18, self.rect.w + 8, 26):
+                pygame.draw.polygon(barrier, (220, 40, 35), [(x, self.rect.h), (x + 15, self.rect.h), (x + 35, 0), (x + 20, 0)])
+            cone_offsets = [(-self.rect.w // 2 - 8, 0), (self.rect.w // 2 + 8, 0)]
+        else:
+            for y in range(-18, self.rect.h + 8, 26):
+                pygame.draw.polygon(barrier, (220, 40, 35), [(0, y + 20), (0, y + 35), (self.rect.w, y + 15), (self.rect.w, y)])
+            cone_offsets = [(0, -self.rect.h // 2 - 8), (0, self.rect.h // 2 + 8)]
+        surf.blit(barrier, barrier.get_rect(center=(cx, cy)))
+        for ox, oy in cone_offsets:
+            x = int(cx + ox)
+            y = int(cy + oy)
+            pygame.draw.polygon(surf, (245, 120, 25), [(x, y - 10), (x - 8, y + 9), (x + 8, y + 9)])
+            pygame.draw.rect(surf, (245, 245, 245), (x - 6, y + 2, 12, 3))
+
+
+def _near_intersection(x, y, state, margin=105):
+    return any(abs(x - rx) < margin for rx in state.roads_v) and any(abs(y - ry) < margin for ry in state.roads_h)
+
+
+def _roadblock_spawn_near(state, tx, ty):
+    for _ in range(220):
+        road_axis = "v" if random.random() < 0.5 else "h"
+        dist = random.uniform(300, 850)
+        sign = -1 if random.random() < 0.5 else 1
+        if road_axis == "v":
+            roads = [rx for rx in state.roads_v if abs(rx - tx) <= 900] or sorted(state.roads_v, key=lambda rx: abs(rx - tx))[:4]
+            x = random.choice(roads)
+            y = max(ROAD_LO + 80, min(ROAD_HI_Y - 80, ty + sign * dist))
+        else:
+            x = max(ROAD_LO + 80, min(ROAD_HI_X - 80, tx + sign * dist))
+            roads = [ry for ry in state.roads_h if abs(ry - ty) <= 900] or sorted(state.roads_h, key=lambda ry: abs(ry - ty))[:4]
+            y = random.choice(roads)
+        roadblock = Roadblock(x, y, road_axis)
+        probe = roadblock.rect.inflate(70, 70)
+        if _near_intersection(x, y, state):
+            continue
+        if any(probe.colliderect(other.rect) for other in state.roadblocks):
+            continue
+        if any(probe.colliderect(c.rect()) for c in state.cars if not c.dead):
+            continue
+        if any(probe.colliderect(b[0]) for b in state.buildings):
+            continue
+        return roadblock
+    return None
+
+
+def _spawn_roadblock_cop_car(state, roadblock):
+    from game2d.entities.car import Car
+
+    car = Car(roadblock.x, roadblock.y, (245, 245, 250), is_cop=True)
+    side = -1 if random.random() < 0.5 else 1
+    if roadblock.road_axis == "v":
+        car.x = roadblock.x + random.choice([-28, 28])
+        car.y = roadblock.y + side * 96
+        car.angle = 0 if side < 0 else 180
+    else:
+        car.x = roadblock.x + side * 96
+        car.y = roadblock.y + random.choice([-28, 28])
+        car.angle = 90 if side < 0 else 270
+    car.spd = 0
+    car.ai_spd = 0
+    car.yield_timer = 2.0
+    car.is_roadblock_support = True
+    return car
+
+
 def escalate_police(state):
     """Small wanted-level extras beyond normal cop spawns."""
     wanted = state.player.wanted
     if wanted < 3:
         state.roadblocks.clear()
+        for car in list(state.cars):
+            if getattr(car, "is_roadblock_support", False) and car is not state.in_car:
+                if car._siren_channel is not None:
+                    audio.stop_loop(car._siren_channel)
+                    car._siren_channel = None
+                state.cars.remove(car)
         return
-    active = [c for c in state.roadblocks if c in state.cars and not c.dead]
-    state.roadblocks[:] = active
-    limit = 1 if wanted == 3 else 2 if wanted == 4 else 3
+    limit = 4 if wanted == 3 else 7 if wanted == 4 else 10
     while len(state.roadblocks) < limit:
-        from game2d.entities.car import Car
-        from game2d.world.spawning import cop_car_spawn_near
-
         target = state.in_car if state.in_car else state.player
-        x, y, angle = cop_car_spawn_near(target.x, target.y)
-        car = Car(x, y, (245, 245, 250), is_cop=True)
-        car.angle = (angle + 90) % 360
-        car.spd = 0
-        car.ai_spd = 0
-        car.max_spd = 260
-        car.yield_timer = 1.5
-        car.is_roadblock = True
+        roadblock = _roadblock_spawn_near(state, target.x, target.y)
+        if roadblock is None:
+            break
+        car = _spawn_roadblock_cop_car(state, roadblock)
         state.cars.append(car)
-        state.roadblocks.append(car)
+        state.roadblocks.append(roadblock)
 
 
 def lose_cops_after_repaint(state):

@@ -28,6 +28,7 @@ class Car:
         self.max_spd = 400 if is_cop else 320
         self.is_cop = is_cop
         self.is_roadblock = False
+        self.is_roadblock_support = False
         self.sprite = make_cop_car_sprite() if is_cop else make_car_sprite(body)
         self.w, self.h = self.sprite.get_size()
         self.max_hp = 500
@@ -185,6 +186,32 @@ class Car:
                 return other
         return None
 
+    def roadblock_at(self, rect):
+        for roadblock in current().roadblocks:
+            if rect.colliderect(roadblock.rect):
+                return roadblock
+        return None
+
+    def resolve_roadblock_collision(self, roadblock, prev_spd):
+        own = self.rect()
+        overlap_x = min(own.right, roadblock.rect.right) - max(own.left, roadblock.rect.left)
+        overlap_y = min(own.bottom, roadblock.rect.bottom) - max(own.top, roadblock.rect.top)
+        if overlap_x <= 0 or overlap_y <= 0:
+            return
+        dx = self.x - roadblock.x
+        dy = self.y - roadblock.y
+        if overlap_x < overlap_y:
+            push = overlap_x + 1
+            self.x += push if dx >= 0 else -push
+        else:
+            push = overlap_y + 1
+            self.y += push if dy >= 0 else -push
+        impact = abs(prev_spd)
+        if impact > 55:
+            self.take_damage(impact * 0.05)
+            audio.play('crash', volume=min(1.0, impact / 260.0), pos=(self.x, self.y))
+        self.spd *= -0.18 if impact > 45 else 0
+
     def resolve_car_collision(self, other, controlled):
         s = current()
         dx = self.x - other.x
@@ -204,7 +231,17 @@ class Car:
         if overlap_x <= 0 or overlap_y <= 0:
             return
         push = max(1.5, min(overlap_x, overlap_y, 10.0))
-        if controlled:
+        anchored_self = self.is_roadblock and not controlled
+        anchored_other = other.is_roadblock and other is not s.in_car
+        if anchored_self and anchored_other:
+            anchored_self = False
+        if anchored_self:
+            self.x += nx * push * 0.08
+            self.y += ny * push * 0.08
+        elif anchored_other:
+            other.x -= nx * push * 0.08
+            other.y -= ny * push * 0.08
+        elif controlled:
             self.x += nx * push * 0.2
             self.y += ny * push * 0.2
             other.x -= nx * push * 0.55
@@ -225,6 +262,10 @@ class Car:
         impulse = max(16.0, abs(rel) * 0.28 + abs(self.spd) * 0.08)
         self.spd = max(-self.max_spd * 0.4, min(self.max_spd, self.spd - impulse * 0.14))
         other.spd = max(-other.max_spd * 0.4, min(other.max_spd, other.spd + impulse * (0.32 if controlled else 0.18)))
+        if self.is_roadblock:
+            self.spd = 0
+        if other.is_roadblock:
+            other.spd = 0
         if controlled:
             other.angle += max(-10, min(10, math.degrees(math.atan2(nx, -ny)) - other.angle)) * 0.05
         else:
@@ -431,9 +472,13 @@ class Car:
         dy = -math.cos(rad) * self.spd * dt
         nx, ny = self.x + dx, self.y + dy
         tx = self.rect_at(nx, self.y)
-        hit_x = any(tx.colliderect(b[0]) for b in s.buildings) or (not controlled and not rect_on_road(tx))
+        hit_x = (any(tx.colliderect(b[0]) for b in s.buildings) or
+                 self.roadblock_at(tx) is not None or
+                 (not controlled and not rect_on_road(tx)))
         ty = self.rect_at(self.x, ny)
-        hit_y = any(ty.colliderect(b[0]) for b in s.buildings) or (not controlled and not rect_on_road(ty))
+        hit_y = (any(ty.colliderect(b[0]) for b in s.buildings) or
+                 self.roadblock_at(ty) is not None or
+                 (not controlled and not rect_on_road(ty)))
         mag = math.hypot(dx, dy) or 1
         if hit_x and hit_y:
             self.spd *= -0.2
@@ -458,6 +503,9 @@ class Car:
         other = self.overlaps_other_car()
         if other:
             self.resolve_car_collision(other, controlled)
+        roadblock = self.roadblock_at(self.rect())
+        if roadblock:
+            self.resolve_roadblock_collision(roadblock, prev_spd)
         if controlled:
             self.x = max(40, min(WORLD_W-40, self.x))
             self.y = max(40, min(WORLD_H-40, self.y))
@@ -470,6 +518,17 @@ class Car:
     def ai_update(self, dt):
         s = current()
         self.yield_timer = max(0.0, self.yield_timer - dt)
+        if self.is_roadblock_support:
+            self.spd = 0
+            self.ai_spd = 0
+            return
+        if self.is_roadblock:
+            self.spd = 0
+            self.ai_spd = 0
+            lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
+            self.x = move_toward(self.x, lane_x, 18 * dt)
+            self.y = move_toward(self.y, lane_y, 18 * dt)
+            return
         if self.is_cop:
             target = s.in_car if s.in_car else s.player
             dx = target.x - self.x
@@ -520,7 +579,9 @@ class Car:
                         nx2 = self.x + math.sin(rad2) * speed_guess * dt
                         ny2 = self.y - math.cos(rad2) * speed_guess * dt
                         test2 = self.rect_at(nx2, ny2)
-                        clear = not any(test2.colliderect(b[0]) for b in s.AI_OBSTACLES) and rect_on_road(test2)
+                        clear = (not any(test2.colliderect(b[0]) for b in s.AI_OBSTACLES) and
+                                 not any(test2.colliderect(rb.rect) for rb in s.roadblocks) and
+                                 rect_on_road(test2))
                         if clear:
                             clear = not any(test2.colliderect(c.rect()) for c in s.cars if c is not self and not c.dead)
                         if clear:
@@ -556,7 +617,9 @@ class Car:
         nx = self.x + math.sin(rad) * self.ai_spd * dt
         ny = self.y - math.cos(rad) * self.ai_spd * dt
         test = self.rect_at(nx, ny)
-        blocked = any(test.colliderect(b[0]) for b in s.AI_OBSTACLES) or not rect_on_road(test)
+        blocked = (any(test.colliderect(b[0]) for b in s.AI_OBSTACLES) or
+                   any(test.colliderect(rb.rect) for rb in s.roadblocks) or
+                   not rect_on_road(test))
         if not blocked:
             for c in s.cars:
                 if c is self: continue
@@ -580,11 +643,11 @@ class Car:
             self.angle = random.choice([0, 90, 180, 270])
 
     def draw(self, surf, cam):
-        if self.is_roadblock:
-            self.draw_roadblock_markers(surf, cam)
         rot = pygame.transform.rotate(self.sprite, -self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
+        if self.is_roadblock:
+            self.draw_roadblock_markers(surf, cam)
         if self.dents:
             rad = math.radians(self.angle)
             cs, sn = math.cos(rad), math.sin(rad)
@@ -595,17 +658,24 @@ class Car:
                 pygame.draw.circle(surf, (25, 25, 28), (int(cx_ + wx), int(cy_ + wy)), dr_)
 
     def draw_roadblock_markers(self, surf, cam):
-        rad = math.radians(self.angle)
+        marker_angle = (self.angle + 90) % 360
+        rad = math.radians(marker_angle)
         cs, sn = math.cos(rad), math.sin(rad)
         cx = self.x - cam[0]
         cy = self.y - cam[1]
-        barrier = pygame.Surface((126, 14), pygame.SRCALPHA)
-        pygame.draw.rect(barrier, (235, 235, 230), (0, 0, 126, 14), border_radius=3)
-        for x in range(-14, 128, 22):
-            pygame.draw.polygon(barrier, (220, 40, 35), [(x, 14), (x + 13, 14), (x + 31, 0), (x + 18, 0)])
-        rot_barrier = pygame.transform.rotate(barrier, -self.angle)
-        surf.blit(rot_barrier, rot_barrier.get_rect(center=(cx, cy)))
-        for offset in (-72, -48, 48, 72):
+        barrier = pygame.Surface((132, 18), pygame.SRCALPHA)
+        pygame.draw.rect(barrier, (238, 238, 230), (0, 0, 132, 18), border_radius=3)
+        pygame.draw.rect(barrier, (55, 55, 60), (0, 7, 132, 4), border_radius=2)
+        for x in range(-16, 134, 24):
+            pygame.draw.polygon(barrier, (220, 40, 35), [(x, 18), (x + 14, 18), (x + 34, 0), (x + 20, 0)])
+        rot_barrier = pygame.transform.rotate(barrier, -marker_angle)
+        normal_x = math.sin(math.radians(self.angle))
+        normal_y = -math.cos(math.radians(self.angle))
+        for lateral in (-20, 20):
+            bx = cx + normal_x * lateral
+            by = cy + normal_y * lateral
+            surf.blit(rot_barrier, rot_barrier.get_rect(center=(bx, by)))
+        for offset in (-78, -52, 52, 78):
             wx = offset * cs
             wy = offset * sn
             x = int(cx + wx)
