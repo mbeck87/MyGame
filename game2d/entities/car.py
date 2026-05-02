@@ -47,7 +47,7 @@ class Car:
         self.yield_timer = 0.0
         self.ai_spd = random.uniform(150, 240) if is_cop else random.uniform(80, 160)
         self.turn_cd = random.uniform(2, 6)
-        self.turn_target = None   # sanftes Abbiegen: Zielwinkel während Kurve
+        self.arc = None   # Kreisbogen-Kurve: {cx,cy,r,theta,theta_end,omega,target}
         self._siren_channel = None
 
     def take_damage(self, dmg):
@@ -432,18 +432,60 @@ class Car:
             rad = math.radians(angle)
             tx = lx + math.sin(rad) * 120
             ty = ly - math.cos(rad) * 120
-            test = self.rect_at(tx, ty)
-            if rect_on_road(self.rect_at(lx, ly)) and rect_on_road(test):
+            if rect_on_road(self.rect_at(lx, ly)) and rect_on_road(self.rect_at(tx, ty)):
                 choices.append(angle)
-        if choices:
-            new_angle = random.choice(choices)
-            self.turn_cd = random.uniform(2.5, 6.0)
-            lane_x, lane_y = lane_center_for_car(new_angle, self.x, self.y)
-            self.x = move_toward(self.x, lane_x, 999)
-            self.y = move_toward(self.y, lane_y, 999)
-            self.turn_target = float(new_angle)
-            return True
-        return False
+        if not choices:
+            return False
+
+        new_angle = random.choice(choices)
+        self.turn_cd = random.uniform(2.5, 6.0)
+        diff = ((new_angle - heading + 180) % 360) - 180
+
+        if diff == 0:
+            return True  # geradeaus — kein Bogen
+
+        A_rad = math.radians(heading)
+        B_rad = math.radians(new_angle)
+        LANE_OFF = 28
+
+        fwd_A = (math.sin(A_rad), -math.cos(A_rad))
+        rgt_A = (math.cos(A_rad),  math.sin(A_rad))
+        fwd_B = (math.sin(B_rad), -math.cos(B_rad))
+        rgt_B = (math.cos(B_rad),  math.sin(B_rad))
+
+        ix = nearest_road_x(self.x)
+        iy = nearest_road_y(self.y)
+
+        # Schnittpunkt der beiden Spurmittellinien (eingehend + ausgehend)
+        corner_x = ix + LANE_OFF * rgt_A[0] + LANE_OFF * rgt_B[0]
+        corner_y = iy + LANE_OFF * rgt_A[1] + LANE_OFF * rgt_B[1]
+
+        # Bogentiefe = Abstand von jetzt bis zum Eckpunkt entlang Fahrtrichtung
+        depth = (corner_x - self.x) * fwd_A[0] + (corner_y - self.y) * fwd_A[1]
+        R = max(20.0, min(88.0, depth))
+
+        # Bogenstart/-ende liegen exakt auf den richtigen Spuren — kein Snap nötig
+        arc_sx = corner_x - R * fwd_A[0]
+        arc_sy = corner_y - R * fwd_A[1]
+        arc_ex = corner_x + R * fwd_B[0]
+        arc_ey = corner_y + R * fwd_B[1]
+
+        if diff > 0:   # Rechtsabbiegen: Mittelpunkt rechts vom Bogenstart
+            cx = arc_sx + R * rgt_A[0]
+            cy = arc_sy + R * rgt_A[1]
+            omega = 1
+        else:          # Linksabbiegen: Mittelpunkt links vom Bogenstart
+            cx = arc_sx - R * rgt_A[0]
+            cy = arc_sy - R * rgt_A[1]
+            omega = -1
+
+        theta_s = math.atan2(arc_sy - cy, arc_sx - cx)
+        theta_e = theta_s + omega * math.pi / 2
+
+        self.x, self.y = arc_sx, arc_sy
+        self.arc = dict(cx=cx, cy=cy, r=R, theta=theta_s, theta_end=theta_e,
+                        omega=omega, end_x=arc_ex, end_y=arc_ey, target=float(new_angle))
+        return True
 
     def _leave_tire_trail(self, dt):
         if self.blood_trail <= 0 or abs(self.spd) < 35:
@@ -670,23 +712,28 @@ class Car:
                     self.deployed_cops += 1
                     self.spd *= 0.35
             return
-        # Kreisbogen-Kurve: vorwärts fahren UND gleichzeitig drehen (kein Panzer)
-        if self.turn_target is not None:
-            diff = ((self.turn_target - self.angle + 180) % 360) - 180
-            if abs(diff) <= 3.0:
-                self.angle = self.turn_target
-                self.turn_target = None
+        # Kreisbogen-Abbiegen: Auto folgt geometrischem Bogen mit Radius und Mittelpunkt
+        if self.arc is not None:
+            a = self.arc
+            arc_spd = min(self.ai_spd * 0.58, 92.0)
+            if abs(self.spd) < arc_spd:
+                self.spd = min(self.spd + 220 * dt, arc_spd)
+            dtheta = (self.spd / a['r']) * a['omega'] * dt
+            a['theta'] += dtheta
+            done = (a['omega'] > 0 and a['theta'] >= a['theta_end']) or \
+                   (a['omega'] < 0 and a['theta'] <= a['theta_end'])
+            if done:
+                self.angle = a['target']
+                self.x = a['end_x']
+                self.y = a['end_y']
+                self.arc = None
             else:
-                turn_rate = 125  # Grad/Sekunde
-                self.angle += math.copysign(min(abs(diff), turn_rate * dt), diff)
-                arc_spd = min(self.ai_spd * 0.55, 90.0)
-                if abs(self.spd) < arc_spd:
-                    self.spd = min(self.spd + 200 * dt, arc_spd)
-                rad = math.radians(self.angle)
-                self.x += math.sin(rad) * self.spd * dt
-                self.y -= math.cos(rad) * self.spd * dt
-                self.x = max(ROAD_LO, min(ROAD_HI_X, self.x))
-                self.y = max(ROAD_LO, min(ROAD_HI_Y, self.y))
+                self.x = a['cx'] + a['r'] * math.cos(a['theta'])
+                self.y = a['cy'] + a['r'] * math.sin(a['theta'])
+                # Fahrrichtung = Tangente am Bogen → Spielwinkel daraus ableiten
+                vx = -math.sin(a['theta']) * a['omega']
+                vy =  math.cos(a['theta']) * a['omega']
+                self.angle = math.degrees(math.atan2(vx, -vy))
             return
 
         lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
@@ -714,7 +761,12 @@ class Car:
             self.spd *= max(0.0, 1 - 3.0 * dt)
             self.yield_timer = max(self.yield_timer, 0.12)
             return
-        at_intersection = abs(self.x - nearest_road_x(self.x)) < 34 and abs(self.y - nearest_road_y(self.y)) < 34
+        # Frühzeitige Kreuzungserkennung: Abstand zur nächsten Kreuzung in Fahrtrichtung
+        _ix = nearest_road_x(self.x); _iy = nearest_road_y(self.y)
+        _ar = math.radians(self.angle)
+        _fwd_dist = ((_ix - self.x) * math.sin(_ar) + (_iy - self.y) * (-math.cos(_ar)))
+        _perp_on_road = (abs(self.x - _ix) < 34 if self.is_vertical() else abs(self.y - _iy) < 34)
+        at_intersection = _perp_on_road and 18 < _fwd_dist < 94
         if at_intersection and (self.turn_cd <= 0 or self.near_road_end()):
             self.choose_intersection_turn(allow_reverse=self.near_road_end())
         self.x, self.y = nx, ny
@@ -722,7 +774,21 @@ class Car:
         if other:
             self.resolve_car_collision(other, False)
             self.turn_cd = random.uniform(1.2, 2.6)
-            self.turn_target = float(random.choice([0, 90, 180, 270]))
+            new_a = float(random.choice([0, 90, 180, 270]))
+            diff_r = ((new_a - self.angle + 180) % 360) - 180
+            A_rad = math.radians(self.angle)
+            if diff_r > 0:
+                R = 46
+                cx = self.x + R * math.cos(A_rad); cy = self.y + R * math.sin(A_rad)
+                ts = A_rad + math.pi
+                self.arc = dict(cx=cx, cy=cy, r=R, theta=ts, theta_end=ts+math.pi/2, omega=1, target=new_a)
+            elif diff_r < 0:
+                R = 80
+                cx = self.x - R * math.cos(A_rad); cy = self.y - R * math.sin(A_rad)
+                ts = A_rad
+                self.arc = dict(cx=cx, cy=cy, r=R, theta=ts, theta_end=ts-math.pi/2, omega=-1, target=new_a)
+            else:
+                self.angle = new_a
 
     def draw(self, surf, cam):
         if self.sunk:
