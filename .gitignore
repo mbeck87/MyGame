@@ -1,6 +1,9 @@
 .venv/
+venv/
 .tmp/
 __pycache__/
 *.py[cod]
 .run.*
 scores.json
+settings.json
+game2d/assets/_zips/
