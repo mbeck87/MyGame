@@ -8,6 +8,9 @@ from game2d.state import current
 from game2d.systems import audio
 
 
+LIGHTSABER_IDX = 0
+
+
 _SHOT_SOUND = {
     1: 'shoot_pistol',
     2: 'shoot_smg',
@@ -45,7 +48,7 @@ def _lightsaber_swing():
         dx, dy = car.x - p.x, car.y - p.y
         dist = math.hypot(dx, dy)
         if dist <= swing_range + 12 and _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
-            car.take_damage(WPN_DMG[6])
+            car.take_damage(WPN_DMG[LIGHTSABER_IDX])
             audio.play('hit_metal', volume=0.7, pos=(car.x, car.y))
             p.wanted = min(5, p.wanted + 1)
             p.crime_timer = 30
@@ -61,7 +64,7 @@ def _lightsaber_swing():
         from game2d.systems.effects import make_corpse, spawn_blood
         from game2d.systems.services import add_money
 
-        ped.hp -= WPN_DMG[6]
+        ped.hp -= WPN_DMG[LIGHTSABER_IDX]
         ped.state = 'flee'
         spawn_blood(ped.x, ped.y, 8)
         audio.play('hit_flesh', pos=(ped.x, ped.y))
@@ -78,6 +81,9 @@ def fire():
     """Aktuelle Waffe abfeuern (state.weapon). Setzt state.fire_cd."""
     s = current()
     weapon = s.weapon
+    if weapon < 0 or weapon >= len(WPN_RATE):
+        weapon = LIGHTSABER_IDX
+        s.weapon = weapon
     if weapon != 0 and s.ammo[weapon] <= 0: return
     if weapon == 0:
         s.fire_cd = WPN_RATE[weapon]

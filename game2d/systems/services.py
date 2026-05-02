@@ -15,7 +15,6 @@ SHOP_ITEMS = {
     4: ("MG ammo +200", 360, "ammo_4"),
     5: ("RPG ammo +5", 700, "ammo_5"),
     6: ("Wanted -1", 500, "wanted"),
-    7: ("Lichtschwert", 850, "weapon_6"),
 }
 
 GARAGE_ITEMS = {
@@ -107,8 +106,6 @@ def buy_shop_item(state, key):
     elif action == "wanted":
         state.player.wanted = max(0, state.player.wanted - 1)
         state.player.crime_timer = 25
-    elif action == "weapon_6":
-        state.unlocked_weapons.add(6)
     else:
         weapon = int(action.split("_")[1])
         state.unlocked_weapons.add(weapon)

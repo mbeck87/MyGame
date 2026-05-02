@@ -2,7 +2,7 @@
 REM Erstellt und befuellt eine virtuelle Python-Umgebung fuer Windows
 REM Verwendung: setup_venv.bat
 
-set VENV_DIR=venv
+set VENV_DIR=.venv
 
 REM Python pruefen
 python --version >nul 2>&1

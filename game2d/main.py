@@ -174,7 +174,7 @@ def main():
                 if e.key == pygame.K_g and nearby_service(state) == "garage" and not state.game_over:
                     state.menu = "garage"
                     continue
-                if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7):
+                if pygame.K_1 <= e.key < pygame.K_1 + len(WPN_NAMES):
                     w = e.key - pygame.K_1
                     if w in state.unlocked_weapons:
                         state.weapon = w
@@ -575,7 +575,7 @@ def main():
             draw_hud_text(label, (10, wy), col)
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-7 Waffe",
+        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-6 Waffe",
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
         if state.in_car:
