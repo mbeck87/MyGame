@@ -95,22 +95,54 @@ def init():
     _initialized = True
 
 
+def _biquad_bp(freq, Q, sr):
+    """Biquad-Bandpass-Koeffizienten (b0, b2, a1, a2) – normalisiert auf a0=1."""
+    w0 = math.tau * freq / sr
+    alpha = math.sin(w0) / (2.0 * Q)
+    a0 = 1.0 + alpha
+    return (alpha / a0, -alpha / a0,
+            -2.0 * math.cos(w0) / a0, (1.0 - alpha) / a0)
+
+
 def _make_squeal_sound():
-    """Synthetisiert Reifenquietschen ohne externe Bibliothek."""
+    """Reifenquietschen: weißes Rauschen durch Resonanzfilter.
+
+    Echtes Reifenquietschen ist Reibungsrauschen, das durch die
+    Reifenresonanz gefärbt wird – kein Sinuston. Zwei leicht
+    verstimmte Bandpässe erzeugen ein natürliches Schwebungs-Timbre.
+    """
     try:
+        import random as _rnd
         sr = 22050
-        dur = 1.4
+        dur = 1.5
         n = int(sr * dur)
+
+        # Zwei leicht verstimmte Resonanzen (~1100 Hz + ~1350 Hz) + eine höhere
+        b0a, b2a, a1a, a2a = _biquad_bp(1100, 9.0, sr)
+        b0b, b2b, a1b, a2b = _biquad_bp(1350, 7.0, sr)
+        b0c, b2c, a1c, a2c = _biquad_bp(2600, 5.0, sr)
+
+        x1a=x2a=y1a=y2a = 0.0
+        x1b=x2b=y1b=y2b = 0.0
+        x1c=x2c=y1c=y2c = 0.0
+
         buf = _array.array('h')
         for i in range(n):
-            t = i / sr
-            f = 720 + 280 * math.sin(math.tau * 3.8 * t)
-            v = (math.sin(math.tau * f * t) * 0.55
-                 + math.sin(math.tau * f * 1.29 * t) * 0.24
-                 + math.sin(math.tau * f * 1.71 * t) * 0.14
-                 + math.sin(math.tau * f * 2.13 * t) * 0.07)
-            fade = min(i / (0.04 * sr), 1.0, (n - i) / (0.07 * sr))
-            buf.append(int(max(-32767, min(32767, v * fade * 25000))))
+            noise = _rnd.gauss(0, 1.0)
+
+            ya = b0a*noise + b2a*x2a - a1a*y1a - a2a*y2a
+            x2a=x1a; x1a=noise; y2a=y1a; y1a=ya
+
+            yb = b0b*noise + b2b*x2b - a1b*y1b - a2b*y2b
+            x2b=x1b; x1b=noise; y2b=y1b; y1b=yb
+
+            yc = b0c*noise + b2c*x2c - a1c*y1c - a2c*y2c
+            x2c=x1c; x1c=noise; y2c=y1c; y1c=yc
+
+            v = ya * 0.50 + yb * 0.35 + yc * 0.15
+            fade = min(i / (0.04 * sr), 1.0, (n - i) / (0.06 * sr))
+            buf.append(int(max(-32767, min(32767, v * fade * 32000))))
+
         wav_buf = _io.BytesIO()
         with _wave.open(wav_buf, 'wb') as wf:
             wf.setnchannels(1)
