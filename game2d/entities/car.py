@@ -206,12 +206,15 @@ class Car:
                 s.smoke_particles.append([self.x, self.y, random.uniform(-10, 10),
                                           random.uniform(-45, -18), random.uniform(1.2, 2.2), 2.2, col_r])
 
-    def rect_at(self, x, y):
-        if abs(math.cos(math.radians(self.angle))) >= abs(math.sin(math.radians(self.angle))):
+    def rect_at_angle(self, x, y, angle):
+        if abs(math.cos(math.radians(angle))) >= abs(math.sin(math.radians(angle))):
             w, h = 34, 62
         else:
             w, h = 62, 34
         return pygame.Rect(x - w//2, y - h//2, w, h)
+
+    def rect_at(self, x, y):
+        return self.rect_at_angle(x, y, self.angle)
 
     def rect(self):
         return self.rect_at(self.x, self.y)
@@ -227,9 +230,17 @@ class Car:
     def overlaps_other_car(self):
         own = self.rect()
         for other in current().cars:
-            if other is self or other.dead:
+            if other is self or other.dead or other.sunk:
                 continue
             if own.colliderect(other.rect()):
+                return other
+        return None
+
+    def car_blocking_rect(self, rect, padding=8):
+        for other in current().cars:
+            if other is self or other.dead or other.sunk:
+                continue
+            if rect.colliderect(other.rect().inflate(padding, padding)):
                 return other
         return None
 
@@ -294,17 +305,25 @@ class Car:
             other.x -= nx * push * 0.55
             other.y -= ny * push * 0.55
         else:
-            self.x += nx * push * 0.28
-            self.y += ny * push * 0.28
-            other.x -= nx * push * 0.28
-            other.y -= ny * push * 0.28
+            if overlap_x < overlap_y:
+                side = 1 if self.x >= other.x else -1
+                sep = overlap_x + 2
+                self.x += side * sep * 0.5
+                other.x -= side * sep * 0.5
+            else:
+                side = 1 if self.y >= other.y else -1
+                sep = overlap_y + 2
+                self.y += side * sep * 0.5
+                other.y -= side * sep * 0.5
+            self.yield_timer = max(self.yield_timer, 0.28)
+            self.spd *= 0.18
             if other is not s.in_car:
+                other.yield_timer = max(other.yield_timer, 0.22)
+                other.spd *= 0.35
                 if id(self) < id(other):
-                    self.yield_timer = max(self.yield_timer, 0.22)
-                    self.spd *= 0.35
+                    self.yield_timer = max(self.yield_timer, 0.36)
                 else:
-                    other.yield_timer = max(other.yield_timer, 0.22)
-                    other.spd *= 0.35
+                    other.yield_timer = max(other.yield_timer, 0.36)
         rel = self.spd - other.spd
         impulse = max(16.0, abs(rel) * 0.28 + abs(self.spd) * 0.08)
         self.spd = max(-self.max_spd * 0.4, min(self.max_spd, self.spd - impulse * 0.14))
@@ -315,8 +334,6 @@ class Car:
             other.spd = 0
         if controlled:
             other.angle += max(-10, min(10, math.degrees(math.atan2(nx, -ny)) - other.angle)) * 0.05
-        else:
-            self.angle += random.uniform(-4, 4)
         impact = max(abs(self.spd), abs(other.spd), abs(rel))
         if impact > 75:
             dmg = impact * (0.022 if controlled else 0.02)
@@ -442,7 +459,7 @@ class Car:
             rad = math.radians(angle)
             tx = lx + math.sin(rad) * 120
             ty = ly - math.cos(rad) * 120
-            if rect_on_road(self.rect_at(lx, ly)) and rect_on_road(self.rect_at(tx, ty)):
+            if rect_on_road(self.rect_at_angle(lx, ly, angle)) and rect_on_road(self.rect_at_angle(tx, ty, angle)):
                 choices.append(angle)
         return choices
 
@@ -453,14 +470,18 @@ class Car:
             return False
 
         new_angle = self.planned_turn if self.planned_turn in choices else random.choice(choices)
-        self.turn_cd = random.uniform(2.5, 6.0)
         self.planned_turn = None
         self.signal_dir = self._turn_signal_dir(heading, new_angle)
         if new_angle == heading:
             self.signal_dir = 0
+            self.turn_cd = random.uniform(2.5, 6.0)
             return True
 
-        self.start_turn_arc(heading, new_angle)
+        if not self.start_turn_arc(heading, new_angle):
+            self.planned_turn = new_angle
+            self.turn_cd = 0.2
+            return False
+        self.turn_cd = random.uniform(2.5, 6.0)
         return True
 
     def plan_intersection_turn(self, allow_reverse=False):
@@ -477,10 +498,9 @@ class Car:
         diff = self._turn_delta(heading, new_angle)
         if diff == 0:
             self.arc = None
-            return
+            return True
         if abs(diff) == 180:
-            self.start_u_turn_arc(heading, new_angle)
-            return
+            return self.start_u_turn_arc(heading, new_angle)
 
         a_rad = math.radians(heading)
         b_rad = math.radians(new_angle)
@@ -513,8 +533,7 @@ class Car:
 
         theta_s = math.atan2(arc_sy - cy, arc_sx - cx)
         theta_e = theta_s + omega * math.pi / 2
-        self.x, self.y = arc_sx, arc_sy
-        self.arc = {
+        arc = {
             "cx": cx,
             "cy": cy,
             "r": radius,
@@ -525,6 +544,7 @@ class Car:
             "end_y": arc_ey,
             "target": float(new_angle),
         }
+        return self.begin_turn_arc(arc, arc_sx, arc_sy, heading)
 
     def start_u_turn_arc(self, heading, new_angle):
         a_rad = math.radians(heading)
@@ -543,8 +563,7 @@ class Car:
         arc_ey = cy - radius * right_a[1]
         theta_s = math.atan2(arc_sy - cy, arc_sx - cx)
         theta_e = theta_s - math.pi
-        self.x, self.y = arc_sx, arc_sy
-        self.arc = {
+        arc = {
             "cx": cx,
             "cy": cy,
             "r": radius,
@@ -555,6 +574,36 @@ class Car:
             "end_y": arc_ey,
             "target": float(new_angle),
         }
+        return self.begin_turn_arc(arc, arc_sx, arc_sy, heading)
+
+    def arc_pose(self, arc, theta):
+        x = arc["cx"] + arc["r"] * math.cos(theta)
+        y = arc["cy"] + arc["r"] * math.sin(theta)
+        vx = -math.sin(theta) * arc["omega"]
+        vy = math.cos(theta) * arc["omega"]
+        angle = math.degrees(math.atan2(vx, -vy))
+        return x, y, angle
+
+    def turn_path_blocker(self, arc, samples=7):
+        for i in range(1, samples + 1):
+            t = i / samples
+            theta = arc["theta"] + (arc["theta_end"] - arc["theta"]) * t
+            x, y, angle = self.arc_pose(arc, theta)
+            blocker = self.car_blocking_rect(self.rect_at_angle(x, y, angle), padding=12)
+            if blocker:
+                return blocker
+        return None
+
+    def begin_turn_arc(self, arc, start_x, start_y, heading):
+        start_rect = self.rect_at_angle(start_x, start_y, heading)
+        if self.car_blocking_rect(start_rect, padding=10) or self.turn_path_blocker(arc):
+            self.arc = None
+            self.yield_timer = max(self.yield_timer, 0.22)
+            self.spd *= 0.35
+            return False
+        self.x, self.y = start_x, start_y
+        self.arc = arc
+        return True
 
     def _leave_tire_trail(self, dt):
         if self.blood_trail <= 0 or abs(self.spd) < 35:
@@ -738,14 +787,9 @@ class Car:
                 test = self.rect_at(nx, ny)
                 blocked = any(test.colliderect(b[0]) for b in s.AI_OBSTACLES) or not rect_on_road(test)
                 if not blocked:
-                    for c in s.cars:
-                        if c is self or c.dead:
-                            continue
-                        if c.is_cop and s.in_car and c is not s.in_car and math.hypot(c.x - target.x, c.y - target.y) < 90:
-                            continue
-                        if test.colliderect(c.rect()):
-                            blocked = True
-                            break
+                    blocker = self.car_blocking_rect(test, padding=8)
+                    if blocker and not (blocker.is_cop and s.in_car and blocker is not s.in_car and math.hypot(blocker.x - target.x, blocker.y - target.y) < 90):
+                        blocked = True
                 if blocked:
                     for alt in (-1.0, 1.0, -0.65, 0.65):
                         ang2 = self.angle + alt * 52
@@ -757,7 +801,7 @@ class Car:
                                  not any(test2.colliderect(rb.rect) for rb in s.roadblocks) and
                                  rect_on_road(test2))
                         if clear:
-                            clear = not any(test2.colliderect(c.rect()) for c in s.cars if c is not self and not c.dead)
+                            clear = self.car_blocking_rect(test2, padding=8) is None
                         if clear:
                             steer = alt
                             blocked = False
@@ -783,27 +827,39 @@ class Car:
             return
         if self.arc is not None:
             arc = self.arc
-            arc_spd = min(self.ai_spd * 0.58, 92.0)
-            if abs(self.spd) < arc_spd:
-                self.spd = min(self.spd + 220 * dt, arc_spd)
-            arc["theta"] += (self.spd / arc["r"]) * arc["omega"] * dt
-            done = (
-                arc["omega"] > 0 and arc["theta"] >= arc["theta_end"]
-            ) or (
-                arc["omega"] < 0 and arc["theta"] <= arc["theta_end"]
-            )
+            arc_spd = min(148.0, max(105.0, self.ai_spd * 0.82))
+            if arc["r"] < 48:
+                arc_spd = min(arc_spd, 122.0)
+            self.spd = move_toward(max(0.0, self.spd), arc_spd, 420 * dt)
+            theta_next = arc["theta"] + (self.spd / arc["r"]) * arc["omega"] * dt
+            if arc["omega"] > 0:
+                theta_next = min(theta_next, arc["theta_end"])
+                done = theta_next >= arc["theta_end"]
+            else:
+                theta_next = max(theta_next, arc["theta_end"])
+                done = theta_next <= arc["theta_end"]
+            if done:
+                next_x = arc["end_x"]
+                next_y = arc["end_y"]
+                next_angle = arc["target"]
+            else:
+                next_x, next_y, next_angle = self.arc_pose(arc, theta_next)
+            blocker = self.car_blocking_rect(self.rect_at_angle(next_x, next_y, next_angle), padding=10)
+            if blocker:
+                self.spd = move_toward(max(0.0, self.spd), 0.0, 560 * dt)
+                self.yield_timer = max(self.yield_timer, 0.16)
+                return
+            arc["theta"] = theta_next
             if done:
                 self.angle = arc["target"]
-                self.x = arc["end_x"]
-                self.y = arc["end_y"]
+                self.x = next_x
+                self.y = next_y
                 self.arc = None
                 self.signal_dir = 0
             else:
-                self.x = arc["cx"] + arc["r"] * math.cos(arc["theta"])
-                self.y = arc["cy"] + arc["r"] * math.sin(arc["theta"])
-                vx = -math.sin(arc["theta"]) * arc["omega"]
-                vy = math.cos(arc["theta"]) * arc["omega"]
-                self.angle = math.degrees(math.atan2(vx, -vy))
+                self.x = next_x
+                self.y = next_y
+                self.angle = next_angle
             return
 
         lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
@@ -822,12 +878,7 @@ class Car:
         blocked = (any(test.colliderect(b[0]) for b in s.AI_OBSTACLES) or
                    any(test.colliderect(rb.rect) for rb in s.roadblocks) or
                    not rect_on_road(test))
-        if not blocked:
-            for c in s.cars:
-                if c is self: continue
-                if test.colliderect(c.rect()):
-                    blocked = True; break
-        if not blocked and s.in_car and test.colliderect(s.in_car.rect()):
+        if not blocked and self.car_blocking_rect(test, padding=10):
             blocked = True
         if blocked:
             self.spd *= max(0.0, 1 - 3.0 * dt)

@@ -2,8 +2,8 @@
 from game2d.config import BLOCK
 from game2d.state import current
 
-LIGHT_RED = 3.2
-LIGHT_RED_YELLOW = 0.75
+LIGHT_RED = 2.1
+LIGHT_RED_YELLOW = 0.55
 LIGHT_GREEN = 5.2
 LIGHT_YELLOW = 0.9
 

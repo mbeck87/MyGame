@@ -48,6 +48,8 @@ def draw_crosswalks(surf, cam):
     stripe_w = 6
     gap = 8
     span = ROAD_W - 18
+    crosswalk_len = 18
+    half_crosswalk = crosswalk_len // 2
     offset = ROAD_W // 2 + 10
     for ix in s.roads_v:
         sx = ix - cam[0]
@@ -77,22 +79,22 @@ def draw_crosswalks(surf, cam):
                         has_east = False
                     elif ix == right_road:
                         has_west = False
-            y_top = sy - offset
-            y_bottom = sy + offset - stripe_w
+            y_top = sy - offset - half_crosswalk
+            y_bottom = sy + offset - half_crosswalk
             x_left = sx - span // 2
             for x in range(int(x_left), int(x_left + span), stripe_w + gap):
                 if has_north:
-                    pygame.draw.rect(surf, stripe, (x, y_top, stripe_w, 18))
+                    pygame.draw.rect(surf, stripe, (x, y_top, stripe_w, crosswalk_len))
                 if has_south:
-                    pygame.draw.rect(surf, stripe, (x, y_bottom, stripe_w, 18))
-            x_left_side = sx - offset
-            x_right_side = sx + offset - stripe_w
+                    pygame.draw.rect(surf, stripe, (x, y_bottom, stripe_w, crosswalk_len))
+            x_left_side = sx - offset - half_crosswalk
+            x_right_side = sx + offset - half_crosswalk
             y_top_side = sy - span // 2
             for y in range(int(y_top_side), int(y_top_side + span), stripe_w + gap):
                 if has_west:
-                    pygame.draw.rect(surf, stripe, (x_left_side, y, 18, stripe_w))
+                    pygame.draw.rect(surf, stripe, (x_left_side, y, crosswalk_len, stripe_w))
                 if has_east:
-                    pygame.draw.rect(surf, stripe, (x_right_side, y, 18, stripe_w))
+                    pygame.draw.rect(surf, stripe, (x_right_side, y, crosswalk_len, stripe_w))
 
 
 def draw_traffic_lights(surf, cam):
