@@ -72,6 +72,7 @@ def main():
         col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
         car = Car(x, y, col)
         car.angle = angle
+        car.driver = True
         state.cars.append(car)
 
     for _ in range(60):
@@ -181,13 +182,23 @@ def main():
                 if e.key == pygame.K_e and not state.game_over:
                     if state.in_car:
                         player.x, player.y = exit_car_position(state.in_car)
+                        state.in_car.driver = None
                         state.in_car = None
                         audio.play('door_close', pos=(player.x, player.y))
                         audio.set_engine(False)
                     else:
                         for c in state.cars:
                             if math.hypot(c.x-player.x, c.y-player.y) < 60:
+                                if c.driver is not None and not c.is_cop:
+                                    # Fahrer rauswerfen
+                                    ex, ey = exit_car_position(c)
+                                    ejected = Ped(ex, ey)
+                                    ejected.state = 'flee'
+                                    state.peds.append(ejected)
+                                    player.wanted = min(5, player.wanted + 1)
+                                    player.crime_timer = max(player.crime_timer, 20)
                                 state.in_car = c
+                                c.driver = player
                                 audio.play('door_open', pos=(c.x, c.y))
                                 break
                 if e.key == pygame.K_f and not state.in_car and not state.game_over:
@@ -375,6 +386,7 @@ def main():
                         col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
                         car = Car(nx, ny, col)
                         car.angle = angle
+                        car.driver = True
                         state.cars.append(car)
 
             for sp_ in list(state.smoke_particles):

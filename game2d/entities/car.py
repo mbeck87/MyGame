@@ -27,6 +27,7 @@ class Car:
         self.spd = 0
         self.max_spd = 400 if is_cop else 320
         self.is_cop = is_cop
+        self.driver = True if is_cop else None  # None = geparkt, True/Ped = hat Fahrer
         self.is_roadblock = False
         self.is_roadblock_support = False
         self.sprite = make_cop_car_sprite() if is_cop else make_car_sprite(body)
@@ -46,6 +47,7 @@ class Car:
         self.yield_timer = 0.0
         self.ai_spd = random.uniform(150, 240) if is_cop else random.uniform(80, 160)
         self.turn_cd = random.uniform(2, 6)
+        self.turn_target = None   # sanftes Abbiegen: Zielwinkel während Kurve
         self._siren_channel = None
 
     def take_damage(self, dmg):
@@ -434,11 +436,12 @@ class Car:
             if rect_on_road(self.rect_at(lx, ly)) and rect_on_road(test):
                 choices.append(angle)
         if choices:
-            self.angle = random.choice(choices)
+            new_angle = random.choice(choices)
             self.turn_cd = random.uniform(2.5, 6.0)
-            lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
+            lane_x, lane_y = lane_center_for_car(new_angle, self.x, self.y)
             self.x = move_toward(self.x, lane_x, 999)
             self.y = move_toward(self.y, lane_y, 999)
+            self.turn_target = float(new_angle)
             return True
         return False
 
@@ -574,6 +577,9 @@ class Car:
             self.spd = 0
             self.ai_spd = 0
             return
+        if not self.is_cop and self.driver is None:
+            self.spd *= max(0, 1 - 2.5 * dt)
+            return
         self.yield_timer = max(0.0, self.yield_timer - dt)
         if self.is_roadblock_support:
             self.spd = 0
@@ -664,6 +670,25 @@ class Car:
                     self.deployed_cops += 1
                     self.spd *= 0.35
             return
+        # Kreisbogen-Kurve: vorwärts fahren UND gleichzeitig drehen (kein Panzer)
+        if self.turn_target is not None:
+            diff = ((self.turn_target - self.angle + 180) % 360) - 180
+            if abs(diff) <= 3.0:
+                self.angle = self.turn_target
+                self.turn_target = None
+            else:
+                turn_rate = 125  # Grad/Sekunde
+                self.angle += math.copysign(min(abs(diff), turn_rate * dt), diff)
+                arc_spd = min(self.ai_spd * 0.55, 90.0)
+                if abs(self.spd) < arc_spd:
+                    self.spd = min(self.spd + 200 * dt, arc_spd)
+                rad = math.radians(self.angle)
+                self.x += math.sin(rad) * self.spd * dt
+                self.y -= math.cos(rad) * self.spd * dt
+                self.x = max(ROAD_LO, min(ROAD_HI_X, self.x))
+                self.y = max(ROAD_LO, min(ROAD_HI_Y, self.y))
+            return
+
         lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
         self.x = move_toward(self.x, lane_x, 26 * dt)
         self.y = move_toward(self.y, lane_y, 26 * dt)
@@ -697,7 +722,7 @@ class Car:
         if other:
             self.resolve_car_collision(other, False)
             self.turn_cd = random.uniform(1.2, 2.6)
-            self.angle = random.choice([0, 90, 180, 270])
+            self.turn_target = float(random.choice([0, 90, 180, 270]))
 
     def draw(self, surf, cam):
         if self.sunk:
