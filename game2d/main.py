@@ -223,7 +223,8 @@ def main():
             if state.in_car:
                 accel = (1 if keys[pygame.K_w] else 0) - (1 if keys[pygame.K_s] else 0)
                 steer = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
-                state.in_car.update(dt, accel, steer)
+                handbrake = bool(keys[pygame.K_SPACE])
+                state.in_car.update(dt, accel, steer, handbrake=handbrake)
                 if state.in_car and not state.in_car.dead:
                     player.x, player.y = state.in_car.x, state.in_car.y
                     audio.set_engine(True, throttle=accel,

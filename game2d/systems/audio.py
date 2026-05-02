@@ -24,9 +24,12 @@ API:
 - ``stop_loop(channel)``: Loop beenden.
 - ``set_engine(active, throttle=0.0, speed_norm=0.0)``: Auto-Motor steuern.
 """
+import array as _array
+import io as _io
 import math
 import os
 import random
+import wave as _wave
 import pygame
 
 from game2d.state import current
@@ -83,7 +86,41 @@ def init():
     if 'engine_high' in _sounds and _sounds['engine_high']:
         _engine_high_sound = _sounds['engine_high'][0]
 
+    # Reifenquietschen synthetisch generieren falls keine Datei vorhanden
+    if 'squeal' not in _sounds:
+        snd = _make_squeal_sound()
+        if snd is not None:
+            _sounds['squeal'] = [snd]
+
     _initialized = True
+
+
+def _make_squeal_sound():
+    """Synthetisiert Reifenquietschen ohne externe Bibliothek."""
+    try:
+        sr = 22050
+        dur = 1.4
+        n = int(sr * dur)
+        buf = _array.array('h')
+        for i in range(n):
+            t = i / sr
+            f = 720 + 280 * math.sin(math.tau * 3.8 * t)
+            v = (math.sin(math.tau * f * t) * 0.55
+                 + math.sin(math.tau * f * 1.29 * t) * 0.24
+                 + math.sin(math.tau * f * 1.71 * t) * 0.14
+                 + math.sin(math.tau * f * 2.13 * t) * 0.07)
+            fade = min(i / (0.04 * sr), 1.0, (n - i) / (0.07 * sr))
+            buf.append(int(max(-32767, min(32767, v * fade * 25000))))
+        wav_buf = _io.BytesIO()
+        with _wave.open(wav_buf, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sr)
+            wf.writeframes(buf.tobytes())
+        wav_buf.seek(0)
+        return pygame.mixer.Sound(wav_buf)
+    except Exception:
+        return None
 
 
 def _volume_for(pos, base, max_dist=None):

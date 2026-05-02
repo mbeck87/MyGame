@@ -5,7 +5,7 @@ import pygame
 
 from game2d.config import (
     BLOCK, ROAD_LO, ROAD_HI_X, ROAD_HI_Y,
-    WORLD_W, WORLD_H, TIRE_BLOOD,
+    WORLD_W, WORLD_H, TIRE_BLOOD, TIRE_SKID,
 )
 from game2d.render.sprites import make_car_sprite, make_cop_car_sprite
 from game2d.state import current
@@ -51,6 +51,10 @@ class Car:
         self.planned_turn = None
         self.signal_dir = 0
         self._siren_channel = None
+        self._squeal_channel = None
+        self._vel_angle = None   # tatsächliche Bewegungsrichtung (für Drift)
+        self._drifting = False
+        self._skid_cd = 0.0
 
     def take_damage(self, dmg):
         if self.dead or self.sunk or dmg <= 0: return
@@ -169,7 +173,20 @@ class Car:
             if self._siren_channel is not None:
                 audio.stop_loop(self._siren_channel)
                 self._siren_channel = None
+            if self._squeal_channel is not None:
+                audio.stop_loop(self._squeal_channel)
+                self._squeal_channel = None
             return
+        # Reifenquietschen beim Driften
+        if self._drifting:
+            if self._squeal_channel is None or not self._squeal_channel.get_busy():
+                self._squeal_channel = audio.start_loop('squeal', pos=(self.x, self.y), volume=0.7, max_dist=650)
+            else:
+                audio.update_loop(self._squeal_channel, pos=(self.x, self.y), volume=0.7, max_dist=650)
+        else:
+            if self._squeal_channel is not None:
+                audio.stop_loop(self._squeal_channel)
+                self._squeal_channel = None
         s = current()
         if self.is_cop and s.in_car is not self:
             if self._siren_channel is None or not self._siren_channel.get_busy():
@@ -620,6 +637,20 @@ class Car:
                            wy + random.uniform(-1.2, 1.2),
                            random.randint(2, 4), TIRE_BLOOD))
 
+    def _leave_skid_trail(self, dt):
+        if abs(self.spd) < 45:
+            self._skid_cd = 0.0
+            return
+        self._skid_cd -= dt
+        if self._skid_cd > 0:
+            return
+        self._skid_cd = 0.025
+        splats = current().blood_splats
+        for wx, wy in self._wheel_points():
+            splats.append((wx + random.uniform(-1.5, 1.5),
+                           wy + random.uniform(-1.5, 1.5),
+                           random.randint(2, 4), TIRE_SKID))
+
     def _run_over_ped(self, ped, group, damage, is_cop=False):
         s = current()
         if not self.rect().colliderect(ped.rect()):
@@ -665,22 +696,45 @@ class Car:
             self._run_over_ped(c, s.cops, dmg + 12, is_cop=True)
         self._run_over_player(dmg + 10)
 
-    def update(self, dt, accel=0, steer=0):
+    def update(self, dt, accel=0, steer=0, handbrake=False):
         if self.dead or self.sunk:
             self.spd = 0
             return
         s = current()
         controlled = (self is s.in_car)
         prev_spd = self.spd
-        if accel > 0:
-            self.spd = min(self.max_spd, self.spd + 260 * dt)
-        elif accel < 0:
-            self.spd = max(-self.max_spd*0.5, self.spd - 260 * dt)
+
+        drift_active = handbrake and controlled and abs(self.spd) > 50
+        self._drifting = drift_active
+
+        if drift_active:
+            # Handbremse: leichtes Abbremsen, damit Drift lang anhält
+            self.spd *= max(0, 1 - 0.7 * dt)
+            if abs(self.spd) > 5:
+                self.angle += steer * 155 * dt * max(0.4, abs(self.spd) / self.max_spd)
+            self._leave_skid_trail(dt)
         else:
-            self.spd *= max(0, 1 - 1.4 * dt)
-        if abs(self.spd) > 5:
-            self.angle += steer * 110 * dt * (self.spd/self.max_spd)
-        rad = math.radians(self.angle)
+            if accel > 0:
+                self.spd = min(self.max_spd, self.spd + 260 * dt)
+            elif accel < 0:
+                self.spd = max(-self.max_spd*0.5, self.spd - 260 * dt)
+            else:
+                self.spd *= max(0, 1 - 1.4 * dt)
+            if abs(self.spd) > 5:
+                self.angle += steer * 110 * dt * (self.spd/self.max_spd)
+
+        # Bewegungsrichtung: Spieler benutzt vel_angle (lags beim Driften)
+        if controlled:
+            if self._vel_angle is None or abs(self.spd) < 5:
+                self._vel_angle = self.angle
+            align = 1.5 if drift_active else 14.0
+            diff = ((self.angle - self._vel_angle + 180) % 360) - 180
+            self._vel_angle += diff * min(1.0, align * dt)
+            rad = math.radians(self._vel_angle)
+        else:
+            self._vel_angle = self.angle
+            rad = math.radians(self.angle)
+
         dx = math.sin(rad) * self.spd * dt
         dy = -math.cos(rad) * self.spd * dt
         nx, ny = self.x + dx, self.y + dy
