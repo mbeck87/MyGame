@@ -16,6 +16,9 @@ from typing import Any, Optional
 class GameState:
     # ── Welt-Geometrie (initialisiert durch world.generation) ───────
     buildings: list = field(default_factory=list)        # [(rect, surface), ...]
+    parks:     list = field(default_factory=list)        # [rect, ...]
+    park_ponds: list = field(default_factory=list)       # [[(x, y), ...], ...]
+    park_trees: list = field(default_factory=list)       # [(x, y, crown, trunk, dark_g, light_g), ...]
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x
     AI_OBSTACLES: list = field(default_factory=list)     # Häuser + Wasser

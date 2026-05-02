@@ -4,6 +4,7 @@ import random
 import pygame
 
 from game2d.config import (
+    W, H,
     INNER_LO, INNER_HI_X, INNER_HI_Y,
     ROAD_LO, ROAD_HI_X, ROAD_HI_Y,
     ROAD_W, SIDEWALK_W, WORLD_W, WORLD_H,
@@ -63,6 +64,8 @@ def car_spawn_clear(x, y, margin=22):
     probe = r.inflate(margin * 2, margin * 2)
     if any(probe.colliderect(b[0]) for b in s.buildings):
         return False
+    if any(probe.colliderect(park) for park in s.parks):
+        return False
     if any(probe.colliderect(c.rect()) for c in s.cars):
         return False
     return True
@@ -91,11 +94,20 @@ def road_spawn():
     return WORLD_W // 2, WORLD_H // 2, random.choice([0, 90, 180, 270])
 
 
-def cop_car_spawn_near(tx, ty):
+def _outside_view(x, y, cam, margin=130):
+    if cam is None:
+        return True
+    view = pygame.Rect(int(cam[0]), int(cam[1]), W, H).inflate(margin * 2, margin * 2)
+    return not view.collidepoint(x, y)
+
+
+def cop_car_spawn_near(tx, ty, cam=None):
     s = current()
-    for _ in range(180):
+    min_dist = max(W, H) * 0.65
+    max_dist = max(W, H) * 1.15
+    for _ in range(260):
         ang = random.uniform(0, math.tau)
-        dist = random.uniform(260, 520)
+        dist = random.uniform(min_dist, max_dist)
         sx = tx + math.cos(ang) * dist
         sy = ty + math.sin(ang) * dist
         sx = max(ROAD_LO + 50, min(ROAD_HI_X - 50, sx))
@@ -108,6 +120,11 @@ def cop_car_spawn_near(tx, ty):
             angle = random.choice([0, 180])
             x = random.choice(s.roads_v) + (28 if angle == 0 else -28)
             y = int(sy)
-        if car_spawn_clear(x, y, margin=30):
+        if _outside_view(x, y, cam) and car_spawn_clear(x, y, margin=30):
             return x, y, angle
+    if cam is not None:
+        for _ in range(260):
+            x, y, angle = road_spawn()
+            if _outside_view(x, y, cam):
+                return x, y, angle
     return road_spawn()

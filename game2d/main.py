@@ -52,6 +52,12 @@ def main():
     BIG  = pygame.font.SysFont("arial", 64, bold=True)
     MED  = pygame.font.SysFont("arial", 32, bold=True)
 
+    def draw_hud_text(text, pos, color):
+        shadow = FONT.render(text, 1, (0, 0, 0))
+        label = FONT.render(text, 1, color)
+        screen.blit(shadow, (pos[0] + 2, pos[1] + 2))
+        screen.blit(label, pos)
+
     player_name = name_input_screen(screen, W, H, BIG, MED, FONT)
 
     state = GameState(player_name=player_name)
@@ -205,13 +211,13 @@ def main():
                 accel = (1 if keys[pygame.K_w] else 0) - (1 if keys[pygame.K_s] else 0)
                 steer = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
                 state.in_car.update(dt, accel, steer)
-                player.x, player.y = state.in_car.x, state.in_car.y
                 if state.in_car and not state.in_car.dead:
+                    player.x, player.y = state.in_car.x, state.in_car.y
                     audio.set_engine(True, throttle=accel,
                                      speed_norm=abs(state.in_car.spd) / state.in_car.max_spd)
                 else:
                     audio.set_engine(False)
-                if in_water(state.in_car.x, state.in_car.y):
+                if state.in_car and in_water(state.in_car.x, state.in_car.y):
                     state.in_car.explode()
             else:
                 audio.set_engine(False)
@@ -257,11 +263,11 @@ def main():
                     player.wanted = max(0, player.wanted - 1)
                     player.crime_timer = 25
                 cop_spawn -= dt
-                active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead and not getattr(c, "is_roadblock_support", False))
+                active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead and not getattr(c, "sunk", False) and not getattr(c, "is_roadblock_support", False))
                 cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
                 if cop_spawn <= 0 and active_cop_cars < cop_limit:
                     cop_spawn = max(1.2, 8 - player.wanted*1.35)
-                    cx, cy, angle = cop_car_spawn_near(player.x, player.y)
+                    cx, cy, angle = cop_car_spawn_near(player.x, player.y, state.cam)
                     car = Car(cx, cy, (245,245,250), is_cop=True)
                     car.angle = angle
                     car.max_spd += max(0, player.wanted - 3) * 30
@@ -539,10 +545,14 @@ def main():
 
         # HUD
         service = nearby_service(state)
+        hud_panel = pygame.Surface((238, 226), pygame.SRCALPHA)
+        hud_panel.fill((0, 0, 0, 175))
+        pygame.draw.rect(hud_panel, (255, 255, 255, 55), hud_panel.get_rect(), 1)
+        screen.blit(hud_panel, (6, 6))
         pygame.draw.rect(screen, (0,0,0), (10, 10, 220, 30))
         pygame.draw.rect(screen, (200,40,40), (12, 12, 216*max(0,player.hp)/100, 26))
-        screen.blit(FONT.render(f"HP {int(player.hp)}", 1, (255,255,255)), (16, 14))
-        screen.blit(FONT.render(f"${player.money}", 1, (60,230,80)), (10, 50))
+        draw_hud_text(f"HP {int(player.hp)}", (16, 14), (255,255,255))
+        draw_hud_text(f"${player.money}", (10, 50), (90,255,115))
         for wi, wname in enumerate(WPN_NAMES):
             wy = 75 + wi * 22
             selected = wi == state.weapon
@@ -561,8 +571,8 @@ def main():
             label = f"{prefix}{wname}" + (f"  {ammo_txt}" if ammo_txt else "")
             if selected:
                 tw = FONT.size(label)[0]
-                pygame.draw.rect(screen, (60, 60, 0), (8, wy - 1, tw + 6, 20))
-            screen.blit(FONT.render(label, 1, col), (10, wy))
+                pygame.draw.rect(screen, (95, 88, 0), (8, wy - 1, tw + 6, 20))
+            draw_hud_text(label, (10, wy), col)
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
         screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-7 Waffe",

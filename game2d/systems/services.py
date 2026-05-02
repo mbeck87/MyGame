@@ -42,7 +42,11 @@ def init_services(state):
         item for item in state.buildings
         if not any(item[0].colliderect(area.inflate(12, 12)) for area in clear)
     ]
-    state.AI_OBSTACLES[:] = list(state.buildings) + [(r, None) for r in state.WATER_RECTS]
+    state.AI_OBSTACLES[:] = (
+        list(state.buildings)
+        + [(r, None) for r in state.WATER_RECTS]
+        + [(r, None) for r in state.parks]
+    )
 
 
 def _pos(state):
@@ -156,6 +160,7 @@ class Roadblock:
         self.x = x
         self.y = y
         self.road_axis = road_axis
+        self.road_key = (road_axis, int(x if road_axis == "v" else y))
         if road_axis == "v":
             self.rect = pygame.Rect(0, 0, ROAD_W + 34, 24)
         else:
@@ -201,6 +206,9 @@ def _roadblock_spawn_near(state, tx, ty):
             x = max(ROAD_LO + 80, min(ROAD_HI_X - 80, tx + sign * dist))
             roads = [ry for ry in state.roads_h if abs(ry - ty) <= 900] or sorted(state.roads_h, key=lambda ry: abs(ry - ty))[:4]
             y = random.choice(roads)
+        road_key = (road_axis, int(x if road_axis == "v" else y))
+        if any(other.road_key == road_key for other in state.roadblocks):
+            continue
         roadblock = Roadblock(x, y, road_axis)
         probe = roadblock.rect.inflate(70, 70)
         if _near_intersection(x, y, state):
@@ -210,6 +218,8 @@ def _roadblock_spawn_near(state, tx, ty):
         if any(probe.colliderect(c.rect()) for c in state.cars if not c.dead):
             continue
         if any(probe.colliderect(b[0]) for b in state.buildings):
+            continue
+        if any(probe.colliderect(park) for park in state.parks):
             continue
         return roadblock
     return None

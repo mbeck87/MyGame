@@ -33,6 +33,27 @@ def _world_rect(x, y, w, h, rect):
     return pygame.Rect(lx, ly, lw, lh)
 
 
+def _local_polyline(points, rect):
+    return [_local_point(x, y, rect) for x, y in points]
+
+
+def _park_path_points(park):
+    cell_w = park.w / 2
+    cell_h = park.h / 3
+    start = (park.left + 120, park.bottom)
+    c1 = (park.left + 120, park.bottom - cell_h * 0.95)
+    c2 = (park.right - cell_w * 0.55, park.top + cell_h * 0.95)
+    end = (park.right, park.top + cell_h * 0.95)
+    points = []
+    for i in range(36):
+        t = i / 35
+        mt = 1 - t
+        x = mt**3 * start[0] + 3 * mt**2 * t * c1[0] + 3 * mt * t**2 * c2[0] + t**3 * end[0]
+        y = mt**3 * start[1] + 3 * mt**2 * t * c1[1] + 3 * mt * t**2 * c2[1] + t**3 * end[1]
+        points.append((x, y))
+    return points
+
+
 def draw_minimap(screen, state, font):
     rect = pygame.Rect(W - 236, 10, 216, 216)
     panel = pygame.Surface(rect.size, pygame.SRCALPHA)
@@ -83,6 +104,15 @@ def draw_minimap(screen, state, font):
             _, my1 = _local_point(0, y1, rect)
             if my1 - gap > my0 + gap:
                 pygame.draw.line(panel, line_col, (mx, my0 + gap), (mx, my1 - gap), 1)
+
+    for i, park in enumerate(state.parks):
+        pr = _local_rect(park, rect)
+        pygame.draw.rect(panel, (42, 135, 56), pr)
+        if i < len(state.park_ponds):
+            pond = _local_polyline(state.park_ponds[i], rect)
+            pygame.draw.polygon(panel, (42, 115, 165), pond)
+        path = _local_polyline(_park_path_points(park), rect)
+        pygame.draw.lines(panel, (150, 105, 56), False, path, 1)
 
     for building_rect, _ in state.buildings:
         br = _local_rect(building_rect, rect)

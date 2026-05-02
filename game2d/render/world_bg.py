@@ -1,4 +1,6 @@
 """Welt-Hintergrund: Wasser, Strand, Gras, Straßen, Gehsteige, Ampeln."""
+import math
+
 import pygame
 
 from game2d.config import (
@@ -142,6 +144,168 @@ def draw_center_lines(surf, cam):
                 draw_center_line_dashes(surf, cam, False, x, start, end)
 
 
+def _smooth_points(points, rounds=3, closed=False):
+    pts = [(float(x), float(y)) for x, y in points]
+    for _ in range(rounds):
+        source = pts + ([pts[0]] if closed else [])
+        smoothed = []
+        if not closed:
+            smoothed.append(source[0])
+        pairs = zip(source, source[1:])
+        for p0, p1 in pairs:
+            q = (p0[0] * 0.75 + p1[0] * 0.25, p0[1] * 0.75 + p1[1] * 0.25)
+            r = (p0[0] * 0.25 + p1[0] * 0.75, p0[1] * 0.25 + p1[1] * 0.75)
+            smoothed.extend([q, r])
+        if not closed:
+            smoothed.append(source[-1])
+        pts = smoothed
+    return [(int(x), int(y)) for x, y in pts]
+
+
+def _draw_flat_path(surf, points, color, width):
+    half = width / 2
+    left = []
+    right = []
+    for i, point in enumerate(points):
+        if i == 0:
+            tx = points[1][0] - point[0]
+            ty = points[1][1] - point[1]
+        elif i == len(points) - 1:
+            tx = point[0] - points[i - 1][0]
+            ty = point[1] - points[i - 1][1]
+        else:
+            tx = points[i + 1][0] - points[i - 1][0]
+            ty = points[i + 1][1] - points[i - 1][1]
+        length = math.hypot(tx, ty) or 1
+        nx = -ty / length
+        ny = tx / length
+        left.append((int(point[0] + nx * half), int(point[1] + ny * half)))
+        right.append((int(point[0] - nx * half), int(point[1] - ny * half)))
+    pygame.draw.polygon(surf, color, left + right[::-1])
+
+
+def _park_path_points(rect):
+    cell_w = rect.w / 2
+    cell_h = rect.h / 3
+    start = (rect.left + 120, rect.bottom)
+    c1 = (rect.left + 120, rect.bottom - cell_h * 0.95)
+    c2 = (rect.right - cell_w * 0.55, rect.top + cell_h * 0.95)
+    end = (rect.right, rect.top + cell_h * 0.95)
+    points = []
+    for i in range(72):
+        t = i / 71
+        mt = 1 - t
+        x = mt**3 * start[0] + 3 * mt**2 * t * c1[0] + 3 * mt * t**2 * c2[0] + t**3 * end[0]
+        y = mt**3 * start[1] + 3 * mt**2 * t * c1[1] + 3 * mt * t**2 * c2[1] + t**3 * end[1]
+        points.append((x, y))
+    return points
+
+
+def _draw_pond_plant(surf, x, y, size=1.0, flower=None):
+    radius = max(3, int(7 * size))
+    pygame.draw.circle(surf, (44, 128, 66), (int(x), int(y)), radius)
+    if flower is not None and abs(size - 1.0) < 0.01:
+        pygame.draw.circle(surf, flower, (int(x + 7), int(y - 3)), 4)
+
+
+def _draw_reeds(surf, x, y, lean=1):
+    base = (int(x), int(y))
+    for i, height in enumerate((18, 24, 15, 21)):
+        ox = (i - 1.5) * 5
+        top = (int(x + ox + lean * (height * 0.18)), int(y - height))
+        pygame.draw.line(surf, (54, 116, 48), (int(x + ox), base[1]), top, 2)
+        pygame.draw.ellipse(surf, (133, 102, 48), (top[0] - 2, top[1] - 5, 4, 9))
+
+
+def _draw_pond_plant_group(surf, x, y, items):
+    flower_cols = [(232, 216, 74), (210, 64, 58), (238, 238, 220)]
+    for ox, oy, size, flower_idx in items:
+        flower = flower_cols[flower_idx % len(flower_cols)] if flower_idx is not None else None
+        _draw_pond_plant(surf, x + ox, y + oy, size, flower)
+
+
+def _draw_reed_group(surf, x, y, leans):
+    offsets = ((0, 0), (13, 4), (-12, 5), (5, -6))
+    for i, lean in enumerate(leans):
+        ox, oy = offsets[i]
+        _draw_reeds(surf, x + ox, y + oy, lean)
+
+
+def draw_park_street_closures(surf, cam):
+    s = current()
+    road_half = ROAD_W // 2
+    margin = ROAD_W // 2 + SIDEWALK_W
+    for park in s.parks:
+        left_road = park.left - margin
+        right_road = park.right + margin
+        top_road = park.top - margin
+        bottom_road = park.bottom + margin
+        for x in s.roads_v:
+            if park.left < x < park.right:
+                top_h = park.top - (top_road + road_half)
+                bot_h = (bottom_road - road_half) - park.bottom
+                pygame.draw.rect(surf, SIDEW, (x - road_half - cam[0], top_road + road_half - cam[1], ROAD_W, top_h))
+                pygame.draw.rect(surf, SIDEW, (x - road_half - cam[0], park.bottom - cam[1], ROAD_W, bot_h))
+        for y in s.roads_h:
+            if park.top < y < park.bottom:
+                left_w = park.left - (left_road + road_half)
+                right_w = (right_road - road_half) - park.right
+                pygame.draw.rect(surf, SIDEW, (left_road + road_half - cam[0], y - road_half - cam[1], left_w, ROAD_W))
+                pygame.draw.rect(surf, SIDEW, (park.right - cam[0], y - road_half - cam[1], right_w, ROAD_W))
+
+
+def draw_parks(surf, cam):
+    s = current()
+    for park in s.parks:
+        rect = pygame.Rect(park.x - cam[0], park.y - cam[1], park.w, park.h)
+        if rect.right < -80 or rect.left > W + 80 or rect.bottom < -80 or rect.top > H + 80:
+            continue
+        pygame.draw.rect(surf, (43, 145, 62), rect)
+        pygame.draw.rect(surf, (27, 92, 41), rect, 4)
+
+        cell_w = rect.w / 2
+        cell_h = rect.h / 3
+        pond = [(int(x - cam[0]), int(y - cam[1])) for x, y in s.park_ponds[s.parks.index(park)]]
+        pygame.draw.polygon(surf, (38, 105, 150), pond)
+        pygame.draw.lines(surf, (91, 166, 196), True, pond, 5)
+        plant_groups = (
+            (rect.left + 118, rect.top + 132, ((0, 0, 1.0, 0), (18, 9, 0.72, None), (-14, 12, 0.55, None))),
+            (rect.left + 226, rect.top + 190, ((0, 0, 1.0, 1), (15, -10, 0.62, None), (-18, 8, 0.82, None), (30, 12, 0.48, None))),
+            (rect.left + cell_w + 96, rect.top + 128, ((0, 0, 1.0, 2), (-16, 12, 0.68, None), (20, 10, 0.52, None))),
+            (rect.right - 220, rect.top + 96, ((0, 0, 1.0, 0), (18, -4, 0.58, None), (-20, 11, 0.76, None))),
+            (rect.right - 145, rect.top + 185, ((0, 0, 1.0, 1), (-16, 8, 0.64, None), (17, 12, 0.44, None))),
+            (rect.left + cell_w - 110, rect.top + cell_h + 118, ((0, 0, 1.0, 2), (16, 12, 0.65, None), (-20, 8, 0.54, None))),
+        )
+        for px, py, items in plant_groups:
+            _draw_pond_plant_group(surf, px, py, items)
+        reed_groups = (
+            (rect.left + 62, rect.top + 120, (-1, 1, -1)),
+            (rect.left + 94, rect.top + cell_h * 1.05, (1, -1, 1, -1)),
+            (rect.left + cell_w * 0.45, rect.top + 42, (1, 1, -1)),
+            (rect.left + cell_w * 1.03, rect.top + 58, (-1, 1, -1, 1)),
+            (rect.right - 124, rect.top + 78, (-1, -1, 1)),
+            (rect.right - 70, rect.top + cell_h * 0.46, (1, -1, 1, -1)),
+            (rect.left + cell_w * 0.62, rect.top + cell_h * 1.55, (-1, 1, -1)),
+            (rect.left + 86, rect.top + cell_h * 1.66, (1, -1, 1)),
+        )
+        for px, py, leans in reed_groups:
+            _draw_reed_group(surf, px, py, leans)
+
+        path_points = _park_path_points(rect)
+        _draw_flat_path(surf, path_points, (118, 83, 43), 34)
+        _draw_flat_path(surf, path_points, (179, 139, 82), 22)
+
+        for x, y, crown, trunk, dark_g, light_g in s.park_trees:
+            if not park.collidepoint(x, y):
+                continue
+            sx = x - cam[0]
+            sy = y - cam[1]
+            if -45 < sx < W + 45 and -45 < sy < H + 45:
+                pygame.draw.rect(surf, (94, 58, 34), (sx - trunk // 2, sy + crown - 3, trunk, 12))
+                pygame.draw.circle(surf, (22, dark_g, 42), (int(sx), int(sy)), crown)
+                pygame.draw.circle(surf, (52, light_g, 62), (int(sx - crown * 0.28), int(sy - crown * 0.32)), max(6, crown // 2))
+
+
 def draw_world_bg(surf, cam):
     s = current()
     surf.fill(WATER_DEEP)
@@ -220,3 +384,5 @@ def draw_world_bg(surf, cam):
     draw_crosswalks(surf, cam)
     draw_center_lines(surf, cam)
     draw_traffic_lights(surf, cam)
+    draw_park_street_closures(surf, cam)
+    draw_parks(surf, cam)

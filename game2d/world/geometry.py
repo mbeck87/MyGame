@@ -26,6 +26,8 @@ def rect_hits_city_edge(rect):
 
 def rect_on_road(rect, margin=10):
     s = current()
+    if any(rect.colliderect(park) for park in s.parks):
+        return False
     cx, cy = rect.center
     half = ROAD_W * 0.5 - margin
     for y in s.roads_h:
@@ -33,6 +35,35 @@ def rect_on_road(rect, margin=10):
             return True
     for x in s.roads_v:
         if ROAD_LO <= cy <= ROAD_HI_Y and abs(cx - x) <= half:
+            return True
+    return False
+
+
+def point_in_polygon(x, y, points):
+    inside = False
+    px, py = points[-1]
+    for nx, ny in points:
+        if ((ny > y) != (py > y)) and x < (px - nx) * (y - ny) / ((py - ny) or 1) + nx:
+            inside = not inside
+        px, py = nx, ny
+    return inside
+
+
+def rect_in_park_pond(rect):
+    s = current()
+    probes = (
+        rect.center,
+        rect.midtop,
+        rect.midbottom,
+        rect.midleft,
+        rect.midright,
+        rect.topleft,
+        rect.topright,
+        rect.bottomleft,
+        rect.bottomright,
+    )
+    for pond in s.park_ponds:
+        if any(point_in_polygon(x, y, pond) for x, y in probes):
             return True
     return False
 

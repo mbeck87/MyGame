@@ -11,7 +11,7 @@ from game2d.render.sprites import make_car_sprite, make_cop_car_sprite
 from game2d.state import current
 from game2d.world.geometry import (
     in_city, lane_center_for_car, move_toward,
-    intersection_zone_at, rect_on_road,
+    intersection_zone_at, point_in_polygon, rect_in_park_pond, rect_on_road,
     nearest_road_x, nearest_road_y,
 )
 from game2d.world.traffic import traffic_light_allows
@@ -37,6 +37,7 @@ class Car:
         self.burning = False
         self.burn_timer = 0.0
         self.dead = False
+        self.sunk = False
         self._smoke_cd = 0.0
         self._fire_cd = 0.0
         self.blood_trail = 0.0
@@ -48,7 +49,7 @@ class Car:
         self._siren_channel = None
 
     def take_damage(self, dmg):
-        if self.dead or dmg <= 0: return
+        if self.dead or self.sunk or dmg <= 0: return
         self.hp -= dmg
         n = max(1, int(dmg // 18))
         for _ in range(min(n, 4)):
@@ -117,8 +118,50 @@ class Car:
         if not self.is_cop:
             s.player.money += random.randint(20, 50)
 
+    def _pond_sink_point(self):
+        s = current()
+        rect = self.rect()
+        probes = (
+            rect.center, rect.midtop, rect.midbottom, rect.midleft, rect.midright,
+            rect.topleft, rect.topright, rect.bottomleft, rect.bottomright,
+        )
+        for pond in s.park_ponds:
+            inside = [p for p in probes if point_in_polygon(p[0], p[1], pond)]
+            if not inside:
+                continue
+            x, y = inside[0]
+            cx = sum(p[0] for p in pond) / len(pond)
+            cy = sum(p[1] for p in pond) / len(pond)
+            dx = cx - x
+            dy = cy - y
+            dist = math.hypot(dx, dy) or 1
+            return x + dx / dist * 64, y + dy / dist * 64
+        return self.x, self.y
+
+    def sink_in_pond(self):
+        if self.sunk:
+            return
+        s = current()
+        self.x, self.y = self._pond_sink_point()
+        self.sunk = True
+        self.spd = 0
+        self.ai_spd = 0
+        self.hp = 0
+        self.burning = False
+        if self._siren_channel is not None:
+            audio.stop_loop(self._siren_channel)
+            self._siren_channel = None
+        if s.in_car is self:
+            audio.set_engine(False)
+            s.in_car = None
+        for _ in range(18):
+            a = random.uniform(0, math.tau)
+            sp = random.uniform(25, 95)
+            s.smoke_particles.append([self.x, self.y, math.cos(a) * sp, math.sin(a) * sp,
+                                      random.uniform(0.5, 1.0), 1.0, random.randint(3, 7)])
+
     def update_fx(self, dt):
-        if self.dead:
+        if self.dead or self.sunk:
             if self._siren_channel is not None:
                 audio.stop_loop(self._siren_channel)
                 self._siren_channel = None
@@ -361,6 +404,13 @@ class Car:
 
     def near_road_end(self, margin=BLOCK):
         heading = int(round(self.angle / 90.0)) * 90 % 360
+        rad = math.radians(heading)
+        look = self.rect_at(
+            self.x + math.sin(rad) * 220,
+            self.y - math.cos(rad) * 220,
+        )
+        if any(look.colliderect(park) for park in current().parks):
+            return True
         if heading == 0:
             return self.y < ROAD_LO + margin
         if heading == 180:
@@ -453,7 +503,7 @@ class Car:
         self._run_over_player(dmg + 10)
 
     def update(self, dt, accel=0, steer=0):
-        if self.dead:
+        if self.dead or self.sunk:
             self.spd = 0
             return
         s = current()
@@ -513,10 +563,17 @@ class Car:
             self.x = max(ROAD_LO, min(ROAD_HI_X, self.x))
             self.y = max(ROAD_LO, min(ROAD_HI_Y, self.y))
         self.hit_pedestrians(abs(self.spd))
+        if rect_in_park_pond(self.rect()):
+            self.sink_in_pond()
+            return
         self._leave_tire_trail(dt)
 
     def ai_update(self, dt):
         s = current()
+        if self.sunk:
+            self.spd = 0
+            self.ai_spd = 0
+            return
         self.yield_timer = max(0.0, self.yield_timer - dt)
         if self.is_roadblock_support:
             self.spd = 0
@@ -643,6 +700,9 @@ class Car:
             self.angle = random.choice([0, 90, 180, 270])
 
     def draw(self, surf, cam):
+        if self.sunk:
+            self.draw_sunk(surf, cam)
+            return
         rot = pygame.transform.rotate(self.sprite, -self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
@@ -656,6 +716,20 @@ class Car:
                 wx = dx_ * cs - dy_ * sn
                 wy = dx_ * sn + dy_ * cs
                 pygame.draw.circle(surf, (25, 25, 28), (int(cx_ + wx), int(cy_ + wy)), dr_)
+
+    def draw_sunk(self, surf, cam):
+        rear_h = max(18, int(self.h * 0.34))
+        rear = self.sprite.subsurface((0, self.h - rear_h, self.w, rear_h)).copy()
+        shade = pygame.Surface(rear.get_size(), pygame.SRCALPHA)
+        shade.fill((55, 75, 85, 115))
+        rear.blit(shade, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        rot = pygame.transform.rotate(rear, -self.angle)
+        cx = self.x - cam[0]
+        cy = self.y - cam[1]
+        r = rot.get_rect(center=(cx, cy))
+        pygame.draw.ellipse(surf, (35, 104, 145), (int(cx - 38), int(cy - 18), 76, 36))
+        pygame.draw.ellipse(surf, (96, 168, 198), (int(cx - 44), int(cy - 22), 88, 44), 2)
+        surf.blit(rot, r)
 
     def draw_roadblock_markers(self, surf, cam):
         marker_angle = (self.angle + 90) % 360
