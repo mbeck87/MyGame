@@ -11,7 +11,7 @@ from game2d.config import (
 )
 from game2d.state import current
 from game2d.world.geometry import (
-    in_city, rect_hits_city_edge, lane_center_for_car,
+    in_city, rect_hits_city_edge, lane_center_for_car, random_pedestrian_destination,
 )
 
 
@@ -38,6 +38,18 @@ def safe_spawn():
         if not any(r.colliderect(b[0]) for b in s.buildings):
             return x, y
     return ROAD_LO, ROAD_LO
+
+
+def pedestrian_spawn():
+    s = current()
+    prefer_park = bool(s.pedestrian_park_nodes) and random.random() < 0.28
+    node_idx = random_pedestrian_destination(prefer_park=prefer_park)
+    if node_idx is not None:
+        x, y = s.pedestrian_nodes[node_idx]
+        r = pygame.Rect(x - 12, y - 12, 24, 24)
+        if in_city(x, y, 20) and not any(r.colliderect(b[0]) for b in s.buildings):
+            return x, y
+    return safe_spawn()
 
 
 def exit_car_position(car):

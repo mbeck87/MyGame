@@ -26,6 +26,8 @@ GARAGE_ITEMS = {
 
 def init_services(state):
     """Place service markers near reachable roads."""
+    from game2d.world.geometry import rebuild_pedestrian_graph
+
     state.garages[:] = [
         (ROAD_LO + 160, ROAD_LO + 160),
         (ROAD_HI_X - 160, ROAD_HI_Y - 160),
@@ -46,6 +48,7 @@ def init_services(state):
         + [(r, None) for r in state.WATER_RECTS]
         + [(r, None) for r in state.parks]
     )
+    rebuild_pedestrian_graph(state)
 
 
 def _pos(state):

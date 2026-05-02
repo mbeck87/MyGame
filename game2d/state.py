@@ -19,6 +19,9 @@ class GameState:
     parks:     list = field(default_factory=list)        # [rect, ...]
     park_ponds: list = field(default_factory=list)       # [[(x, y), ...], ...]
     park_trees: list = field(default_factory=list)       # [(x, y, crown, trunk, dark_g, light_g), ...]
+    pedestrian_nodes: list = field(default_factory=list) # [(x, y), ...]
+    pedestrian_edges: dict = field(default_factory=dict) # {node_idx: [neighbor_idx, ...]}
+    pedestrian_park_nodes: set = field(default_factory=set)
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x
     AI_OBSTACLES: list = field(default_factory=list)     # Häuser + Wasser

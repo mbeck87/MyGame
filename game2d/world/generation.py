@@ -9,7 +9,7 @@ from game2d.config import (
     ROAD_W, SIDEWALK_W,
 )
 from game2d.render.sprites import make_building
-from game2d.world.geometry import rect_overlaps_street_space
+from game2d.world.geometry import rect_overlaps_street_space, rebuild_pedestrian_graph
 
 
 def _build_park_rect():
@@ -189,3 +189,4 @@ def build_world(state):
         + [(r, None) for r in state.WATER_RECTS]
         + [(r, None) for r in state.parks]
     )
+    rebuild_pedestrian_graph(state)

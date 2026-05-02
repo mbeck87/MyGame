@@ -83,6 +83,41 @@ def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False):
     ]
 
 
+def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False):
+    s = pygame.Surface((20, 24), pygame.SRCALPHA)
+    cx, water_y = 10, 14
+    wave_col = (72, 152, 208, 170)
+    foam_col = (210, 240, 250, 180)
+    torso_y = water_y - 4 + phase
+    arm_span = 5 + abs(phase)
+
+    pygame.draw.ellipse(s, (0, 0, 0, 60), (4, water_y + 1, 12, 5))
+    pygame.draw.ellipse(s, shirt_col, (cx - 4, torso_y, 8, 5))
+    hl = tuple(min(255, c + 30) for c in shirt_col)
+    pygame.draw.ellipse(s, hl, (cx - 3, torso_y, 6, 2))
+    pygame.draw.line(s, shirt_col, (cx - arm_span, torso_y + 2), (cx - 2, torso_y + 1), 2)
+    pygame.draw.line(s, shirt_col, (cx + 2, torso_y + 1), (cx + arm_span, torso_y + 2), 2)
+    pygame.draw.circle(s, skin, (cx, torso_y - 3), 3)
+    pygame.draw.circle(s, hair if not is_cop else COP_DARK, (cx, torso_y - 4), 4)
+    if is_cop:
+        pygame.draw.rect(s, COP_DARK, (cx - 4, torso_y - 7, 8, 2))
+        pygame.draw.rect(s, (230, 200, 60), (cx - 1, torso_y - 4, 2, 2))
+
+    for wx in range(3, 18, 4):
+        pygame.draw.arc(s, wave_col, (wx - 3, water_y - 1, 7, 5), 3.2, 6.1, 2)
+    pygame.draw.arc(s, foam_col, (cx - 8, water_y - 2, 16, 5), 3.35, 5.95, 1)
+    return s
+
+
+def make_swim_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False):
+    return [
+        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop),
+        _draw_swim_frame(shirt_col, skin, hair, 1, is_cop),
+        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop),
+        _draw_swim_frame(shirt_col, skin, hair, -1, is_cop),
+    ]
+
+
 def make_ped_sprite(shirt_col, skin=SKIN, hair=(60,40,30)):
     return make_ped_frames(shirt_col, skin, hair)[0]
 

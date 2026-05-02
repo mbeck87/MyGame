@@ -22,7 +22,7 @@ from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
 from game2d.world.geometry import in_water
 from game2d.world.spawning import (
-    safe_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
+    safe_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
 from game2d.entities.car import Car
 from game2d.entities.ped import Ped
@@ -75,7 +75,7 @@ def main():
         state.cars.append(car)
 
     for _ in range(60):
-        x, y = safe_spawn()
+        x, y = pedestrian_spawn()
         state.peds.append(Ped(x, y))
 
     # Spieler
