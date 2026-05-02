@@ -33,6 +33,7 @@ from game2d.systems.services import (
     add_money,
     buy_shop_item, cop_damage_for_wanted, cop_fire_rate_for_wanted,
     escalate_police, init_services, nearby_service, use_garage_item,
+    SHOP_ITEMS, GARAGE_ITEMS,
 )
 from game2d.systems.weapons import fire, aim_to_mouse
 from game2d.systems import audio
@@ -147,7 +148,8 @@ def main():
                 if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g):
                     state.menu = None
                     continue
-                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key <= pygame.K_7:
+                max_key = max(SHOP_ITEMS if state.menu == "shop" else GARAGE_ITEMS)
+                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key < pygame.K_1 + max_key:
                     if state.menu == "shop":
                         buy_shop_item(state, e.key - pygame.K_0)
                     else:

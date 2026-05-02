@@ -11,7 +11,7 @@ from game2d.config import (
 
 def make_car_sprite(body_col, w=46, h=78):
     s = pygame.Surface((w, h), pygame.SRCALPHA)
-    pygame.draw.rect(s, (0,0,0,80), (3, 6, w-2, h-2), border_radius=8)
+    pygame.draw.ellipse(s, (0, 0, 0, 70), (6, 9, w - 12, h - 18))
     pygame.draw.rect(s, body_col, (2, 4, w-4, h-8), border_radius=8)
     hl = tuple(min(255, c+35) for c in body_col)
     pygame.draw.rect(s, hl, (4, 6, w-8, 4), border_radius=4)

@@ -47,7 +47,9 @@ class Car:
         self.yield_timer = 0.0
         self.ai_spd = random.uniform(150, 240) if is_cop else random.uniform(80, 160)
         self.turn_cd = random.uniform(2, 6)
-        self.arc = None   # Kreisbogen-Kurve: {cx,cy,r,theta,theta_end,omega,target}
+        self.arc = None
+        self.planned_turn = None
+        self.signal_dir = 0
         self._siren_channel = None
 
     def take_damage(self, dmg):
@@ -421,8 +423,16 @@ class Car:
             return self.x > ROAD_HI_X - margin
         return self.x < ROAD_LO + margin
 
-    def choose_intersection_turn(self, allow_reverse=False):
-        heading = int(round(self.angle / 90.0)) * 90 % 360
+    def _turn_signal_dir(self, start_angle, end_angle):
+        diff = self._turn_delta(start_angle, end_angle)
+        if diff == 0:
+            return 0
+        return 1 if diff > 0 else -1
+
+    def _turn_delta(self, start_angle, end_angle):
+        return ((end_angle - start_angle + 180) % 360) - 180
+
+    def _valid_turn_choices(self, heading, allow_reverse=False):
         reverse = (heading + 180) % 360
         choices = []
         for angle in (0, 90, 180, 270):
@@ -434,58 +444,117 @@ class Car:
             ty = ly - math.cos(rad) * 120
             if rect_on_road(self.rect_at(lx, ly)) and rect_on_road(self.rect_at(tx, ty)):
                 choices.append(angle)
+        return choices
+
+    def choose_intersection_turn(self, allow_reverse=False):
+        heading = int(round(self.angle / 90.0)) * 90 % 360
+        choices = self._valid_turn_choices(heading, allow_reverse=allow_reverse)
         if not choices:
             return False
 
-        new_angle = random.choice(choices)
+        new_angle = self.planned_turn if self.planned_turn in choices else random.choice(choices)
         self.turn_cd = random.uniform(2.5, 6.0)
-        diff = ((new_angle - heading + 180) % 360) - 180
+        self.planned_turn = None
+        self.signal_dir = self._turn_signal_dir(heading, new_angle)
+        if new_angle == heading:
+            self.signal_dir = 0
+            return True
 
+        self.start_turn_arc(heading, new_angle)
+        return True
+
+    def plan_intersection_turn(self, allow_reverse=False):
+        if self.arc is not None or self.planned_turn is not None:
+            return
+        heading = int(round(self.angle / 90.0)) * 90 % 360
+        choices = self._valid_turn_choices(heading, allow_reverse=allow_reverse)
+        if not choices:
+            return
+        self.planned_turn = random.choice(choices)
+        self.signal_dir = self._turn_signal_dir(heading, self.planned_turn)
+
+    def start_turn_arc(self, heading, new_angle):
+        diff = self._turn_delta(heading, new_angle)
         if diff == 0:
-            return True  # geradeaus — kein Bogen
+            self.arc = None
+            return
+        if abs(diff) == 180:
+            self.start_u_turn_arc(heading, new_angle)
+            return
 
-        A_rad = math.radians(heading)
-        B_rad = math.radians(new_angle)
-        LANE_OFF = 28
-
-        fwd_A = (math.sin(A_rad), -math.cos(A_rad))
-        rgt_A = (math.cos(A_rad),  math.sin(A_rad))
-        fwd_B = (math.sin(B_rad), -math.cos(B_rad))
-        rgt_B = (math.cos(B_rad),  math.sin(B_rad))
-
+        a_rad = math.radians(heading)
+        b_rad = math.radians(new_angle)
+        lane_off = 28
+        fwd_a = (math.sin(a_rad), -math.cos(a_rad))
+        right_a = (math.cos(a_rad), math.sin(a_rad))
+        fwd_b = (math.sin(b_rad), -math.cos(b_rad))
+        right_b = (math.cos(b_rad), math.sin(b_rad))
         ix = nearest_road_x(self.x)
         iy = nearest_road_y(self.y)
 
-        # Schnittpunkt der beiden Spurmittellinien (eingehend + ausgehend)
-        corner_x = ix + LANE_OFF * rgt_A[0] + LANE_OFF * rgt_B[0]
-        corner_y = iy + LANE_OFF * rgt_A[1] + LANE_OFF * rgt_B[1]
+        corner_x = ix + lane_off * right_a[0] + lane_off * right_b[0]
+        corner_y = iy + lane_off * right_a[1] + lane_off * right_b[1]
+        depth = (corner_x - self.x) * fwd_a[0] + (corner_y - self.y) * fwd_a[1]
+        radius = max(20.0, min(68.0 if diff > 0 else 92.0, depth))
 
-        # Bogentiefe = Abstand von jetzt bis zum Eckpunkt entlang Fahrtrichtung
-        depth = (corner_x - self.x) * fwd_A[0] + (corner_y - self.y) * fwd_A[1]
-        R = max(20.0, min(88.0, depth))
+        arc_sx = corner_x - radius * fwd_a[0]
+        arc_sy = corner_y - radius * fwd_a[1]
+        arc_ex = corner_x + radius * fwd_b[0]
+        arc_ey = corner_y + radius * fwd_b[1]
 
-        # Bogenstart/-ende liegen exakt auf den richtigen Spuren — kein Snap nötig
-        arc_sx = corner_x - R * fwd_A[0]
-        arc_sy = corner_y - R * fwd_A[1]
-        arc_ex = corner_x + R * fwd_B[0]
-        arc_ey = corner_y + R * fwd_B[1]
-
-        if diff > 0:   # Rechtsabbiegen: Mittelpunkt rechts vom Bogenstart
-            cx = arc_sx + R * rgt_A[0]
-            cy = arc_sy + R * rgt_A[1]
+        if diff > 0:
+            cx = arc_sx + radius * right_a[0]
+            cy = arc_sy + radius * right_a[1]
             omega = 1
-        else:          # Linksabbiegen: Mittelpunkt links vom Bogenstart
-            cx = arc_sx - R * rgt_A[0]
-            cy = arc_sy - R * rgt_A[1]
+        else:
+            cx = arc_sx - radius * right_a[0]
+            cy = arc_sy - radius * right_a[1]
             omega = -1
 
         theta_s = math.atan2(arc_sy - cy, arc_sx - cx)
         theta_e = theta_s + omega * math.pi / 2
-
         self.x, self.y = arc_sx, arc_sy
-        self.arc = dict(cx=cx, cy=cy, r=R, theta=theta_s, theta_end=theta_e,
-                        omega=omega, end_x=arc_ex, end_y=arc_ey, target=float(new_angle))
-        return True
+        self.arc = {
+            "cx": cx,
+            "cy": cy,
+            "r": radius,
+            "theta": theta_s,
+            "theta_end": theta_e,
+            "omega": omega,
+            "end_x": arc_ex,
+            "end_y": arc_ey,
+            "target": float(new_angle),
+        }
+
+    def start_u_turn_arc(self, heading, new_angle):
+        a_rad = math.radians(heading)
+        radius = 34.0
+        right_a = (math.cos(a_rad), math.sin(a_rad))
+        if heading in (0, 180):
+            cx = nearest_road_x(self.x)
+            cy = self.y
+        else:
+            cx = self.x
+            cy = nearest_road_y(self.y)
+
+        arc_sx = cx + radius * right_a[0]
+        arc_sy = cy + radius * right_a[1]
+        arc_ex = cx - radius * right_a[0]
+        arc_ey = cy - radius * right_a[1]
+        theta_s = math.atan2(arc_sy - cy, arc_sx - cx)
+        theta_e = theta_s - math.pi
+        self.x, self.y = arc_sx, arc_sy
+        self.arc = {
+            "cx": cx,
+            "cy": cy,
+            "r": radius,
+            "theta": theta_s,
+            "theta_end": theta_e,
+            "omega": -1,
+            "end_x": arc_ex,
+            "end_y": arc_ey,
+            "target": float(new_angle),
+        }
 
     def _leave_tire_trail(self, dt):
         if self.blood_trail <= 0 or abs(self.spd) < 35:
@@ -712,33 +781,37 @@ class Car:
                     self.deployed_cops += 1
                     self.spd *= 0.35
             return
-        # Kreisbogen-Abbiegen: Auto folgt geometrischem Bogen mit Radius und Mittelpunkt
         if self.arc is not None:
-            a = self.arc
+            arc = self.arc
             arc_spd = min(self.ai_spd * 0.58, 92.0)
             if abs(self.spd) < arc_spd:
                 self.spd = min(self.spd + 220 * dt, arc_spd)
-            dtheta = (self.spd / a['r']) * a['omega'] * dt
-            a['theta'] += dtheta
-            done = (a['omega'] > 0 and a['theta'] >= a['theta_end']) or \
-                   (a['omega'] < 0 and a['theta'] <= a['theta_end'])
+            arc["theta"] += (self.spd / arc["r"]) * arc["omega"] * dt
+            done = (
+                arc["omega"] > 0 and arc["theta"] >= arc["theta_end"]
+            ) or (
+                arc["omega"] < 0 and arc["theta"] <= arc["theta_end"]
+            )
             if done:
-                self.angle = a['target']
-                self.x = a['end_x']
-                self.y = a['end_y']
+                self.angle = arc["target"]
+                self.x = arc["end_x"]
+                self.y = arc["end_y"]
                 self.arc = None
+                self.signal_dir = 0
             else:
-                self.x = a['cx'] + a['r'] * math.cos(a['theta'])
-                self.y = a['cy'] + a['r'] * math.sin(a['theta'])
-                # Fahrrichtung = Tangente am Bogen → Spielwinkel daraus ableiten
-                vx = -math.sin(a['theta']) * a['omega']
-                vy =  math.cos(a['theta']) * a['omega']
+                self.x = arc["cx"] + arc["r"] * math.cos(arc["theta"])
+                self.y = arc["cy"] + arc["r"] * math.sin(arc["theta"])
+                vx = -math.sin(arc["theta"]) * arc["omega"]
+                vy = math.cos(arc["theta"]) * arc["omega"]
                 self.angle = math.degrees(math.atan2(vx, -vy))
             return
 
         lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
         self.x = move_toward(self.x, lane_x, 26 * dt)
         self.y = move_toward(self.y, lane_y, 26 * dt)
+        self.turn_cd -= dt
+        if self.turn_cd <= 0 and self.upcoming_intersection(150):
+            self.plan_intersection_turn(allow_reverse=self.near_road_end())
         if not traffic_light_allows(self) or self.yield_timer > 0 or self.should_yield_at_intersection() or self.car_ahead() or not self.reserve_intersection():
             self.spd *= max(0.0, 1 - 2.6 * dt)
             return
@@ -756,7 +829,6 @@ class Car:
                     blocked = True; break
         if not blocked and s.in_car and test.colliderect(s.in_car.rect()):
             blocked = True
-        self.turn_cd -= dt
         if blocked:
             self.spd *= max(0.0, 1 - 3.0 * dt)
             self.yield_timer = max(self.yield_timer, 0.12)
@@ -774,21 +846,9 @@ class Car:
         if other:
             self.resolve_car_collision(other, False)
             self.turn_cd = random.uniform(1.2, 2.6)
-            new_a = float(random.choice([0, 90, 180, 270]))
-            diff_r = ((new_a - self.angle + 180) % 360) - 180
-            A_rad = math.radians(self.angle)
-            if diff_r > 0:
-                R = 46
-                cx = self.x + R * math.cos(A_rad); cy = self.y + R * math.sin(A_rad)
-                ts = A_rad + math.pi
-                self.arc = dict(cx=cx, cy=cy, r=R, theta=ts, theta_end=ts+math.pi/2, omega=1, target=new_a)
-            elif diff_r < 0:
-                R = 80
-                cx = self.x - R * math.cos(A_rad); cy = self.y - R * math.sin(A_rad)
-                ts = A_rad
-                self.arc = dict(cx=cx, cy=cy, r=R, theta=ts, theta_end=ts-math.pi/2, omega=-1, target=new_a)
-            else:
-                self.angle = new_a
+            self.arc = None
+            self.planned_turn = None
+            self.signal_dir = 0
 
     def draw(self, surf, cam):
         if self.sunk:
@@ -807,6 +867,30 @@ class Car:
                 wx = dx_ * cs - dy_ * sn
                 wy = dx_ * sn + dy_ * cs
                 pygame.draw.circle(surf, (25, 25, 28), (int(cx_ + wx), int(cy_ + wy)), dr_)
+        self.draw_turn_signal(surf, cam)
+
+    def draw_turn_signal(self, surf, cam):
+        if self.signal_dir == 0:
+            return
+        if self.arc is None and self.planned_turn is None:
+            return
+        if (pygame.time.get_ticks() // 280) % 2:
+            return
+        rad = math.radians(self.angle)
+        cs, sn = math.cos(rad), math.sin(rad)
+        cx = self.x - cam[0]
+        cy = self.y - cam[1]
+        front_y = -self.h * 0.34
+        back_y = self.h * 0.34
+        side_x = self.w * 0.34 * self.signal_dir
+        lamp_col = (255, 180, 40)
+        glow_col = (255, 220, 120)
+        for dx_, dy_ in ((side_x, front_y), (side_x, back_y)):
+            wx = dx_ * cs - dy_ * sn
+            wy = dx_ * sn + dy_ * cs
+            pos = (int(cx + wx), int(cy + wy))
+            pygame.draw.circle(surf, glow_col, pos, 4)
+            pygame.draw.circle(surf, lamp_col, pos, 2)
 
     def draw_sunk(self, surf, cam):
         rear_h = max(18, int(self.h * 0.34))

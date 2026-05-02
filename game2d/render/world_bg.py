@@ -61,6 +61,22 @@ def draw_crosswalks(surf, cam):
                 continue
             has_north = iy != ROAD_LO
             has_south = iy != ROAD_HI_Y
+            for park in s.parks:
+                margin = ROAD_W // 2 + SIDEWALK_W
+                left_road = park.left - margin
+                right_road = park.right + margin
+                top_road = park.top - margin
+                bottom_road = park.bottom + margin
+                if park.left < ix < park.right:
+                    if iy == top_road:
+                        has_south = False
+                    elif iy == bottom_road:
+                        has_north = False
+                if park.top < iy < park.bottom:
+                    if ix == left_road:
+                        has_east = False
+                    elif ix == right_road:
+                        has_west = False
             y_top = sy - offset
             y_bottom = sy + offset - stripe_w
             x_left = sx - span // 2
@@ -353,6 +369,41 @@ def draw_world_bg(surf, cam):
         return (ROAD_LO + road_half, ROAD_HI_Y - road_half,
                 ROAD_LO + road_half, ROAD_HI_Y - road_half)
 
+    curb_col = (125, 125, 130)
+    curb_gap = ROAD_W // 2 + 28
+
+    def draw_h_curb(edge_y, start, end):
+        seg_start = start
+        for crossing_x in s.roads_v:
+            if crossing_x <= start or crossing_x >= end:
+                continue
+            seg_end = min(end, crossing_x - curb_gap)
+            if seg_end > seg_start:
+                pygame.draw.line(surf, curb_col,
+                                 (seg_start - cam[0], edge_y - cam[1]),
+                                 (seg_end - cam[0], edge_y - cam[1]), 2)
+            seg_start = max(seg_start, crossing_x + curb_gap)
+        if end > seg_start:
+            pygame.draw.line(surf, curb_col,
+                             (seg_start - cam[0], edge_y - cam[1]),
+                             (end - cam[0], edge_y - cam[1]), 2)
+
+    def draw_v_curb(edge_x, start, end):
+        seg_start = start
+        for crossing_y in s.roads_h:
+            if crossing_y <= start or crossing_y >= end:
+                continue
+            seg_end = min(end, crossing_y - curb_gap)
+            if seg_end > seg_start:
+                pygame.draw.line(surf, curb_col,
+                                 (edge_x - cam[0], seg_start - cam[1]),
+                                 (edge_x - cam[0], seg_end - cam[1]), 2)
+            seg_start = max(seg_start, crossing_y + curb_gap)
+        if end > seg_start:
+            pygame.draw.line(surf, curb_col,
+                             (edge_x - cam[0], seg_start - cam[1]),
+                             (edge_x - cam[0], end - cam[1]), 2)
+
     for y in s.roads_h:
         sy = y - cam[1]
         if -sidewalk_total-20 < sy < H+sidewalk_total+20:
@@ -370,8 +421,8 @@ def draw_world_bg(surf, cam):
             ax = a0 - cam[0]
             aw = a1 - a0
             pygame.draw.rect(surf, ASPHALT, (ax, sy - ROAD_W//2, aw, ROAD_W))
-            pygame.draw.line(surf, (125, 125, 130), (ax, sy - ROAD_W//2), (ax + aw, sy - ROAD_W//2), 2)
-            pygame.draw.line(surf, (125, 125, 130), (ax, sy + ROAD_W//2), (ax + aw, sy + ROAD_W//2), 2)
+            draw_h_curb(y - road_half, a0, a1)
+            draw_h_curb(y + road_half, a0, a1)
     for x in s.roads_v:
         sx = x - cam[0]
         if -ROAD_W < sx < W+ROAD_W:
@@ -379,8 +430,8 @@ def draw_world_bg(surf, cam):
             ay = a0 - cam[1]
             ah = a1 - a0
             pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, ay, ROAD_W, ah))
-            pygame.draw.line(surf, (125, 125, 130), (sx - ROAD_W//2, ay), (sx - ROAD_W//2, ay + ah), 2)
-            pygame.draw.line(surf, (125, 125, 130), (sx + ROAD_W//2, ay), (sx + ROAD_W//2, ay + ah), 2)
+            draw_v_curb(x - road_half, a0, a1)
+            draw_v_curb(x + road_half, a0, a1)
     draw_crosswalks(surf, cam)
     draw_center_lines(surf, cam)
     draw_traffic_lights(surf, cam)
