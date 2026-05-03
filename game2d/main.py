@@ -24,7 +24,13 @@ from game2d.world.geometry import in_water
 from game2d.world.spawning import (
     safe_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
-from game2d.entities.car import Car
+from game2d.entities.car import (
+    Car,
+    law_color_for_kind,
+    law_kind_for_wanted,
+    random_car_color,
+    random_car_kind,
+)
 from game2d.entities.ped import Ped
 from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
@@ -69,9 +75,9 @@ def main():
 
     # Initial-Verkehr und NPCs
     for _ in range(50):
-        x, y, angle = road_spawn()
-        col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
-        car = Car(x, y, col)
+        kind = random_car_kind()
+        x, y, angle = road_spawn(kind)
+        car = Car(x, y, random_car_color(kind), kind=kind)
         car.angle = angle
         car.driver = True
         state.cars.append(car)
@@ -190,7 +196,9 @@ def main():
                         audio.set_engine(False)
                     else:
                         for c in state.cars:
-                            if math.hypot(c.x-player.x, c.y-player.y) < 60:
+                            if c.dead or getattr(c, "sunk", False):
+                                continue
+                            if c.rect().inflate(36, 36).collidepoint(player.x, player.y):
                                 if c.driver is not None and not c.is_cop:
                                     # Fahrer rauswerfen
                                     ex, ey = exit_car_position(c)
@@ -277,14 +285,26 @@ def main():
                     player.wanted = max(0, player.wanted - 1)
                     player.crime_timer = 25
                 cop_spawn -= dt
+                law_kind = law_kind_for_wanted(player.wanted)
                 active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead and not getattr(c, "sunk", False) and not getattr(c, "is_roadblock_support", False))
+                active_tier_cars = sum(
+                    1 for c in state.cars
+                    if (
+                        c.is_cop
+                        and getattr(c, "kind", "cop") == law_kind
+                        and not c.dead
+                        and not getattr(c, "sunk", False)
+                        and not getattr(c, "is_roadblock_support", False)
+                    )
+                )
                 cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
-                if cop_spawn <= 0 and active_cop_cars < cop_limit:
+                tier_min = 0 if law_kind == "cop" else 1
+                if cop_spawn <= 0 and (active_cop_cars < cop_limit or active_tier_cars < tier_min):
                     cop_spawn = max(1.2, 8 - player.wanted*1.35)
-                    spawn = cop_car_spawn_near(player.x, player.y, state.cam)
+                    spawn = cop_car_spawn_near(player.x, player.y, state.cam, law_kind)
                     if spawn is not None:
                         cx, cy, angle = spawn
-                        car = Car(cx, cy, (245,245,250), is_cop=True)
+                        car = Car(cx, cy, law_color_for_kind(law_kind), is_cop=True, kind=law_kind)
                         car.angle = angle
                         car.max_spd += max(0, player.wanted - 3) * 30
                         state.cars.append(car)
@@ -389,9 +409,9 @@ def main():
                 if c.dead:
                     state.cars.remove(c)
                     if not c.is_cop:
-                        nx, ny, angle = road_spawn()
-                        col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
-                        car = Car(nx, ny, col)
+                        kind = random_car_kind()
+                        nx, ny, angle = road_spawn(kind)
+                        car = Car(nx, ny, random_car_color(kind), kind=kind)
                         car.angle = angle
                         car.driver = True
                         state.cars.append(car)
@@ -604,7 +624,8 @@ def main():
             frac = max(0, state.in_car.hp) / state.in_car.max_hp
             col = (60,200,60) if frac > 0.6 else ((230,180,40) if frac > 0.3 else (220,40,40))
             pygame.draw.rect(screen, col, (W-228, 274, 216*frac, 18))
-            label = "BRENNT!" if state.in_car.burning else f"Auto {int(state.in_car.hp)}/{state.in_car.max_hp}"
+            car_label = getattr(state.in_car, "label", "Auto")
+            label = "BRENNT!" if state.in_car.burning else f"{car_label} {int(state.in_car.hp)}/{state.in_car.max_hp}"
             screen.blit(FONT.render(label, 1, (255,255,255)), (W-225, 274))
         draw_hint(screen, state, service, FONT)
         if not state.in_car:

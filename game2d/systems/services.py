@@ -136,11 +136,9 @@ def use_garage_item(state, key):
         state.in_car.burning = False
         state.in_car.dents.clear()
     elif action == "repaint":
-        from game2d.render.sprites import make_car_sprite
+        from game2d.entities.car import random_car_color
 
-        state.in_car.sprite = make_car_sprite(
-            (random.randint(70, 230), random.randint(70, 230), random.randint(70, 230))
-        )
+        state.in_car.repaint(random_car_color(getattr(state.in_car, "kind", "sedan")))
         state.in_car.dents.clear()
         lose_cops_after_repaint(state)
     elif action == "clear_wanted":
@@ -253,9 +251,10 @@ def _roadblock_spawn_near(state, tx, ty):
 
 
 def _spawn_roadblock_cop_car(state, roadblock):
-    from game2d.entities.car import Car
+    from game2d.entities.car import Car, law_color_for_kind, law_kind_for_wanted
 
-    car = Car(roadblock.x, roadblock.y, (245, 245, 250), is_cop=True)
+    law_kind = law_kind_for_wanted(state.player.wanted)
+    car = Car(roadblock.x, roadblock.y, law_color_for_kind(law_kind), is_cop=True, kind=law_kind)
     side = -1 if random.random() < 0.5 else 1
     if roadblock.road_axis == "v":
         car.x = roadblock.x + random.choice([-28, 28])

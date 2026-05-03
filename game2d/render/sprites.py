@@ -10,31 +10,254 @@ from game2d.config import (
 )
 
 
-def make_car_sprite(body_col, w=46, h=78):
+def _shade(col, delta):
+    return tuple(max(0, min(255, c + delta)) for c in col)
+
+
+def _draw_car_shadow(surf, w, h, inset_x=6, inset_y=9):
+    pygame.draw.ellipse(
+        surf,
+        (0, 0, 0, 70),
+        (inset_x, inset_y, w - inset_x * 2, h - inset_y * 2),
+    )
+
+
+def _draw_car_wheels(surf, w, h, front_y=14, rear_y=None, wheel_w=4, wheel_h=14):
+    rear_y = h - front_y - wheel_h if rear_y is None else rear_y
+    for x in (0, w - wheel_w):
+        pygame.draw.rect(surf, (18, 18, 18), (x, front_y, wheel_w, wheel_h), border_radius=2)
+        pygame.draw.rect(surf, (18, 18, 18), (x, rear_y, wheel_w, wheel_h), border_radius=2)
+
+
+def _draw_car_lights(surf, w, h, front_w=8, rear_w=8):
+    pygame.draw.rect(surf, (255, 250, 200), (5, 6, front_w, 5), border_radius=2)
+    pygame.draw.rect(surf, (255, 250, 200), (w - 5 - front_w, 6, front_w, 5), border_radius=2)
+    pygame.draw.rect(surf, (200, 30, 30), (5, h - 10, rear_w, 5), border_radius=2)
+    pygame.draw.rect(surf, (200, 30, 30), (w - 5 - rear_w, h - 10, rear_w, 5), border_radius=2)
+
+
+def _draw_sedan_sprite(body_col, w, h):
     s = pygame.Surface((w, h), pygame.SRCALPHA)
-    pygame.draw.ellipse(s, (0, 0, 0, 70), (6, 9, w - 12, h - 18))
-    pygame.draw.rect(s, body_col, (2, 4, w-4, h-8), border_radius=8)
-    hl = tuple(min(255, c+35) for c in body_col)
-    pygame.draw.rect(s, hl, (4, 6, w-8, 4), border_radius=4)
-    pygame.draw.polygon(s, (60,80,100), [(6,16),(w-6,16),(w-10,30),(10,30)])
-    pygame.draw.polygon(s, (130,180,220), [(8,17),(w-8,17),(w-12,28),(12,28)])
-    pygame.draw.polygon(s, (60,80,100), [(8,h-22),(w-8,h-22),(w-12,h-12),(12,h-12)])
-    pygame.draw.polygon(s, (130,180,220), [(10,h-21),(w-10,21+h-42) if False else (w-10,h-21),(w-13,h-13),(13,h-13)])
-    pygame.draw.rect(s, tuple(max(0,c-25) for c in body_col), (10, 30, w-20, h-60))
+    _draw_car_shadow(s, w, h)
+    pygame.draw.rect(s, body_col, (2, 4, w - 4, h - 8), border_radius=8)
+    pygame.draw.rect(s, _shade(body_col, 35), (4, 6, w - 8, 4), border_radius=4)
+    pygame.draw.polygon(s, (60, 80, 100), [(6, 16), (w - 6, 16), (w - 10, 30), (10, 30)])
+    pygame.draw.polygon(s, (130, 180, 220), [(8, 17), (w - 8, 17), (w - 12, 28), (12, 28)])
+    pygame.draw.polygon(s, (60, 80, 100), [(8, h - 22), (w - 8, h - 22), (w - 12, h - 12), (12, h - 12)])
+    pygame.draw.polygon(s, (130, 180, 220), [(10, h - 21), (w - 10, h - 21), (w - 13, h - 13), (13, h - 13)])
+    pygame.draw.rect(s, _shade(body_col, -25), (10, 30, w - 20, h - 60))
     pygame.draw.line(s, (0,0,0,180), (4, h//2), (w-4, h//2), 1)
-    pygame.draw.rect(s, (255,250,200), (5, 6, 8, 5), border_radius=2)
-    pygame.draw.rect(s, (255,250,200), (w-13, 6, 8, 5), border_radius=2)
-    pygame.draw.rect(s, (200,30,30), (5, h-10, 8, 5), border_radius=2)
-    pygame.draw.rect(s, (200,30,30), (w-13, h-10, 8, 5), border_radius=2)
-    pygame.draw.rect(s, (20,20,20), (0, 14, 4, 14), border_radius=2)
-    pygame.draw.rect(s, (20,20,20), (w-4, 14, 4, 14), border_radius=2)
-    pygame.draw.rect(s, (20,20,20), (0, h-28, 4, 14), border_radius=2)
-    pygame.draw.rect(s, (20,20,20), (w-4, h-28, 4, 14), border_radius=2)
+    _draw_car_lights(s, w, h)
+    _draw_car_wheels(s, w, h)
     return s
 
 
-def make_cop_car_sprite():
-    s = make_car_sprite((245,245,250))
+def _draw_limo_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=5, inset_y=10)
+    pygame.draw.rect(s, body_col, (2, 4, w - 4, h - 8), border_radius=7)
+    pygame.draw.rect(s, _shade(body_col, 30), (5, 7, w - 10, 5), border_radius=3)
+    pygame.draw.rect(s, _shade(body_col, -25), (7, 23, w - 14, h - 47), border_radius=5)
+    pygame.draw.polygon(s, (70, 88, 108), [(8, 16), (w - 8, 16), (w - 11, 28), (11, 28)])
+    pygame.draw.polygon(s, (150, 195, 225), [(10, 17), (w - 10, 17), (w - 13, 26), (13, 26)])
+    pygame.draw.polygon(s, (65, 78, 92), [(8, h - 25), (w - 8, h - 25), (w - 11, h - 13), (11, h - 13)])
+    pygame.draw.polygon(s, (135, 175, 205), [(10, h - 24), (w - 10, h - 24), (w - 13, h - 15), (13, h - 15)])
+    for y in range(36, h - 37, 18):
+        pygame.draw.rect(s, (118, 165, 196), (8, y, 8, 10), border_radius=2)
+        pygame.draw.rect(s, (118, 165, 196), (w - 16, y, 8, 10), border_radius=2)
+    pygame.draw.line(s, _shade(body_col, 55), (6, h // 2), (w - 6, h // 2), 1)
+    _draw_car_lights(s, w, h, front_w=7, rear_w=7)
+    _draw_car_wheels(s, w, h, front_y=17, rear_y=h - 31, wheel_h=16)
+    return s
+
+
+def _draw_sport_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=5, inset_y=8)
+    pygame.draw.polygon(
+        s,
+        body_col,
+        [(w // 2, 3), (w - 5, 12), (w - 3, h - 14), (w // 2, h - 4), (3, h - 14), (5, 12)],
+    )
+    pygame.draw.polygon(s, _shade(body_col, 36), [(w // 2, 5), (w - 7, 13), (w - 10, 19), (10, 19), (7, 13)])
+    pygame.draw.polygon(s, (60, 78, 96), [(10, 24), (w - 10, 24), (w - 14, 38), (14, 38)])
+    pygame.draw.polygon(s, (120, 190, 230), [(12, 25), (w - 12, 25), (w - 15, 36), (15, 36)])
+    pygame.draw.rect(s, _shade(body_col, -35), (13, 39, w - 26, h - 58), border_radius=5)
+    stripe_col = (245, 245, 230) if sum(body_col) < 360 else (35, 35, 38)
+    pygame.draw.rect(s, stripe_col, (w // 2 - 2, 8, 4, h - 16), border_radius=2)
+    pygame.draw.rect(s, (255, 250, 205), (7, 8, 7, 4), border_radius=2)
+    pygame.draw.rect(s, (255, 250, 205), (w - 14, 8, 7, 4), border_radius=2)
+    pygame.draw.rect(s, (205, 30, 30), (8, h - 10, 8, 4), border_radius=2)
+    pygame.draw.rect(s, (205, 30, 30), (w - 16, h - 10, 8, 4), border_radius=2)
+    _draw_car_wheels(s, w, h, front_y=13, rear_y=h - 26, wheel_h=13)
+    return s
+
+
+def _draw_lamborghini_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=4, inset_y=8)
+    pygame.draw.polygon(
+        s,
+        body_col,
+        [(w // 2, 3), (w - 4, 13), (w - 8, h - 7), (w // 2, h - 2), (8, h - 7), (4, 13)],
+    )
+    pygame.draw.polygon(s, _shade(body_col, 42), [(w // 2, 5), (w - 8, 14), (w - 12, 22), (12, 22), (8, 14)])
+    pygame.draw.polygon(s, (36, 48, 62), [(11, 24), (w - 11, 24), (w - 15, 42), (15, 42)])
+    pygame.draw.polygon(s, (94, 175, 225), [(13, 25), (w - 13, 25), (w - 16, 39), (16, 39)])
+    pygame.draw.polygon(s, _shade(body_col, -38), [(12, 44), (w - 12, 44), (w - 15, h - 19), (15, h - 19)])
+    pygame.draw.line(s, (30, 30, 32), (w // 2, 24), (w // 2, h - 18), 2)
+    pygame.draw.polygon(s, (28, 28, 30), [(7, 25), (13, 30), (11, 51), (5, 47)])
+    pygame.draw.polygon(s, (28, 28, 30), [(w - 7, 25), (w - 13, 30), (w - 11, 51), (w - 5, 47)])
+    pygame.draw.rect(s, (255, 246, 190), (7, 8, 10, 4), border_radius=2)
+    pygame.draw.rect(s, (255, 246, 190), (w - 17, 8, 10, 4), border_radius=2)
+    pygame.draw.rect(s, (210, 28, 28), (8, h - 9, 10, 4), border_radius=2)
+    pygame.draw.rect(s, (210, 28, 28), (w - 18, h - 9, 10, 4), border_radius=2)
+    _draw_car_wheels(s, w, h, front_y=13, rear_y=h - 25, wheel_h=13)
+    return s
+
+
+def _draw_mini_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=4, inset_y=7)
+    pygame.draw.rect(s, body_col, (2, 4, w - 4, h - 8), border_radius=9)
+    pygame.draw.rect(s, _shade(body_col, 32), (5, 7, w - 10, 4), border_radius=3)
+    pygame.draw.rect(s, (232, 236, 228), (7, 21, w - 14, 18), border_radius=5)
+    pygame.draw.polygon(s, (130, 180, 215), [(8, 14), (w - 8, 14), (w - 10, 22), (10, 22)])
+    pygame.draw.polygon(s, (105, 150, 188), [(8, h - 19), (w - 8, h - 19), (w - 11, h - 11), (11, h - 11)])
+    pygame.draw.rect(s, _shade(body_col, -25), (9, 40, w - 18, h - 52), border_radius=4)
+    pygame.draw.rect(s, (255, 250, 200), (5, 7, 6, 4), border_radius=2)
+    pygame.draw.rect(s, (255, 250, 200), (w - 11, 7, 6, 4), border_radius=2)
+    pygame.draw.rect(s, (200, 30, 30), (5, h - 9, 6, 4), border_radius=2)
+    pygame.draw.rect(s, (200, 30, 30), (w - 11, h - 9, 6, 4), border_radius=2)
+    _draw_car_wheels(s, w, h, front_y=11, rear_y=h - 23, wheel_h=12)
+    return s
+
+
+def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
+    if kind == "lamborgini":
+        kind = "lamborghini"
+    kind = kind if kind in ("sedan", "limo", "sport", "lamborghini", "mini") else "sedan"
+    default_sizes = {
+        "sedan": (46, 78),
+        "limo": (50, 132),
+        "sport": (44, 72),
+        "lamborghini": (48, 76),
+        "mini": (36, 58),
+    }
+    default_w, default_h = default_sizes[kind]
+    w = default_w if w is None else w
+    h = default_h if h is None else h
+    if kind == "limo":
+        return _draw_limo_sprite(body_col, w, h)
+    if kind == "sport":
+        return _draw_sport_sprite(body_col, w, h)
+    if kind == "lamborghini":
+        return _draw_lamborghini_sprite(body_col, w, h)
+    if kind == "mini":
+        return _draw_mini_sprite(body_col, w, h)
+    return _draw_sedan_sprite(body_col, w, h)
+
+
+_BLOCK_LETTERS = {
+    "A": ("010", "101", "111", "101", "101"),
+    "B": ("110", "101", "110", "101", "110"),
+    "F": ("111", "100", "110", "100", "100"),
+    "I": ("111", "010", "010", "010", "111"),
+    "S": ("111", "100", "111", "001", "111"),
+    "T": ("111", "010", "010", "010", "010"),
+    "W": ("101", "101", "101", "111", "101"),
+}
+
+
+def _draw_block_text(surf, text, x, y, color, scale=2):
+    cursor = x
+    for ch in text:
+        rows = _BLOCK_LETTERS.get(ch)
+        if rows is None:
+            cursor += scale * 2
+            continue
+        for ry, row in enumerate(rows):
+            for rx, bit in enumerate(row):
+                if bit == "1":
+                    pygame.draw.rect(
+                        surf,
+                        color,
+                        (cursor + rx * scale, y + ry * scale, scale, scale),
+                    )
+        cursor += (len(rows[0]) + 1) * scale
+
+
+def _draw_vehicle_star(surf, cx, cy, radius, color):
+    pts = []
+    for i in range(10):
+        r = radius if i % 2 == 0 else radius * 0.42
+        a = -math.pi / 2 + i * math.pi / 5
+        pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r))
+    pygame.draw.polygon(surf, color, pts)
+
+
+def _draw_swat_bus_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=5, inset_y=10)
+    _draw_car_wheels(s, w, h, front_y=17, rear_y=h - 34, wheel_w=5, wheel_h=18)
+    pygame.draw.rect(s, body_col, (4, 5, w - 8, h - 10), border_radius=6)
+    pygame.draw.rect(s, _shade(body_col, 22), (7, 9, w - 14, 8), border_radius=3)
+    pygame.draw.rect(s, _shade(body_col, -18), (8, 28, w - 16, h - 54), border_radius=4)
+    pygame.draw.polygon(s, (38, 58, 78), [(10, 18), (w - 10, 18), (w - 14, 32), (14, 32)])
+    pygame.draw.polygon(s, (98, 146, 172), [(12, 19), (w - 12, 19), (w - 15, 30), (15, 30)])
+    for y in (43, 60):
+        pygame.draw.rect(s, (82, 118, 142), (9, y, 8, 10), border_radius=2)
+        pygame.draw.rect(s, (82, 118, 142), (w - 17, y, 8, 10), border_radius=2)
+    pygame.draw.rect(s, (12, 16, 24), (12, h - 25, w - 24, 10), border_radius=3)
+    _draw_block_text(s, "SWAT", w // 2 - 16, h // 2 - 5, (230, 235, 230), scale=2)
+    pygame.draw.rect(s, (210, 35, 35), (w // 2 - 8, 33, 8, 4), border_radius=2)
+    pygame.draw.rect(s, (40, 90, 230), (w // 2, 33, 8, 4), border_radius=2)
+    pygame.draw.rect(s, (255, 245, 190), (8, 8, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (255, 245, 190), (w - 17, 8, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (205, 35, 35), (8, h - 12, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (205, 35, 35), (w - 17, h - 12, 9, 5), border_radius=2)
+    return s
+
+
+def _draw_military_truck_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=5, inset_y=10)
+    _draw_car_wheels(s, w, h, front_y=15, rear_y=h - 34, wheel_w=6, wheel_h=18)
+    pygame.draw.rect(s, (52, 64, 42), (5, 5, w - 10, h - 10), border_radius=5)
+    pygame.draw.rect(s, body_col, (7, 8, w - 14, h - 16), border_radius=4)
+    pygame.draw.rect(s, _shade(body_col, 20), (9, 13, w - 18, 19), border_radius=4)
+    pygame.draw.polygon(s, (42, 58, 48), [(10, 18), (w - 10, 18), (w - 14, 34), (14, 34)])
+    pygame.draw.polygon(s, (94, 132, 112), [(12, 19), (w - 12, 19), (w - 15, 31), (15, 31)])
+    pygame.draw.rect(s, _shade(body_col, -22), (9, 41, w - 18, h - 61), border_radius=5)
+    for patch in ((13, 46, 14, 10), (34, 51, 13, 12), (18, 69, 16, 9), (38, 76, 10, 8)):
+        pygame.draw.rect(s, (48, 72, 42), patch, border_radius=3)
+    _draw_vehicle_star(s, w // 2, h // 2 + 6, 10, (230, 230, 205))
+    pygame.draw.rect(s, (210, 35, 35), (8, h - 12, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (210, 35, 35), (w - 17, h - 12, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (255, 245, 190), (8, 8, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (255, 245, 190), (w - 17, 8, 9, 5), border_radius=2)
+    return s
+
+
+def make_cop_car_sprite(kind="cop", w=None, h=None):
+    kind = kind if kind in ("cop", "fbi", "swat", "military") else "cop"
+    if kind == "swat":
+        return _draw_swat_bus_sprite((18, 26, 42), 58 if w is None else w, 104 if h is None else h)
+    if kind == "military":
+        return _draw_military_truck_sprite((78, 96, 56), 60 if w is None else w, 102 if h is None else h)
+
+    if kind == "fbi":
+        s = make_car_sprite((24, 24, 28), 48 if w is None else w, 80 if h is None else h)
+        w, h = s.get_size()
+        pygame.draw.rect(s, (230, 230, 220), (5, h // 2 - 13, w - 10, 26), border_radius=3)
+        pygame.draw.rect(s, (24, 24, 28), (8, h // 2 - 9, w - 16, 18), border_radius=2)
+        _draw_block_text(s, "FBI", w // 2 - 12, h // 2 - 5, (245, 245, 235), scale=2)
+        pygame.draw.rect(s, (40, 40, 45), (10, 33, w - 20, 6), border_radius=2)
+        pygame.draw.rect(s, (210, 35, 35), (12, 34, (w - 24) // 2, 4), border_radius=2)
+        pygame.draw.rect(s, (40, 85, 220), (12 + (w - 24) // 2, 34, (w - 24) // 2, 4), border_radius=2)
+        return s
+
+    s = make_car_sprite((245, 245, 250), 46 if w is None else w, 78 if h is None else h)
     w, h = s.get_size()
     pygame.draw.rect(s, (20,20,25), (2, h//2 - 14, w-4, 28))
     pygame.draw.rect(s, (245,245,250), (2, h//2 - 4, w-4, 8))
@@ -44,11 +267,18 @@ def make_cop_car_sprite():
     return s
 
 
-def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False):
+def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
     s = pygame.Surface((20, 24), pygame.SRCALPHA)
     cx, cy = 10, 12
     pants = (40, 40, 80)
     boot  = (20, 20, 20)
+    if is_cop:
+        if cop_kind == "fbi":
+            pants = (22, 22, 26)
+        elif cop_kind == "swat":
+            pants = (12, 18, 30)
+        elif cop_kind == "military":
+            pants = (58, 76, 42)
     pygame.draw.ellipse(s, (0, 0, 0, 90), (3, cy + 3, 14, 7))
     leg_l_y = cy + 3 - phase * 3
     leg_r_y = cy + 3 + phase * 3
@@ -68,23 +298,39 @@ def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False):
     head_y = cy - 5
     pygame.draw.circle(s, hair, (cx, head_y), 4)
     pygame.draw.circle(s, skin, (cx, head_y - 1), 3)
-    if is_cop:
+    if is_cop and cop_kind == "fbi":
+        pygame.draw.circle(s, (18, 18, 20), (cx, head_y), 4)
+        pygame.draw.rect(s, (235, 235, 225), (cx - 2, cy - 3, 4, 7))
+        pygame.draw.line(s, (40, 70, 160), (cx, cy - 2), (cx, cy + 3), 1)
+        pygame.draw.line(s, (20, 20, 24), (cx - 3, head_y - 1), (cx + 3, head_y - 1), 1)
+        pygame.draw.rect(s, (230, 200, 60), (cx + 3, cy - 1, 2, 2))
+    elif is_cop and cop_kind == "swat":
+        pygame.draw.circle(s, (8, 12, 20), (cx, head_y), 5)
+        pygame.draw.rect(s, (25, 35, 50), (cx - 4, head_y - 4, 8, 3))
+        pygame.draw.rect(s, (90, 130, 150), (cx - 3, head_y - 1, 6, 2))
+        pygame.draw.rect(s, (8, 12, 18), (cx - 4, cy - 3, 8, 8), 1)
+    elif is_cop and cop_kind == "military":
+        pygame.draw.circle(s, (52, 70, 38), (cx, head_y), 5)
+        pygame.draw.rect(s, (42, 58, 34), (cx - 5, head_y - 3, 10, 3))
+        pygame.draw.rect(s, (218, 214, 170), (cx - 1, cy - 1, 2, 2))
+        pygame.draw.rect(s, (40, 58, 34), (cx - 4, cy - 3, 8, 8), 1)
+    elif is_cop:
         pygame.draw.circle(s, COP_DARK, (cx, head_y), 4)
         pygame.draw.rect(s, COP_DARK, (cx - 4, head_y - 4, 8, 3))
         pygame.draw.rect(s, (230, 200, 60), (cx - 1, head_y - 1, 2, 2))
     return s
 
 
-def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False):
+def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop"):
     return [
-        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop),
-        _draw_ped_frame(shirt_col, skin, hair, 1, is_cop),
-        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop),
-        _draw_ped_frame(shirt_col, skin, hair, -1, is_cop),
+        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
+        _draw_ped_frame(shirt_col, skin, hair, 1, is_cop, cop_kind),
+        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
+        _draw_ped_frame(shirt_col, skin, hair, -1, is_cop, cop_kind),
     ]
 
 
-def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False):
+def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
     s = pygame.Surface((20, 24), pygame.SRCALPHA)
     cx, water_y = 10, 14
     wave_col = (72, 152, 208, 170)
@@ -99,10 +345,20 @@ def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False):
     pygame.draw.line(s, shirt_col, (cx - arm_span, torso_y + 2), (cx - 2, torso_y + 1), 2)
     pygame.draw.line(s, shirt_col, (cx + 2, torso_y + 1), (cx + arm_span, torso_y + 2), 2)
     pygame.draw.circle(s, skin, (cx, torso_y - 3), 3)
-    pygame.draw.circle(s, hair if not is_cop else COP_DARK, (cx, torso_y - 4), 4)
     if is_cop:
-        pygame.draw.rect(s, COP_DARK, (cx - 4, torso_y - 7, 8, 2))
-        pygame.draw.rect(s, (230, 200, 60), (cx - 1, torso_y - 4, 2, 2))
+        head_col = COP_DARK
+        if cop_kind == "fbi":
+            head_col = (18, 18, 20)
+        elif cop_kind == "swat":
+            head_col = (8, 12, 20)
+        elif cop_kind == "military":
+            head_col = (52, 70, 38)
+        pygame.draw.circle(s, head_col, (cx, torso_y - 4), 4)
+        pygame.draw.rect(s, head_col, (cx - 4, torso_y - 7, 8, 2))
+        badge_col = (90, 130, 150) if cop_kind == "swat" else (230, 200, 60)
+        pygame.draw.rect(s, badge_col, (cx - 1, torso_y - 4, 2, 2))
+    else:
+        pygame.draw.circle(s, hair, (cx, torso_y - 4), 4)
 
     for wx in range(3, 18, 4):
         pygame.draw.arc(s, wave_col, (wx - 3, water_y - 1, 7, 5), 3.2, 6.1, 2)
@@ -110,12 +366,12 @@ def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False):
     return s
 
 
-def make_swim_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False):
+def make_swim_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop"):
     return [
-        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop),
-        _draw_swim_frame(shirt_col, skin, hair, 1, is_cop),
-        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop),
-        _draw_swim_frame(shirt_col, skin, hair, -1, is_cop),
+        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
+        _draw_swim_frame(shirt_col, skin, hair, 1, is_cop, cop_kind),
+        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
+        _draw_swim_frame(shirt_col, skin, hair, -1, is_cop, cop_kind),
     ]
 
 

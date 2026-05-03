@@ -10,6 +10,7 @@ from game2d.config import (
     ROAD_W, SIDEWALK_W, WORLD_W, WORLD_H,
 )
 from game2d.state import current
+from game2d.entities.car import car_rect_at
 from game2d.world.geometry import (
     in_city, rect_hits_city_edge, lane_center_for_car, random_pedestrian_destination,
     rect_in_park_pond,
@@ -60,10 +61,12 @@ def pedestrian_spawn():
 def exit_car_position(car):
     s = current()
     candidates = []
+    side_dist = max(40, getattr(car, "coll_w", 34) / 2 + 24)
+    back_dist = max(40, getattr(car, "coll_h", 62) / 2 + 24)
     for side in (-1, 1):
         ang = math.radians(car.angle + 90 * side)
-        candidates.append((car.x + math.sin(ang) * 48, car.y - math.cos(ang) * 48))
-    for back in (42, -42):
+        candidates.append((car.x + math.sin(ang) * side_dist, car.y - math.cos(ang) * side_dist))
+    for back in (back_dist, -back_dist):
         ang = math.radians(car.angle)
         candidates.append((car.x - math.sin(ang) * back, car.y + math.cos(ang) * back))
     for x, y in candidates:
@@ -73,9 +76,9 @@ def exit_car_position(car):
     return safe_spawn()
 
 
-def car_spawn_clear(x, y, margin=22):
+def car_spawn_clear(x, y, margin=22, angle=0, kind="sedan", is_cop=False):
     s = current()
-    r = pygame.Rect(x - 23, y - 39, 46, 78)
+    r = car_rect_at(x, y, angle, kind, is_cop=is_cop)
     if rect_hits_city_edge(r):
         return False
     probe = r.inflate(margin * 2, margin * 2)
@@ -88,7 +91,7 @@ def car_spawn_clear(x, y, margin=22):
     return True
 
 
-def road_spawn():
+def road_spawn(kind="sedan", is_cop=False):
     s = current()
     for _ in range(200):
         if random.random() < 0.5:
@@ -99,14 +102,14 @@ def road_spawn():
             angle = random.choice([0, 180])
             x = random.choice(s.roads_v) + (28 if angle == 0 else -28)
             y = random.randint(ROAD_LO + 50, ROAD_HI_Y - 50)
-        if car_spawn_clear(x, y):
+        if car_spawn_clear(x, y, angle=angle, kind=kind, is_cop=is_cop):
             return x, y, angle
     for _ in range(200):
         x = random.randint(INNER_LO + 60, INNER_HI_X - 60)
         y = random.randint(INNER_LO + 60, INNER_HI_Y - 60)
-        if car_spawn_clear(x, y):
-            angle = random.choice([0, 90, 180, 270])
-            lx, ly = lane_center_for_car(angle, x, y)
+        angle = random.choice([0, 90, 180, 270])
+        lx, ly = lane_center_for_car(angle, x, y)
+        if car_spawn_clear(lx, ly, angle=angle, kind=kind, is_cop=is_cop):
             return lx, ly, angle
     return WORLD_W // 2, WORLD_H // 2, random.choice([0, 90, 180, 270])
 
@@ -118,7 +121,7 @@ def _outside_view(x, y, cam, margin=130):
     return not view.collidepoint(x, y)
 
 
-def cop_car_spawn_near(tx, ty, cam=None):
+def cop_car_spawn_near(tx, ty, cam=None, kind="cop"):
     s = current()
     min_dist = max(W, H) * 0.65
     max_dist = max(W, H) * 1.15
@@ -137,12 +140,12 @@ def cop_car_spawn_near(tx, ty, cam=None):
             angle = random.choice([0, 180])
             x = random.choice(s.roads_v) + (28 if angle == 0 else -28)
             y = int(sy)
-        if _outside_view(x, y, cam) and car_spawn_clear(x, y, margin=30):
+        if _outside_view(x, y, cam) and car_spawn_clear(x, y, margin=30, angle=angle, kind=kind, is_cop=True):
             return x, y, angle
     if cam is not None:
         for _ in range(260):
-            x, y, angle = road_spawn()
+            x, y, angle = road_spawn(kind, is_cop=True)
             if _outside_view(x, y, cam):
                 return x, y, angle
         return None
-    return road_spawn()
+    return road_spawn(kind, is_cop=True)

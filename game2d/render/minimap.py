@@ -143,7 +143,14 @@ def draw_minimap(screen, state, font):
         pygame.draw.circle(screen, (60, 220, 90), _map_point(sx, sy, rect), 4)
     for c in state.cars:
         if c.is_cop and not c.dead:
-            pygame.draw.circle(screen, (80, 120, 255), _map_point(c.x, c.y, rect), 2)
+            kind = getattr(c, "kind", "cop")
+            col = {
+                "cop": (80, 120, 255),
+                "fbi": (235, 235, 235),
+                "swat": (70, 95, 140),
+                "military": (105, 145, 70),
+            }.get(kind, (80, 120, 255))
+            pygame.draw.circle(screen, col, _map_point(c.x, c.y, rect), 2)
     for roadblock in state.roadblocks:
         pygame.draw.circle(screen, (235, 70, 55), _map_point(roadblock.x, roadblock.y, rect), 3)
 

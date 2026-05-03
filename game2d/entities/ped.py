@@ -15,13 +15,52 @@ from game2d.world.geometry import (
 )
 
 
+COP_KIND_PROFILES = {
+    "cop": {
+        "shirt": COP_BLUE,
+        "hp": 200,
+        "speed": 110,
+    },
+    "fbi": {
+        "shirt": (24, 24, 28),
+        "hp": 220,
+        "speed": 118,
+    },
+    "swat": {
+        "shirt": (16, 24, 38),
+        "hp": 280,
+        "speed": 106,
+    },
+    "military": {
+        "shirt": (70, 88, 48),
+        "hp": 310,
+        "speed": 112,
+    },
+}
+
+
+def normalize_cop_kind(kind):
+    aliases = {
+        "police": "cop",
+        "polizei": "cop",
+        "army": "military",
+        "militaer": "military",
+        "militär": "military",
+    }
+    kind = aliases.get(kind, kind)
+    return kind if kind in COP_KIND_PROFILES else "cop"
+
+
 class Ped:
-    def __init__(self, x, y, is_cop=False):
+    def __init__(self, x, y, is_cop=False, cop_kind="cop"):
         self.x, self.y = x, y
         self.is_cop = is_cop
+        self.cop_kind = normalize_cop_kind(cop_kind) if is_cop else None
         if is_cop:
-            self.frames = make_ped_frames(COP_BLUE, is_cop=True)
-            self.swim_frames = make_swim_frames(COP_BLUE, is_cop=True)
+            profile = COP_KIND_PROFILES[self.cop_kind]
+            shirt = profile["shirt"]
+            self.frames = make_ped_frames(shirt, is_cop=True, cop_kind=self.cop_kind)
+            self.swim_frames = make_swim_frames(shirt, is_cop=True, cop_kind=self.cop_kind)
         else:
             shirt = (random.randint(80,220), random.randint(60,200), random.randint(60,200))
             self.frames = make_ped_frames(shirt)
@@ -30,7 +69,8 @@ class Ped:
         self.anim_t = 0.0
         self.frame_idx = 0
         self.last_x, self.last_y = x, y
-        self.hp = 200 if is_cop else 60
+        self.hp = COP_KIND_PROFILES[self.cop_kind]["hp"] if is_cop else 60
+        self.cop_speed = COP_KIND_PROFILES[self.cop_kind]["speed"] if is_cop else 0
         self.angle = random.uniform(0, 360)
         self.state = 'wander'
         self.tick = random.uniform(0, 3)
@@ -105,8 +145,8 @@ class Ped:
             d = math.hypot(dx, dy) or 1
             self.angle = math.degrees(math.atan2(dx, -dy))
             if d > 60:
-                self.try_move(self.x + dx/d * 110 * dt,
-                              self.y + dy/d * 110 * dt)
+                self.try_move(self.x + dx/d * self.cop_speed * dt,
+                              self.y + dy/d * self.cop_speed * dt)
             self.shoot_tick -= dt
             return d < 350 and self.shoot_tick <= 0
 
