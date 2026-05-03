@@ -10,11 +10,13 @@ Beim Hinzufügen von neuem Code immer genau auf die unten beschriebene Architekt
 
 Wenn neue Sounds gebraucht werden:
 
-1. **Runterladen** von kenney.nl (CC0, kein Account, keine Attribution): `https://kenney.nl/assets/category:Audio` — passendes Audio-Pack auswählen, ZIP runterladen.
-2. **Ablegen** als `.ogg` in `game2d/assets/sfx/` mit Namensschema `<category>_<variant>.ogg` (z.B. `door_open_a.ogg`, `door_open_b.ogg`). Mehrere Varianten = `audio.play(...)` würfelt zufällig.
-3. **Implementieren**: `audio.play("category", pos=(x, y))` aus `game2d/systems/audio.py` an der passenden Stelle aufrufen. `audio.init()` lädt alle SFX automatisch beim Start ein, neue Kategorien sind sofort verfügbar.
+1. **Zuerst suchen**: kenney.nl hat kein Motorgeräusch-Pack. Für allgemeine SFX: `https://kenney.nl/assets/category:Audio`. Für Fahrzeug-/Motor-Sounds: `https://opengameart.org` (CC0-Filter setzen).
+2. **Ablegen** als `.ogg` oder `.wav` in `game2d/assets/sfx/` mit Namensschema `<category>_<variant>.ogg` (z.B. `door_open_a.ogg`). Mehrere Varianten = `audio.play(...)` würfelt zufällig. `audio.init()` lädt `.ogg` und `.wav` automatisch.
+3. **Implementieren**: `audio.play("category", pos=(x, y))` aus `game2d/systems/audio.py` aufrufen.
 
-Für Loop-Sounds (z.B. fliegende Geschosse, Motor): `audio.start_loop(...)` / `update_loop(...)` / `stop_loop(...)`. Master-Lautstärke regelt der User per ESC → Options-Slider, persistiert in `settings.json`.
+**Motor-Sounds** kommen von OpenGameArt (CC0): `engine_band_0.wav` (Leerlauf) bis `engine_band_3.wav` (Vollgas). Sie werden in `set_engine()` per 4-Band-Crossfade übergeblendet — **nicht synthetisch erzeugen**.
+
+Für Loop-Sounds (z.B. fliegende Geschosse): `audio.start_loop(...)` / `update_loop(...)` / `stop_loop(...)`. Master-Lautstärke regelt der User per ESC → Options-Slider, persistiert in `settings.json`.
 
 **Wichtig (pygame-CE-Bug):** `Channel.set_volume(left, right)` (2-arg) setzt nur Panning, NICHT die Master-Lautstärke des Kanals. Daher in `audio.py` immer `Channel.set_volume(value)` (single-arg) verwenden — und zwar NACH `Channel.play(snd)`, weil `play()` die Channel-Volume zurücksetzt.
 

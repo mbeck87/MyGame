@@ -284,7 +284,7 @@ class Car:
         impact = abs(prev_spd)
         if impact > 55:
             self.take_damage(impact * 0.05)
-            audio.play('crash', volume=min(1.0, impact / 260.0), pos=(self.x, self.y))
+            audio.play('crash_metal', volume=min(0.25, impact / 1040.0), pos=(self.x, self.y))
         self.spd *= -0.18 if impact > 45 else 0
 
     def resolve_car_collision(self, other, controlled):
@@ -358,7 +358,7 @@ class Car:
             other.take_damage(dmg * (0.85 if controlled else 1.0))
             cx = (self.x + other.x) * 0.5
             cy = (self.y + other.y) * 0.5
-            audio.play('crash', volume=min(1.0, impact / 260.0), pos=(cx, cy))
+            audio.play('crash_metal', volume=min(0.25, impact / 1040.0), pos=(cx, cy))
 
     def _wheel_points(self):
         rad = math.radians(self.angle)

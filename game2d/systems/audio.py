@@ -1,9 +1,13 @@
-"""Audio: Kenney-SFX laden, mit Distanz-Falloff abspielen.
+"""Audio: SFX laden, mit Distanz-Falloff abspielen.
 
 Sound-Dateien liegen flach in ``game2d/assets/sfx/`` und folgen dem Schema
-``<category>_<variant>.ogg`` (z.B. ``shoot_pistol_a.ogg``). Beim ``init()``
-wird alles automatisch nach Kategorie gruppiert; ``play("shoot_pistol")``
-wählt zufällig eine Variante.
+``<category>_<variant>.ogg`` oder ``.wav``. Beim ``init()`` wird alles
+automatisch nach Kategorie gruppiert; ``play("shoot_pistol")`` wählt zufällig
+eine Variante.
+
+Motor-Sounds kommen von OpenGameArt (CC0): ``engine_band_0.wav`` bis
+``engine_band_3.wav`` (Leerlauf → Vollgas). Sie werden im 4-Band-Crossfade
+per ``set_engine()`` übergeblendet.
 
 Wichtig: pygame-CE's ``Channel.set_volume(left, right)`` (2-arg) setzt nur
 das Stereo-Panning, NICHT die Master-Lautstärke des Kanals — der bleibt
@@ -14,7 +18,7 @@ Distanz-Falloff bleibt aber erhalten. Außerdem muss ``set_volume`` NACH
 zurücksetzt.
 
 API:
-- ``init()``: Mixer initialisieren und alle .ogg-Dateien laden.
+- ``init()``: Mixer hochfahren und alle .ogg/.wav-Dateien laden.
 - ``play(category, volume=1.0, pos=None)``: One-shot. ``pos=(x,y)`` aktiviert
   Distanz-Falloff relativ zum Spieler.
 - ``start_loop(category, pos=None, volume=1.0)``: Loop-Sound (z.B. fliegende
@@ -46,47 +50,43 @@ MASTER_VOL = 0.5
 _sounds = {}        # str -> list[pygame.mixer.Sound]
 _initialized = False
 
-# Engine-State (zwei Loop-Channels + interne RPM-Simulation)
-_engine_low_channel = None
-_engine_high_channel = None
-_engine_low_sound = None
-_engine_high_sound = None
-_engine_rpm = 0.0           # 0..1
-_engine_last_tick = 0       # ms, für interne dt-Berechnung
+# Motor: 4 RPM-Bänder (Leerlauf → Vollgas).
+# Dateien: engine_band_0.wav (Idle) … engine_band_3.wav (Vollgas), CC0 von
+# OpenGameArt (https://opengameart.org/content/racing-car-engine-sound-loops).
+_ENGINE_SOUNDS  = [None, None, None, None]
+_ENGINE_CHANS   = [None, None, None, None]
+_engine_rpm     = 0.0   # 0..1
+_engine_last_tick = 0   # ms
 
 
 def init():
     """Mixer hochfahren und alle SFX in ``_sounds`` einlesen."""
-    global _initialized, _engine_low_sound, _engine_high_sound
+    global _initialized
     if _initialized:
         return
-    pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=512)
+    pygame.mixer.pre_init(frequency=22050, size=-16, channels=1, buffer=512)
     pygame.mixer.init()
-    pygame.mixer.set_num_channels(48)
+    pygame.mixer.set_num_channels(52)
 
-    if not os.path.isdir(SFX_DIR):
-        _initialized = True
-        return
+    if os.path.isdir(SFX_DIR):
+        for fn in sorted(os.listdir(SFX_DIR)):
+            if not (fn.endswith('.ogg') or fn.endswith('.wav')):
+                continue
+            ext_len = 4  # '.ogg' oder '.wav'
+            base = fn[:-ext_len]
+            idx = base.rfind('_')
+            category = base[:idx] if idx > 0 else base
+            try:
+                snd = pygame.mixer.Sound(os.path.join(SFX_DIR, fn))
+            except pygame.error:
+                continue
+            _sounds.setdefault(category, []).append(snd)
 
-    for fn in sorted(os.listdir(SFX_DIR)):
-        if not fn.endswith('.ogg'):
-            continue
-        base = fn[:-4]
-        # Letztes Segment nach '_' ist die Variante (a, b, c, ...). Davor steht die Kategorie.
-        idx = base.rfind('_')
-        category = base[:idx] if idx > 0 else base
-        try:
-            snd = pygame.mixer.Sound(os.path.join(SFX_DIR, fn))
-        except pygame.error:
-            continue
-        _sounds.setdefault(category, []).append(snd)
+    # Motor-Bänder aus heruntergeladenen Dateien befüllen (sortiert: 0=Idle … 3=Vollgas)
+    for i, snd in enumerate(_sounds.get('engine_band', [])[:4]):
+        _ENGINE_SOUNDS[i] = snd
 
-    if 'engine_low' in _sounds and _sounds['engine_low']:
-        _engine_low_sound = _sounds['engine_low'][0]
-    if 'engine_high' in _sounds and _sounds['engine_high']:
-        _engine_high_sound = _sounds['engine_high'][0]
-
-    # Reifenquietschen synthetisch generieren falls keine Datei vorhanden
+    # Reifenquietschen (synthetisch, kein geeignetes Asset verfügbar)
     if 'squeal' not in _sounds:
         snd = _make_squeal_sound()
         if snd is not None:
@@ -241,20 +241,17 @@ def stop_loop(channel):
 
 
 def set_engine(active, throttle=0.0, speed_norm=0.0):
-    """Auto-Motor steuern (zweistufig: Idle-Sample + High-Sample).
+    """Auto-Motor steuern (4-Band-Crossfade mit Tonhöhenänderung).
+
+    Jedes Band hat eine eigene Grundfrequenz; durch den Crossfade entsteht
+    der Eindruck steigender Drehzahl, ohne dass Echtzeit-Pitchshifting nötig ist.
 
     Parameter:
     - ``active``: True wenn Spieler im fahrbaren Auto sitzt.
     - ``throttle``: Eingabe -1..0..1 (S-Taste / nichts / W-Taste).
-    - ``speed_norm``: Aktuelle |Geschwindigkeit| als Bruchteil von max_spd.
-
-    Intern wird ein RPM-Wert (0..1) gegen ein Ziel gelerpt: Throttle hebt
-    schnell an, Loslassen lässt langsam abfallen — so klingt der Motor beim
-    Gasgeben höher und beim Ausrollen wieder tiefer. RPM steuert dann das
-    Crossfade zwischen Idle-Sample (low) und High-Sample (high).
+    - ``speed_norm``: |Geschwindigkeit| als Bruchteil von max_spd.
     """
-    global _engine_low_channel, _engine_high_channel
-    global _engine_rpm, _engine_last_tick
+    global _ENGINE_CHANS, _engine_rpm, _engine_last_tick
 
     if not _initialized:
         return
@@ -264,36 +261,37 @@ def set_engine(active, throttle=0.0, speed_norm=0.0):
     _engine_last_tick = now
 
     if not active:
-        if _engine_low_channel is not None:
-            _engine_low_channel.stop()
-            _engine_low_channel = None
-        if _engine_high_channel is not None:
-            _engine_high_channel.stop()
-            _engine_high_channel = None
+        for i in range(4):
+            if _ENGINE_CHANS[i] is not None:
+                _ENGINE_CHANS[i].stop()
+                _ENGINE_CHANS[i] = None
         _engine_rpm = 0.0
         return
 
-    # Ziel-RPM: Geschwindigkeit liefert Basis, Throttle gibt Boost.
-    target = max(0.0, min(1.0, speed_norm * 0.85 + (0.35 if throttle > 0 else 0.0)))
-    rate = 4.0 if target > _engine_rpm else 1.6
+    # RPM-Ziel: Gasstellung + Geschwindigkeit
+    target = max(0.0, min(1.0, speed_norm * 0.82 + (0.28 if throttle > 0 else 0.0)))
+    rate = 5.0 if target > _engine_rpm else 1.5
     _engine_rpm += (target - _engine_rpm) * min(1.0, rate * dt)
     _engine_rpm = max(0.0, min(1.0, _engine_rpm))
 
-    low_vol = ((1.0 - _engine_rpm) * 0.30 + 0.12) * MASTER_VOL
-    high_vol = (_engine_rpm * 0.55) * MASTER_VOL
+    # Dreieck-Crossfade: rpm_pos 0..3 → je Band ein Zelt-Gewicht
+    rpm_pos = _engine_rpm * 3.0
+    for i in range(4):
+        snd = _ENGINE_SOUNDS[i]
+        if snd is None:
+            continue
+        weight = max(0.0, 1.0 - abs(rpm_pos - i))
+        vol = weight * 0.48 * MASTER_VOL
 
-    if _engine_low_sound is not None:
-        if _engine_low_channel is None or not _engine_low_channel.get_busy():
-            _engine_low_channel = pygame.mixer.find_channel(True)
-            if _engine_low_channel is not None:
-                _engine_low_channel.play(_engine_low_sound, loops=-1)
-        if _engine_low_channel is not None:
-            _engine_low_channel.set_volume(low_vol)
-
-    if _engine_high_sound is not None:
-        if _engine_high_channel is None or not _engine_high_channel.get_busy():
-            _engine_high_channel = pygame.mixer.find_channel(True)
-            if _engine_high_channel is not None:
-                _engine_high_channel.play(_engine_high_sound, loops=-1)
-        if _engine_high_channel is not None:
-            _engine_high_channel.set_volume(high_vol)
+        ch = _ENGINE_CHANS[i]
+        if vol < 0.006:
+            if ch is not None and ch.get_busy():
+                ch.set_volume(0.0)
+            continue
+        if ch is None or not ch.get_busy():
+            ch = pygame.mixer.find_channel(True)
+            if ch is None:
+                continue
+            _ENGINE_CHANS[i] = ch
+            ch.play(snd, loops=-1)
+        ch.set_volume(vol)
