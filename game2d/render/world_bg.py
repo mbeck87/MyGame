@@ -11,6 +11,7 @@ from game2d.config import (
     ASPHALT, GRASS, LINE, SIDEW,
     WATER_DEEP, WATER_MID, WATER_LITE, SAND,
 )
+from game2d.render.sprites import make_duck_sprite
 from game2d.state import current
 from game2d.world.traffic import traffic_light_state
 
@@ -249,6 +250,86 @@ def _draw_reed_group(surf, x, y, leans):
         _draw_reeds(surf, x + ox, y + oy, lean)
 
 
+def _draw_ducks(surf, cam):
+    s = current()
+    ducks = []
+    hens = {}
+    duck_entries = []
+    for kind, family, follow_slot, base_x, base_y, rx, ry, speed, phase in s.park_ducks:
+        t = s.traffic_time * speed + phase
+        x = base_x + math.cos(t) * rx
+        y = base_y + math.sin(t * 0.92) * ry
+        vx = -math.sin(t) * rx * speed
+        facing = 1 if vx >= 0 else -1
+        entry = {
+            'kind': kind,
+            'family': family,
+            'follow_slot': follow_slot,
+            'x': x,
+            'y': y,
+            'vx': vx,
+            'vy': math.cos(t * 0.92) * ry * 0.92 * speed,
+            'facing': facing,
+            'phase': t,
+        }
+        duck_entries.append(entry)
+        if kind == 'hen':
+            hens[family] = entry
+
+    for entry in duck_entries:
+        kind = entry['kind']
+        x = entry['x']
+        y = entry['y']
+        facing = entry['facing']
+        phase = entry['phase']
+        if kind == 'duckling' and entry['family'] in hens:
+            mother = hens[entry['family']]
+            slot = entry['follow_slot'] or 0
+            mvx = mother['vx']
+            mvy = mother['vy']
+            md = math.hypot(mvx, mvy) or 1
+            back_x = -mvx / md
+            back_y = -mvy / md
+            side_x = -back_y
+            side_y = back_x
+            stagger = slot - 1
+            follow_dist = 30 + slot * 14
+            wiggle = math.sin(s.traffic_time * 2.8 + slot) * 3
+            x = mother['x'] + back_x * follow_dist + side_x * (stagger * 13 + wiggle)
+            y = mother['y'] + back_y * follow_dist + side_y * (stagger * 8)
+            facing = mother['facing']
+            phase = mother['phase'] + slot * 0.9
+        ducks.append((y, kind, x, y, facing, phase))
+
+    ducks.sort(key=lambda item: item[0])
+    for _, kind, x, y, facing, phase in ducks:
+        sx = x - cam[0]
+        sy = y - cam[1]
+        if not (-50 < sx < W + 50 and -50 < sy < H + 50):
+            continue
+        wake_w, wake_h = (13, 5) if kind == 'duckling' else (40, 12)
+        wake_y = sy + (1 if kind == 'duckling' else 2)
+        wake_base_x = sx - 13 if kind == 'duckling' else sx - 32
+        if kind == 'duckling':
+            wake_base_x = sx - 13 if facing > 0 else sx + 1
+        elif facing < 0:
+            wake_base_x = sx - 8
+        for wake_shift, alpha in ((0, 105), (8, 58), (16, 28)):
+            wake = pygame.Surface((wake_w, wake_h), pygame.SRCALPHA)
+            pygame.draw.arc(wake, (220, 242, 248, alpha), (0, 0, wake_w, wake_h), 3.45, 5.95, 1)
+            wake_x = wake_base_x - wake_shift if facing > 0 else wake_base_x + wake_shift
+            wake_pos = (int(wake_x), int(wake_y))
+            surf.blit(wake, wake_pos)
+        swim_phase = int(math.sin(s.traffic_time * 4.0 + x * 0.01 + y * 0.01) * 1.6)
+        duck = make_duck_sprite(
+            kind,
+            swim_phase=swim_phase,
+            facing=facing,
+            paddle_phase=s.traffic_time * 8.0 + phase,
+        )
+        surf.blit(duck, duck.get_rect(center=(int(sx), int(sy))))
+
+
 def draw_park_street_closures(surf, cam):
     s = current()
     road_half = ROAD_W // 2
@@ -308,6 +389,8 @@ def draw_parks(surf, cam):
         )
         for px, py, leans in reed_groups:
             _draw_reed_group(surf, px, py, leans)
+
+        _draw_ducks(surf, cam)
 
         path_points = _park_path_points(rect)
         _draw_flat_path(surf, path_points, (118, 83, 43), 34)

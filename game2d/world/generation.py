@@ -123,6 +123,46 @@ def _build_park_trees(park):
     return trees
 
 
+def _build_park_ducks(park):
+    cell_w = park.w / 2
+    cell_h = park.h / 3
+    pond = _park_pond_points(park)
+
+    def fit_to_pond(x, y):
+        if _point_in_polygon(x, y, pond):
+            return x, y
+        for radius in range(6, 120, 6):
+            for ox, oy in (
+                (radius, 0), (-radius, 0), (0, radius), (0, -radius),
+                (radius, radius), (radius, -radius), (-radius, radius), (-radius, -radius),
+                (radius * 0.5, radius), (radius * 0.5, -radius),
+                (-radius * 0.5, radius), (-radius * 0.5, -radius),
+            ):
+                px = x + ox
+                py = y + oy
+                if _point_in_polygon(px, py, pond):
+                    return px, py
+        return x, y
+
+    ducks = [
+        ('drake',    0, None, park.left + cell_w * 0.66, park.top + cell_h * 0.62, 58, 34, 0.36, 0.10),
+        ('hen',      0, None, park.left + cell_w * 0.70, park.top + cell_h * 0.68, 54, 32, 0.40, 1.35),
+        ('duckling', 0,    0, park.left + cell_w * 0.70, park.top + cell_h * 0.68,  0,  0, 0.40, 1.35),
+        ('duckling', 0,    1, park.left + cell_w * 0.70, park.top + cell_h * 0.68,  0,  0, 0.40, 1.35),
+        ('duckling', 0,    2, park.left + cell_w * 0.70, park.top + cell_h * 0.68,  0,  0, 0.40, 1.35),
+        ('drake',    1, None, park.left + cell_w * 1.12, park.top + cell_h * 0.50, 52, 30, 0.34, 2.20),
+        ('hen',      1, None, park.left + cell_w * 1.06, park.top + cell_h * 0.58, 48, 28, 0.38, 4.60),
+        ('duckling', 1,    0, park.left + cell_w * 1.06, park.top + cell_h * 0.58,  0,  0, 0.38, 4.60),
+        ('duckling', 1,    1, park.left + cell_w * 1.06, park.top + cell_h * 0.58,  0,  0, 0.38, 4.60),
+    ]
+    fitted = []
+    for kind, family, follow_slot, x, y, rx, ry, speed, phase in ducks:
+        px, py = fit_to_pond(x, y)
+        if _point_in_polygon(px, py, pond):
+            fitted.append((kind, family, follow_slot, px, py, rx, ry, speed, phase))
+    return fitted
+
+
 def build_world(state):
     """Initialisiert state.WATER_RECTS, roads_h/v, buildings, AI_OBSTACLES."""
     state.WATER_RECTS[:] = [
@@ -151,6 +191,7 @@ def build_world(state):
     state.parks[:] = [_build_park_rect()]
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
     state.park_trees[:] = []
+    state.park_ducks[:] = []
     for bx in range(0, WORLD_W, BLOCK):
         for by in range(0, WORLD_H, BLOCK):
             setback = ROAD_W//2 + SIDEWALK_W + 18
@@ -183,6 +224,7 @@ def build_world(state):
 
     for park in state.parks:
         state.park_trees.extend(_build_park_trees(park))
+        state.park_ducks.extend(_build_park_ducks(park))
 
     state.AI_OBSTACLES[:] = (
         list(state.buildings)

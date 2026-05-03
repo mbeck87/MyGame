@@ -12,6 +12,7 @@ from game2d.config import (
 from game2d.state import current
 from game2d.world.geometry import (
     in_city, rect_hits_city_edge, lane_center_for_car, random_pedestrian_destination,
+    rect_in_park_pond,
 )
 
 
@@ -29,13 +30,17 @@ def safe_spawn():
             x = int(road_x + side * (ROAD_W//2 + SIDEWALK_W//2))
             y = random.randint(ROAD_LO + 30, ROAD_HI_Y - 30)
         r = pygame.Rect(x-12, y-12, 24, 24)
-        if in_city(x, y, 20) and not any(r.colliderect(b[0]) for b in s.buildings):
+        if (
+            in_city(x, y, 20)
+            and not any(r.colliderect(b[0]) for b in s.buildings)
+            and not rect_in_park_pond(r)
+        ):
             return x, y
     for _ in range(300):
         x = random.randint(INNER_LO + 30, INNER_HI_X - 30)
         y = random.randint(INNER_LO + 30, INNER_HI_Y - 30)
         r = pygame.Rect(x-15, y-15, 30, 30)
-        if not any(r.colliderect(b[0]) for b in s.buildings):
+        if not any(r.colliderect(b[0]) for b in s.buildings) and not rect_in_park_pond(r):
             return x, y
     return ROAD_LO, ROAD_LO
 

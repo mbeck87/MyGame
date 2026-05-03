@@ -1,4 +1,5 @@
 """Prozedurale Sprite-Generatoren (Autos, Fußgänger, Gebäude)."""
+import math
 import random
 import pygame
 
@@ -124,6 +125,116 @@ def make_ped_sprite(shirt_col, skin=SKIN, hair=(60,40,30)):
 
 def make_cop_sprite():
     return make_ped_frames(COP_BLUE, is_cop=True)[0]
+
+
+def make_duck_sprite(kind, swim_phase=0, facing=1, paddle_phase=0.0):
+    scale = {'drake': 1.0, 'hen': 0.94, 'duckling': 0.48}[kind]
+    w = max(32, int(52 * scale))
+    h = max(16, int(30 * scale))
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    if kind == 'drake':
+        head_col = (44, 118, 82)
+        head_hi = (72, 156, 114)
+        neck_ring = (238, 242, 226)
+        bill_col = (226, 198, 78)
+        foot_col = (220, 126, 42)
+        body_col = (190, 198, 198)
+        wing_col = (128, 136, 142)
+        chest_col = (118, 72, 50)
+        belly_col = (218, 220, 210)
+        tail_col = (32, 36, 38)
+        eye_col = (20, 22, 18)
+    elif kind == 'hen':
+        head_col = (122, 92, 58)
+        head_hi = (150, 118, 80)
+        neck_ring = None
+        bill_col = (212, 142, 58)
+        foot_col = (220, 126, 42)
+        body_col = (148, 112, 72)
+        wing_col = (100, 76, 48)
+        chest_col = (166, 128, 84)
+        belly_col = (184, 146, 94)
+        tail_col = (88, 68, 46)
+        eye_col = (26, 20, 14)
+    else:
+        head_col = (178, 136, 64)
+        head_hi = (208, 184, 98)
+        neck_ring = None
+        bill_col = (206, 142, 66)
+        foot_col = (222, 132, 48)
+        body_col = (214, 184, 92)
+        wing_col = (160, 120, 58)
+        chest_col = (228, 204, 122)
+        belly_col = (236, 214, 136)
+        tail_col = (124, 94, 48)
+        eye_col = (28, 22, 16)
+
+    def sc(value):
+        return int(round(value * scale))
+
+    bob = swim_phase * max(1, sc(1.2))
+    water_y = h - sc(7)
+
+    body = pygame.Rect(sc(6), sc(11) + bob, sc(29), sc(14))
+    rump = pygame.Rect(sc(5), sc(12) + bob, sc(16), sc(13))
+    chest = pygame.Rect(sc(23), sc(11) + bob, sc(12), sc(13))
+    belly = pygame.Rect(sc(10), sc(17) + bob, sc(22), sc(8))
+    wing = pygame.Rect(sc(13), sc(13) + bob, sc(16), sc(8))
+    neck_y = sc(6 if kind == 'drake' else 7) + bob
+    head_y = sc(2 if kind == 'drake' else 4) + bob
+    neck = pygame.Rect(sc(28), neck_y, sc(7), sc(12))
+    head = pygame.Rect(sc(30), head_y, sc(11), sc(10))
+
+    tail_pts = [
+        (body.left + sc(1), body.top + sc(2)),
+        (body.left - sc(7), body.top + sc(5)),
+        (body.left + sc(1), body.top + sc(9)),
+    ]
+    bill_pts = [
+        (head.right - sc(1), head.centery - sc(2)),
+        (head.right + sc(5 if kind == 'duckling' else 6), head.centery),
+        (head.right - sc(1), head.centery + sc(2)),
+    ]
+
+    pygame.draw.polygon(surf, tail_col, tail_pts)
+    if kind != 'duckling':
+        foot_y = water_y + sc(1) + bob // 2
+        foot_stride = math.sin(paddle_phase)
+        rear_foot_x = body.left + sc(5) - int(foot_stride * sc(2))
+        front_foot_x = body.left + sc(12) + int(foot_stride * sc(2))
+        rear_foot_w = sc(7) + int(max(0, foot_stride) * sc(2))
+        front_foot_w = sc(7) + int(max(0, -foot_stride) * sc(2))
+        pygame.draw.ellipse(surf, foot_col, (rear_foot_x, foot_y, rear_foot_w, max(2, sc(3))))
+        pygame.draw.ellipse(surf, foot_col, (front_foot_x, foot_y - sc(1), front_foot_w, max(2, sc(3))))
+    pygame.draw.ellipse(surf, body_col, body)
+    pygame.draw.ellipse(surf, body_col, rump)
+    pygame.draw.ellipse(surf, chest_col, chest)
+    pygame.draw.ellipse(surf, belly_col, belly)
+    pygame.draw.ellipse(surf, wing_col, wing)
+    pygame.draw.ellipse(surf, head_col, neck)
+    pygame.draw.ellipse(surf, head_col, head)
+    pygame.draw.polygon(surf, bill_col, bill_pts)
+    pygame.draw.circle(surf, head_hi, (head.left + sc(4), head.top + sc(3)), max(1, sc(2)))
+    pygame.draw.circle(surf, eye_col, (head.left + sc(7), head.top + sc(4)), max(1, sc(1)))
+
+    if kind == 'hen':
+        pygame.draw.line(surf, (82, 58, 34), (head.left + sc(2), head.top + sc(6)), (head.right - sc(2), head.top + sc(5)), max(1, sc(1)))
+        for ox, oy in ((11, 15), (16, 18), (21, 14), (26, 18), (30, 15)):
+            pygame.draw.line(surf, (92, 66, 40), (sc(ox), sc(oy) + bob), (sc(ox + 3), sc(oy + 1) + bob), 1)
+    elif kind == 'duckling':
+        pygame.draw.ellipse(surf, chest_col, (body.left + sc(4), body.top + sc(4), sc(13), sc(7)))
+        pygame.draw.circle(surf, head_hi, (body.left + sc(9), body.top + sc(4)), max(1, sc(2)))
+    else:
+        pygame.draw.rect(surf, neck_ring, (neck.left + sc(1), neck.top + sc(7), max(1, sc(5)), max(1, sc(2))))
+        speculum = pygame.Rect(wing.left + sc(4), wing.top + sc(3), sc(7), sc(3))
+        pygame.draw.rect(surf, (52, 92, 182), speculum, border_radius=2)
+        pygame.draw.rect(surf, (244, 246, 238), speculum.inflate(sc(2), sc(1)), 1, border_radius=2)
+        pygame.draw.arc(surf, tail_col, (body.left - sc(4), body.top - sc(5), sc(10), sc(9)), 4.4, 6.0, max(1, sc(2)))
+
+    if facing < 0:
+        surf = pygame.transform.flip(surf, True, False)
+    return surf
 
 
 def make_building(w_cells, h_cells, seed):
