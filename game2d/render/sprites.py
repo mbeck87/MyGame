@@ -237,41 +237,588 @@ def make_duck_sprite(kind, swim_phase=0, facing=1, paddle_phase=0.0):
     return surf
 
 
-def make_building(w_cells, h_cells, seed):
+def _shade(col, delta):
+    return tuple(max(0, min(255, c + delta)) for c in col)
+
+
+def _mix(a, b, t):
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _front_wall_point(roof, rise_x, rise_y, x, y):
+    return int(roof.left + x), int(roof.bottom + y)
+
+
+def _side_wall_point(roof, rise_x, rise_y, x, y):
+    t = x / max(1, rise_x)
+    return int(roof.right + x), int(roof.top + y + rise_y * t)
+
+
+def _draw_front_window(surf, roof, rise_x, rise_y, x, y, w, h, col):
+    pts = [
+        _front_wall_point(roof, rise_x, rise_y, x, y),
+        _front_wall_point(roof, rise_x, rise_y, x + w, y),
+        _front_wall_point(roof, rise_x, rise_y, x + w, y + h),
+        _front_wall_point(roof, rise_x, rise_y, x, y + h),
+    ]
+    pygame.draw.polygon(surf, (25, 28, 34), pts)
+    inner = [
+        _front_wall_point(roof, rise_x, rise_y, x + 1, y + 1),
+        _front_wall_point(roof, rise_x, rise_y, x + w - 1, y + 1),
+        _front_wall_point(roof, rise_x, rise_y, x + w - 1, y + h - 1),
+        _front_wall_point(roof, rise_x, rise_y, x + 1, y + h - 1),
+    ]
+    pygame.draw.polygon(surf, col, inner)
+    mid_a = _front_wall_point(roof, rise_x, rise_y, x + w // 2, y + 1)
+    mid_b = _front_wall_point(roof, rise_x, rise_y, x + w // 2, y + h - 1)
+    pygame.draw.line(surf, (40, 44, 50), mid_a, mid_b, 1)
+
+
+def _draw_front_panel(surf, roof, rise_x, rise_y, rect, fill, border=(25, 28, 34)):
+    x, y, w, h = rect
+    if w < 3 or h < 3:
+        return
+    pts = [
+        _front_wall_point(roof, rise_x, rise_y, x, y),
+        _front_wall_point(roof, rise_x, rise_y, x + w, y),
+        _front_wall_point(roof, rise_x, rise_y, x + w, y + h),
+        _front_wall_point(roof, rise_x, rise_y, x, y + h),
+    ]
+    pygame.draw.polygon(surf, border, pts)
+    inner = [
+        _front_wall_point(roof, rise_x, rise_y, x + 1, y + 1),
+        _front_wall_point(roof, rise_x, rise_y, x + w - 1, y + 1),
+        _front_wall_point(roof, rise_x, rise_y, x + w - 1, y + h - 1),
+        _front_wall_point(roof, rise_x, rise_y, x + 1, y + h - 1),
+    ]
+    pygame.draw.polygon(surf, fill, inner)
+
+
+def _label_font(size):
+    if not pygame.font.get_init():
+        pygame.font.init()
+    return pygame.font.Font(None, size)
+
+
+def _draw_sign_text(surf, text, rect, bg, fg=(248, 242, 210)):
+    if rect.w < 8 or rect.h < 6:
+        return
+    pygame.draw.rect(surf, (24, 22, 28), rect.move(2, 2), border_radius=2)
+    pygame.draw.rect(surf, bg, rect, border_radius=2)
+    font = _label_font(max(10, min(18, rect.h + 4)))
+    label = font.render(text, True, fg)
+    if label.get_width() > rect.w - 6:
+        scale = (rect.w - 6) / label.get_width()
+        label = pygame.transform.smoothscale(
+            label,
+            (max(1, int(label.get_width() * scale)), max(1, int(label.get_height() * scale))),
+        )
+    surf.blit(label, label.get_rect(center=rect.center))
+
+
+def _draw_brick_courses(surf, roof, rise_x, rise_y, color):
+    mortar = _shade(color, -22)
+    for y in range(5, max(6, rise_y - 2), 6):
+        pygame.draw.line(
+            surf,
+            mortar,
+            _front_wall_point(roof, rise_x, rise_y, 3, y),
+            _front_wall_point(roof, rise_x, rise_y, roof.w - 3, y),
+            1,
+        )
+        off = 8 if (y // 6) % 2 else 0
+        for x in range(off + 6, roof.w - 5, 18):
+            pygame.draw.line(
+                surf,
+                _shade(color, -16),
+                _front_wall_point(roof, rise_x, rise_y, x, y - 5),
+                _front_wall_point(roof, rise_x, rise_y, x, y),
+                1,
+            )
+
+
+def _draw_front_door(surf, roof, rise_x, rise_y, rect, fill=DOOR, trim=(48, 30, 22), double=False):
+    _draw_front_panel(surf, roof, rise_x, rise_y, rect, fill, trim)
+    if double and rect.w >= 10:
+        pygame.draw.line(
+            surf,
+            _shade(trim, 20),
+            _front_wall_point(roof, rise_x, rise_y, rect.centerx, rect.top + 2),
+            _front_wall_point(roof, rise_x, rise_y, rect.centerx, rect.bottom - 2),
+            1,
+        )
+    knob_x = rect.centerx + (rect.w // 4 if double else rect.w // 2 - 4)
+    knob = _front_wall_point(roof, rise_x, rise_y, knob_x, rect.y + rect.h // 2)
+    pygame.draw.circle(surf, (220, 196, 80), knob, 1)
+
+
+def _draw_front_line(surf, roof, rise_x, rise_y, x1, y1, x2, y2, color, width=1):
+    pygame.draw.line(
+        surf,
+        color,
+        _front_wall_point(roof, rise_x, rise_y, x1, y1),
+        _front_wall_point(roof, rise_x, rise_y, x2, y2),
+        width,
+    )
+
+
+def _draw_side_window(surf, roof, rise_x, rise_y, x, y, w, h, col):
+    pts = [
+        _side_wall_point(roof, rise_x, rise_y, x, y),
+        _side_wall_point(roof, rise_x, rise_y, x + w, y),
+        _side_wall_point(roof, rise_x, rise_y, x + w, y + h),
+        _side_wall_point(roof, rise_x, rise_y, x, y + h),
+    ]
+    pygame.draw.polygon(surf, (22, 24, 30), pts)
+    inner = [
+        _side_wall_point(roof, rise_x, rise_y, x + 1, y + 1),
+        _side_wall_point(roof, rise_x, rise_y, x + w - 1, y + 1),
+        _side_wall_point(roof, rise_x, rise_y, x + w - 1, y + h - 1),
+        _side_wall_point(roof, rise_x, rise_y, x + 1, y + h - 1),
+    ]
+    pygame.draw.polygon(surf, col, inner)
+
+
+def _draw_roof_detail(surf, rng, roof, roof_col, accent):
+    detail = rng.choice(("hvac", "hut", "vents", "skylight"))
+    if detail == "hvac":
+        box_w = min(34, max(18, roof.w // 5))
+        box_h = min(22, max(12, roof.h // 5))
+        x = rng.randint(roof.left + 10, max(roof.left + 10, roof.right - box_w - 8))
+        y = rng.randint(roof.top + 10, max(roof.top + 10, roof.bottom - box_h - 8))
+        pygame.draw.rect(surf, (70, 74, 76), (x + 3, y + 4, box_w, box_h), border_radius=2)
+        pygame.draw.rect(surf, (138, 144, 145), (x, y, box_w, box_h), border_radius=2)
+        pygame.draw.rect(surf, (48, 50, 52), (x + 4, y + 4, box_w - 8, box_h - 8), 1)
+        for lx in range(x + 6, x + box_w - 4, 5):
+            pygame.draw.line(surf, (92, 96, 98), (lx, y + 5), (lx, y + box_h - 5), 1)
+    elif detail == "hut":
+        hut_w = min(36, max(22, roof.w // 4))
+        hut_h = min(28, max(18, roof.h // 4))
+        x = rng.randint(roof.left + 8, max(roof.left + 8, roof.right - hut_w - 8))
+        y = rng.randint(roof.top + 8, max(roof.top + 8, roof.bottom - hut_h - 8))
+        side = _shade(accent, -30)
+        pygame.draw.rect(surf, side, (x + 4, y + 4, hut_w, hut_h))
+        pygame.draw.rect(surf, accent, (x, y, hut_w, hut_h))
+        pygame.draw.rect(surf, _shade(accent, -55), (x + hut_w - 8, y + 4, 5, hut_h - 7))
+        pygame.draw.rect(surf, (48, 35, 28), (x + 6, y + hut_h - 12, 8, 12))
+    elif detail == "vents":
+        for _ in range(rng.randint(4, 7)):
+            x = rng.randint(roof.left + 8, max(roof.left + 8, roof.right - 10))
+            y = rng.randint(roof.top + 8, max(roof.top + 8, roof.bottom - 10))
+            pygame.draw.rect(surf, (55, 58, 60), (x + 2, y + 2, 6, 5))
+            pygame.draw.rect(surf, (118, 124, 126), (x, y, 6, 5))
+            pygame.draw.line(surf, (185, 190, 190), (x + 1, y), (x + 5, y), 1)
+    else:
+        for _ in range(rng.randint(1, 3)):
+            sw = min(30, max(18, roof.w // 5))
+            sh = 9
+            x = rng.randint(roof.left + 10, max(roof.left + 10, roof.right - sw - 8))
+            y = rng.randint(roof.top + 10, max(roof.top + 10, roof.bottom - sh - 8))
+            pygame.draw.polygon(surf, (42, 78, 94), [(x, y + 2), (x + sw - 4, y), (x + sw, y + sh - 2), (x + 4, y + sh)])
+            pygame.draw.polygon(surf, (120, 205, 230), [(x + 3, y + 3), (x + sw - 5, y + 2), (x + sw - 3, y + sh - 3), (x + 5, y + sh - 2)])
+    for _ in range(rng.randint(18, 34)):
+        x = rng.randint(roof.left + 4, max(roof.left + 4, roof.right - 4))
+        y = rng.randint(roof.top + 4, max(roof.top + 4, roof.bottom - 4))
+        speck = _mix(roof_col, (255, 255, 255), rng.uniform(0.05, 0.18))
+        surf.set_at((x, y), (*speck, 120))
+
+
+def _draw_bar_front(surf, rng, roof, rise_x, rise_y, door_rect):
+    _draw_brick_courses(surf, roof, rise_x, rise_y, (94, 48, 44))
+    sign = pygame.Rect(roof.centerx - 24, roof.bottom + 4, 48, 12)
+    _draw_sign_text(surf, "BAR", sign, (54, 20, 32), (255, 210, 90))
+    _draw_front_panel(surf, roof, rise_x, rise_y, (8, 18, max(14, door_rect.left - 13), 14), (46, 26, 36), (22, 14, 16))
+    _draw_front_panel(surf, roof, rise_x, rise_y, (door_rect.right + 8, 18, roof.w - door_rect.right - 16, 14), (46, 26, 36), (22, 14, 16))
+    _draw_front_door(surf, roof, rise_x, rise_y, door_rect, (34, 20, 18), (190, 120, 52), double=True)
+    for lx in (sign.left + 7, sign.right - 7):
+        pygame.draw.circle(surf, (255, 210, 90), (lx, sign.centery), 2)
+    for x in range(roof.left + 12, roof.right - 12, 28):
+        pygame.draw.rect(surf, (68, 38, 30), (x, roof.top + 8, 14, 6), border_radius=3)
+        pygame.draw.circle(surf, (180, 136, 64), (x + 4, roof.top + 11), 1)
+
+
+def _draw_restaurant_front(surf, rng, roof, rise_x, rise_y, door_rect):
+    sign_w = min(92, roof.w - 18)
+    sign = pygame.Rect(roof.centerx - sign_w // 2, roof.bottom + 4, sign_w, 12)
+    _draw_sign_text(surf, "RESTAURANT", sign, (82, 96, 52), (248, 232, 188))
+    win_y = max(15, rise_y - 26)
+    for rect in (
+        (8, win_y, max(16, door_rect.left - 12), 14),
+        (door_rect.right + 8, win_y, roof.w - door_rect.right - 16, 14),
+    ):
+        _draw_front_panel(surf, roof, rise_x, rise_y, rect, (122, 82, 56), (44, 30, 24))
+        _draw_front_line(surf, roof, rise_x, rise_y, rect[0] + 3, rect[1] + 8, rect[0] + rect[2] - 3, rect[1] + 8, (226, 178, 104))
+    _draw_front_door(surf, roof, rise_x, rise_y, door_rect, (72, 42, 30), (216, 172, 96))
+    for side_x in (8, roof.w - 18):
+        pot = pygame.Rect(roof.left + side_x, roof.bottom + rise_y - 11, 10, 7)
+        pygame.draw.rect(surf, (104, 56, 40), pot)
+        pygame.draw.circle(surf, (48, 132, 68), (pot.centerx, pot.top - 1), 4)
+    vent = pygame.Rect(roof.right - 42, roof.top + 10, 24, 15)
+    pygame.draw.rect(surf, (86, 88, 86), vent.move(3, 3), border_radius=2)
+    pygame.draw.rect(surf, (158, 162, 158), vent, border_radius=2)
+    pygame.draw.circle(surf, (70, 72, 72), (vent.centerx, vent.centery), 5)
+
+
+def _draw_disco_front(surf, rng, roof, rise_x, rise_y, door_rect):
+    pygame.draw.polygon(
+        surf,
+        (28, 22, 50),
+        [
+            _front_wall_point(roof, rise_x, rise_y, 2, 2),
+            _front_wall_point(roof, rise_x, rise_y, roof.w - 2, 2),
+            _front_wall_point(roof, rise_x, rise_y, roof.w - 2, rise_y - 2),
+            _front_wall_point(roof, rise_x, rise_y, 2, rise_y - 2),
+        ],
+    )
+    sign_w = min(82, roof.w - 18)
+    sign = pygame.Rect(roof.centerx - sign_w // 2, roof.bottom + 4, sign_w, 13)
+    _draw_sign_text(surf, "DISCO", sign, (18, 16, 36), (98, 236, 255))
+    neon = [(240, 70, 190), (74, 216, 255), (255, 226, 70)]
+    for idx, x in enumerate(range(10, roof.w - 8, 18)):
+        _draw_front_line(surf, roof, rise_x, rise_y, x, 18, min(roof.w - 5, x + 10), rise_y - 5, neon[idx % len(neon)], 2)
+    disco_ball = (roof.centerx, roof.centery)
+    pygame.draw.circle(surf, (206, 210, 224), disco_ball, 11)
+    pygame.draw.circle(surf, (78, 80, 96), disco_ball, 11, 1)
+    for dx in (-5, 0, 5):
+        pygame.draw.line(surf, (132, 136, 156), (disco_ball[0] + dx, disco_ball[1] - 9), (disco_ball[0] + dx, disco_ball[1] + 9))
+    for dy in (-4, 2):
+        pygame.draw.line(surf, (132, 136, 156), (disco_ball[0] - 9, disco_ball[1] + dy), (disco_ball[0] + 9, disco_ball[1] + dy))
+    door = door_rect.inflate(10, 2)
+    door.x = max(6, min(door.x, roof.w - door.w - 6))
+    _draw_front_door(surf, roof, rise_x, rise_y, door, (14, 12, 20), (230, 70, 200), double=True)
+    for _ in range(16):
+        px = rng.randint(roof.left + 8, roof.right - 8)
+        py = rng.randint(roof.top + 8, roof.bottom - 8)
+        pygame.draw.circle(surf, rng.choice(neon), (px, py), 1)
+
+
+def _draw_supermarket_front(surf, rng, roof, rise_x, rise_y, door_rect):
+    sign = pygame.Rect(roof.left + 8, roof.bottom + 4, roof.w - 16, 13)
+    _draw_sign_text(surf, "SUPERMARKT", sign, (28, 128, 72), (245, 248, 218))
+    entry_w = min(42, max(28, roof.w // 3))
+    entry = pygame.Rect(roof.w // 2 - entry_w // 2, max(16, rise_y - 23), entry_w, 20)
+    _draw_front_panel(surf, roof, rise_x, rise_y, (8, entry.y, entry.left - 12, 17), (76, 132, 124), (34, 68, 62))
+    _draw_front_panel(surf, roof, rise_x, rise_y, (entry.right + 8, entry.y, roof.w - entry.right - 16, 17), (76, 132, 124), (34, 68, 62))
+    _draw_front_panel(surf, roof, rise_x, rise_y, entry, (120, 178, 188), (30, 70, 74))
+    _draw_front_line(surf, roof, rise_x, rise_y, entry.centerx, entry.y + 1, entry.centerx, entry.bottom - 2, (236, 248, 248), 1)
+    cart_x = roof.left + 14
+    cart_y = roof.top + 15
+    pygame.draw.rect(surf, (228, 232, 226), (cart_x, cart_y, 22, 12), 2)
+    pygame.draw.line(surf, (228, 232, 226), (cart_x + 3, cart_y + 12), (cart_x + 18, cart_y + 17), 2)
+    pygame.draw.circle(surf, (38, 42, 42), (cart_x + 7, cart_y + 18), 2)
+    pygame.draw.circle(surf, (38, 42, 42), (cart_x + 19, cart_y + 18), 2)
+    dock = pygame.Rect(roof.right - 44, roof.top + 12, 30, 18)
+    pygame.draw.rect(surf, (54, 58, 60), dock)
+    pygame.draw.rect(surf, (144, 150, 150), dock.inflate(-5, -5))
+
+
+def _draw_fastfood_front(surf, rng, roof, rise_x, rise_y, door_rect):
+    sign_w = min(82, roof.w - 18)
+    sign = pygame.Rect(roof.centerx - sign_w // 2, roof.bottom + 4, sign_w, 13)
+    _draw_sign_text(surf, "BURGER", sign, (198, 40, 36), (255, 232, 92))
+    pygame.draw.circle(surf, (245, 184, 52), (sign.left + 10, sign.centery), 5)
+    pygame.draw.rect(surf, (110, 54, 24), (sign.left + 5, sign.centery, 11, 2))
+    _draw_front_panel(surf, roof, rise_x, rise_y, (8, max(14, rise_y - 24), max(16, door_rect.left - 14), 15), (118, 58, 42), (58, 28, 24))
+    _draw_front_panel(surf, roof, rise_x, rise_y, (door_rect.right + 8, max(14, rise_y - 24), roof.w - door_rect.right - 16, 15), (118, 58, 42), (58, 28, 24))
+    _draw_front_door(surf, roof, rise_x, rise_y, door_rect, (92, 30, 26), (252, 210, 58), double=True)
+    lane_y = roof.top + roof.h // 2
+    pygame.draw.line(surf, (248, 214, 64), (roof.left + 10, lane_y), (roof.right - 12, lane_y), 2)
+    pygame.draw.polygon(surf, (248, 214, 64), [(roof.right - 18, lane_y - 5), (roof.right - 8, lane_y), (roof.right - 18, lane_y + 5)])
+    board = pygame.Rect(roof.right - 28, roof.bottom - 22, 16, 11)
+    pygame.draw.rect(surf, (42, 30, 24), board)
+    pygame.draw.rect(surf, (230, 194, 66), board.inflate(-4, -4))
+
+
+def _make_bank_building(w, h, seed):
+    rng = random.Random(seed)
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    shadow = pygame.Rect(14, 12, w - 22, h - 14)
+    pygame.draw.rect(surf, (0, 0, 0, 82), shadow, border_radius=2)
+
+    roof = pygame.Rect(8, 6, w - 16, max(76, h - 70))
+    facade = pygame.Rect(10, roof.bottom - 1, w - 20, h - roof.bottom - 15)
+    stone = (218, 211, 190)
+    stone_dark = (142, 134, 118)
+    stone_mid = (184, 176, 156)
+
+    pygame.draw.rect(surf, (56, 70, 78), roof)
+    pygame.draw.rect(surf, (34, 42, 48), roof, 2)
+    for y in range(roof.top + 14, roof.bottom - 8, 18):
+        pygame.draw.line(surf, (46, 58, 66), (roof.left + 6, y), (roof.right - 6, y), 1)
+    for x in range(roof.left + 18, roof.right - 8, 28):
+        pygame.draw.line(surf, (48, 60, 68), (x, roof.top + 7), (x, roof.bottom - 7), 1)
+
+    skylight = pygame.Rect(roof.centerx - 42, roof.top + 18, 84, 30)
+    pygame.draw.rect(surf, (30, 40, 46), skylight.move(4, 4), border_radius=3)
+    pygame.draw.rect(surf, (106, 146, 164), skylight, border_radius=3)
+    pygame.draw.rect(surf, (36, 48, 54), skylight, 1, border_radius=3)
+    pygame.draw.line(surf, (194, 214, 220), skylight.midleft, skylight.midright, 1)
+    pygame.draw.line(surf, (194, 214, 220), skylight.midtop, skylight.midbottom, 1)
+
+    for x in (roof.left + 24, roof.right - 58):
+        plant = pygame.Rect(x, roof.bottom - 30, 34, 18)
+        pygame.draw.rect(surf, (48, 54, 56), plant.move(3, 3), border_radius=2)
+        pygame.draw.rect(surf, (128, 134, 132), plant, border_radius=2)
+        for lx in range(plant.left + 6, plant.right - 4, 7):
+            pygame.draw.line(surf, (84, 90, 90), (lx, plant.top + 4), (lx, plant.bottom - 4), 1)
+
+    pygame.draw.rect(surf, (128, 120, 106), facade.move(5, 5))
+    pygame.draw.rect(surf, stone, facade)
+    pygame.draw.rect(surf, stone_dark, facade, 2)
+    for y in range(facade.top + 9, facade.bottom - 4, 10):
+        pygame.draw.line(surf, (198, 190, 170), (facade.left + 4, y), (facade.right - 4, y), 1)
+
+    crown = pygame.Rect(facade.left - 6, facade.top - 8, facade.w + 12, 10)
+    pygame.draw.rect(surf, stone_mid, crown)
+    pygame.draw.line(surf, (112, 104, 92), crown.bottomleft, crown.bottomright, 1)
+    pediment = [
+        (facade.centerx, facade.top - 28),
+        (facade.left + 24, facade.top - 8),
+        (facade.right - 24, facade.top - 8),
+    ]
+    pygame.draw.polygon(surf, (232, 226, 204), pediment)
+    pygame.draw.polygon(surf, (112, 104, 92), pediment, 2)
+    seal = (facade.centerx, facade.top - 14)
+    pygame.draw.circle(surf, (174, 144, 72), seal, 7)
+    pygame.draw.circle(surf, (88, 76, 56), seal, 7, 1)
+
+    sign = pygame.Rect(facade.centerx - 68, facade.top + 5, 136, 12)
+    _draw_sign_text(surf, "ZENTRALBANK", sign, (35, 62, 82), (246, 240, 210))
+
+    entrance = pygame.Rect(facade.centerx - 28, facade.bottom - 32, 56, 26)
+    pygame.draw.rect(surf, (44, 48, 50), entrance.move(3, 3))
+    pygame.draw.rect(surf, (42, 48, 52), entrance)
+    pygame.draw.rect(surf, (102, 142, 158), entrance.inflate(-8, -6))
+    pygame.draw.rect(surf, (34, 44, 50), entrance.inflate(-8, -6), 1)
+    pygame.draw.line(surf, (226, 198, 112), entrance.midtop, entrance.midbottom, 2)
+    pygame.draw.line(surf, (190, 214, 220), (entrance.left + 12, entrance.top + 8), (entrance.left + 26, entrance.top + 8), 1)
+    pygame.draw.line(surf, (190, 214, 220), (entrance.right - 26, entrance.top + 8), (entrance.right - 12, entrance.top + 8), 1)
+    pygame.draw.circle(surf, (238, 214, 130), (entrance.centerx - 5, entrance.centery + 5), 1)
+    pygame.draw.circle(surf, (238, 214, 130), (entrance.centerx + 5, entrance.centery + 5), 1)
+
+    for x in (facade.left + 18, facade.right - 78):
+        bank_window = pygame.Rect(x, facade.top + 23, 60, 19)
+        pygame.draw.rect(surf, (52, 66, 72), bank_window.move(2, 2))
+        pygame.draw.rect(surf, (76, 110, 126), bank_window)
+        pygame.draw.rect(surf, (34, 46, 52), bank_window, 1)
+        for split in (bank_window.left + 20, bank_window.left + 40):
+            pygame.draw.line(surf, (174, 194, 200), (split, bank_window.top + 3), (split, bank_window.bottom - 3), 1)
+        pygame.draw.line(surf, (174, 194, 200), bank_window.midleft, bank_window.midright, 1)
+
+    plinth = pygame.Rect(facade.left + 12, facade.bottom - 9, facade.w - 24, 5)
+    pygame.draw.rect(surf, (166, 158, 140), plinth)
+    pygame.draw.line(surf, (116, 108, 96), plinth.topleft, plinth.topright, 1)
+
+    for step in range(3):
+        y = facade.bottom - 2 + step * 4
+        pygame.draw.rect(surf, (170, 162, 144), (facade.centerx - 96 + step * 14, y, 192 - step * 28, 4))
+
+    for _ in range(26):
+        x = rng.randint(roof.left + 5, roof.right - 5)
+        y = rng.randint(roof.top + 5, roof.bottom - 5)
+        surf.set_at((x, y), (*_mix((56, 70, 78), (255, 255, 255), rng.uniform(0.04, 0.12)), 120))
+    return surf
+
+
+def _draw_highrise_front(surf, rng, roof, rise_x, rise_y, door_rect):
+    facade = (42, 62, 76)
+    shine = (96, 132, 150)
+    for x in range(9, roof.w - 10, 18):
+        _draw_front_line(surf, roof, rise_x, rise_y, x, 4, x, rise_y - 5, _shade(facade, -18))
+    for y in range(8, rise_y - 9, 12):
+        _draw_front_line(surf, roof, rise_x, rise_y, 6, y, roof.w - 6, y, _shade(facade, -24))
+
+    win_w = 9
+    win_h = 6
+    cols = max(2, min(10, (roof.w - 16) // 14))
+    rows = max(3, (rise_y - 18) // 11)
+    gap_x = max(5, (roof.w - cols * win_w) // (cols + 1))
+    for row in range(rows):
+        y = 8 + row * 11
+        if y + win_h > rise_y - 8:
+            continue
+        for col in range(cols):
+            x = gap_x + col * (win_w + gap_x)
+            if door_rect and pygame.Rect(x, y, win_w, win_h).inflate(8, 4).colliderect(door_rect):
+                continue
+            lit = rng.random() < 0.22
+            glass = (242, 218, 112) if lit else _mix((52, 92, 118), (24, 28, 36), 0.35)
+            _draw_front_panel(surf, roof, rise_x, rise_y, (x, y, win_w, win_h), glass, (24, 32, 40))
+            if not lit:
+                _draw_front_line(surf, roof, rise_x, rise_y, x + 2, y + 1, x + win_w - 2, y + 1, shine)
+
+    lobby = door_rect.inflate(10, 2)
+    lobby.x = roof.w // 2 - lobby.w // 2
+    lobby.y = min(lobby.y, rise_y - lobby.h - 2)
+    _draw_front_door(surf, roof, rise_x, rise_y, lobby, (42, 74, 88), (180, 192, 190), double=True)
+    canopy = pygame.Rect(roof.left + lobby.x - 4, roof.bottom + lobby.y - 5, lobby.w + 8, 5)
+    pygame.draw.rect(surf, (166, 176, 172), canopy)
+    pygame.draw.line(surf, (70, 78, 80), canopy.bottomleft, canopy.bottomright, 1)
+
+    mast_x = roof.centerx + rng.randint(-12, 12)
+    pygame.draw.line(surf, (68, 72, 74), (mast_x, roof.top + 26), (mast_x, roof.top + 4), 2)
+    pygame.draw.circle(surf, (212, 60, 56), (mast_x, roof.top + 4), 2)
+    plant = pygame.Rect(roof.left + 14, roof.top + 14, 30, 18)
+    pygame.draw.rect(surf, (68, 72, 74), plant.move(3, 3), border_radius=2)
+    pygame.draw.rect(surf, (128, 136, 138), plant, border_radius=2)
+    for lx in range(plant.left + 5, plant.right - 4, 6):
+        pygame.draw.line(surf, (82, 88, 90), (lx, plant.top + 4), (lx, plant.bottom - 4), 1)
+
+
+def _draw_house_accents(surf, rng, roof, rise_x, rise_y, door_rect, wall, style):
+    if style == "brick":
+        chimney = pygame.Rect(roof.right - 28, roof.top + 10, 9, 16)
+        pygame.draw.rect(surf, (84, 42, 36), chimney)
+        pygame.draw.rect(surf, (46, 28, 26), chimney.inflate(-2, -2))
+    elif style == "balconies":
+        y = min(max(10, rise_y // 3), rise_y - 14)
+        for x in range(13, roof.w - 24, 30):
+            _draw_front_line(surf, roof, rise_x, rise_y, x, y + 12, x + 18, y + 12, (62, 64, 66), 2)
+            _draw_front_line(surf, roof, rise_x, rise_y, x + 2, y + 9, x + 2, y + 13, (62, 64, 66))
+            _draw_front_line(surf, roof, rise_x, rise_y, x + 16, y + 9, x + 16, y + 13, (62, 64, 66))
+    elif style == "office":
+        for x in range(18, roof.w - 10, 24):
+            _draw_front_line(surf, roof, rise_x, rise_y, x, 4, x, rise_y - 4, _shade(wall, -28))
+        antenna = (roof.centerx, roof.top + 10)
+        pygame.draw.line(surf, (54, 56, 58), (antenna[0], antenna[1] + 14), antenna, 2)
+        pygame.draw.circle(surf, (168, 174, 174), antenna, 2)
+    else:
+        segments = max(2, roof.w // 42)
+        seg_w = roof.w // segments
+        for i in range(1, segments):
+            x = i * seg_w
+            _draw_front_line(surf, roof, rise_x, rise_y, x, 3, x, rise_y - 4, _shade(wall, -45), 2)
+        if door_rect:
+            for i in range(3):
+                pygame.draw.rect(surf, (132, 126, 112), (roof.left + door_rect.x - 4 - i * 2, roof.bottom + rise_y - 3 + i * 2, door_rect.w + 8 + i * 4, 2))
+
+
+def _draw_business_front(surf, rng, roof, rise_x, rise_y, kind, door_rect):
+    if not door_rect:
+        return
+    if kind == "bar":
+        _draw_bar_front(surf, rng, roof, rise_x, rise_y, door_rect)
+    elif kind == "restaurant":
+        _draw_restaurant_front(surf, rng, roof, rise_x, rise_y, door_rect)
+    elif kind == "disco":
+        _draw_disco_front(surf, rng, roof, rise_x, rise_y, door_rect)
+    elif kind == "supermarket":
+        _draw_supermarket_front(surf, rng, roof, rise_x, rise_y, door_rect)
+    elif kind == "fastfood":
+        _draw_fastfood_front(surf, rng, roof, rise_x, rise_y, door_rect)
+    elif kind == "highrise":
+        _draw_highrise_front(surf, rng, roof, rise_x, rise_y, door_rect)
+
+
+def make_building(w_cells, h_cells, seed, kind=None):
     rng = random.Random(seed)
     cell = 32
     w, h = w_cells * cell, h_cells * cell
     s = pygame.Surface((w, h), pygame.SRCALPHA)
-    wall = rng.choice([WALL1, WALL2, (200,180,150), (165,140,115), (190,170,140)])
-    roof = rng.choice([ROOF1, ROOF2, (90,90,95), (130,80,70), (70,80,90)])
-    pygame.draw.rect(s, (0,0,0,90), (4, 4, w, h))
-    pygame.draw.rect(s, wall, (0, 0, w-4, h-4))
-    for y in range(0, h-4, 6):
-        off = (y//6) % 2 * 3
-        for x in range(-3, w-4, 12):
-            pygame.draw.line(s, tuple(max(0,c-15) for c in wall),
-                             (x+off, y), (x+off+10, y), 1)
-    pygame.draw.rect(s, roof, (0, 0, w-4, 6))
-    pygame.draw.rect(s, tuple(max(0,c-25) for c in roof), (0, 6, w-4, 2))
-    pad = 8
-    win_w, win_h = 14, 18
-    cols = (w - 16) // (win_w + 6)
-    rows = (h - 18) // (win_h + 8)
-    for r in range(rows):
-        for c in range(cols):
-            x = pad + c * (win_w + 6)
-            y = 12 + r * (win_h + 8)
-            lit = rng.random() < 0.35
-            col = WIN_LIT if lit else WIN
-            pygame.draw.rect(s, (30,30,40), (x-1, y-1, win_w+2, win_h+2))
-            pygame.draw.rect(s, col, (x, y, win_w, win_h))
-            pygame.draw.line(s, (40,40,50), (x+win_w//2, y), (x+win_w//2, y+win_h), 1)
-            pygame.draw.line(s, (40,40,50), (x, y+win_h//2), (x+win_w, y+win_h//2), 1)
-    dx = w//2 - 10
-    dy = h - 28
-    pygame.draw.rect(s, DOOR, (dx, dy, 20, 24))
-    pygame.draw.rect(s, (50,30,15), (dx, dy, 20, 24), 2)
-    pygame.draw.circle(s, (220,200,80), (dx+16, dy+12), 1)
+    if kind == "bank":
+        return _make_bank_building(w, h, seed)
+
+    palettes = [
+        ((172, 86, 72), (118, 55, 52), (74, 76, 78), (132, 128, 118)),
+        ((194, 184, 164), (146, 136, 122), (88, 86, 82), (168, 158, 138)),
+        ((126, 150, 160), (80, 104, 118), (48, 62, 70), (116, 134, 138)),
+        ((168, 164, 150), (118, 112, 102), (88, 58, 54), (126, 96, 78)),
+        ((WALL1, _shade(WALL1, -44), ROOF1, WALL2)),
+        ((WALL2, _shade(WALL2, -42), ROOF2, WALL1)),
+    ]
+    if kind == "bar":
+        wall, wall_side, roof_col, accent = (86, 48, 42), (56, 34, 32), (42, 36, 34), (190, 120, 52)
+    elif kind == "restaurant":
+        wall, wall_side, roof_col, accent = (174, 132, 92), (112, 86, 66), (96, 82, 62), (82, 96, 52)
+    elif kind == "disco":
+        wall, wall_side, roof_col, accent = (38, 32, 58), (24, 22, 38), (24, 24, 36), (240, 70, 190)
+    elif kind == "supermarket":
+        wall, wall_side, roof_col, accent = (170, 182, 174), (118, 128, 124), (58, 82, 76), (28, 128, 72)
+    elif kind == "fastfood":
+        wall, wall_side, roof_col, accent = (198, 62, 48), (132, 42, 36), (92, 54, 46), (248, 214, 64)
+    elif kind == "highrise":
+        wall, wall_side, roof_col, accent = (54, 76, 88), (38, 54, 64), (42, 48, 54), (128, 136, 138)
+    else:
+        wall, wall_side, roof_col, accent = rng.choice(palettes)
+    if kind == "highrise":
+        rise_y = max(64, min(104, h // 2))
+    else:
+        rise_y_max = max(30, min(58, h // 2))
+        rise_y_min = min(rise_y_max, max(26, min(46, h // 4)))
+        rise_y = rng.randint(rise_y_min, rise_y_max)
+    rise_x = 0
+    roof = pygame.Rect(4, 4, max(42, w - 8), max(38, h - rise_y - 10))
+    base = roof.move(0, rise_y)
+    base.bottom = min(base.bottom, h - 4)
+
+    front_pts = [(roof.left, roof.bottom), (roof.right, roof.bottom),
+                 (base.right, base.bottom), (base.left, base.bottom)]
+    shadow_pts = [(base.left + 5, base.top + 8), (base.right + 5, base.top + 8),
+                  (base.right + 5, base.bottom + 5), (base.left + 5, base.bottom + 5)]
+
+    pygame.draw.polygon(s, (0, 0, 0, 80), shadow_pts)
+    pygame.draw.polygon(s, wall, front_pts)
+    pygame.draw.rect(s, _shade(wall_side, -18), (base.right - 6, base.top, 6, base.h))
+    pygame.draw.rect(s, _shade(wall, 18), (base.left, base.top, 4, base.h))
+    pygame.draw.rect(s, roof_col, roof)
+
+    parapet_hi = _shade(roof_col, 30)
+    parapet_lo = _shade(roof_col, -35)
+    pygame.draw.line(s, parapet_hi, roof.topleft, roof.topright, 2)
+    pygame.draw.line(s, parapet_hi, roof.topleft, roof.bottomleft, 2)
+    pygame.draw.line(s, parapet_lo, roof.bottomleft, roof.bottomright, 2)
+    pygame.draw.line(s, parapet_lo, roof.topright, roof.bottomright, 2)
+    pygame.draw.polygon(s, _shade(wall, -55), front_pts, 1)
+    pygame.draw.rect(s, _shade(roof_col, -55), roof, 1)
+
+    house_style = rng.choice(("brick", "balconies", "office", "rowhouse")) if kind is None else None
+    if house_style == "brick":
+        _draw_brick_courses(s, roof, rise_x, rise_y, wall)
+
+    if rng.random() < 0.65:
+        seam_col = _shade(roof_col, -18)
+        for y in range(roof.top + 12, roof.bottom - 6, 18):
+            pygame.draw.line(s, seam_col, (roof.left + 5, y), (roof.right - 5, y), 1)
+        for x in range(roof.left + 14, roof.right - 6, 24):
+            pygame.draw.line(s, _shade(roof_col, -10), (x, roof.top + 5), (x, roof.bottom - 5), 1)
+
+    door_rect = None
+    if rise_y >= 34 and roof.w > 72:
+        door_w = 24 if kind in ("bank", "highrise") else 16
+        door_h = min(24 if kind in ("bank", "highrise") else 22, rise_y - 11)
+        door_x = roof.w // 2 - door_w // 2 + (0 if kind in ("bank", "highrise") else rng.randint(-8, 8))
+        door_y = rise_y - door_h - 2
+        door_rect = pygame.Rect(door_x, door_y, door_w, door_h)
+
+    if kind is None:
+        win_w = 12 if w_cells <= 4 else 14
+        win_h = 10
+        front_cols = max(1, min(6, (roof.w - 14) // (win_w + 8)))
+        front_rows = max(1, min(3, (rise_y - 9) // (win_h + 4)))
+        gap_x = (roof.w - front_cols * win_w) // (front_cols + 1)
+        for row in range(front_rows):
+            y = 7 + row * (win_h + 4)
+            if y + win_h > rise_y - 3:
+                continue
+            for col in range(front_cols):
+                x = gap_x + col * (win_w + gap_x)
+                if door_rect and pygame.Rect(x, y, win_w, win_h).inflate(10, 6).colliderect(door_rect):
+                    continue
+                lit = rng.random() < 0.32
+                glass = WIN_LIT if lit else _mix(WIN, (30, 34, 46), 0.45)
+                _draw_front_window(s, roof, rise_x, rise_y, x, y, win_w, win_h, glass)
+
+        if door_rect:
+            _draw_front_door(s, roof, rise_x, rise_y, door_rect)
+
+    if kind not in ("bank", "restaurant"):
+        _draw_roof_detail(s, rng, roof, roof_col, accent)
+
+    if kind is None:
+        _draw_house_accents(s, rng, roof, rise_x, rise_y, door_rect, wall, house_style)
+    else:
+        _draw_business_front(s, rng, roof, rise_x, rise_y, kind, door_rect)
+
     return s
 
 

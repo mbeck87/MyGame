@@ -4,7 +4,7 @@ import random
 
 import pygame
 
-from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W
+from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W, W, H
 from game2d.systems import audio
 
 
@@ -107,8 +107,13 @@ def buy_shop_item(state, key):
     if action == "health":
         state.player.hp = min(100, state.player.hp + 50)
     elif action == "wanted":
+        old_wanted = state.player.wanted
         state.player.wanted = max(0, state.player.wanted - 1)
         state.player.crime_timer = 25
+        if state.player.wanted < old_wanted:
+            clear_roadblocks(state)
+            state.roadblock_wanted_level = state.player.wanted
+            state.roadblocks_cleared_on_drop = True
     else:
         weapon = int(action.split("_")[1])
         state.unlocked_weapons.add(weapon)
@@ -139,8 +144,13 @@ def use_garage_item(state, key):
         state.in_car.dents.clear()
         lose_cops_after_repaint(state)
     elif action == "clear_wanted":
+        old_wanted = state.player.wanted
         state.player.wanted = max(0, state.player.wanted - 2)
         state.player.crime_timer = 25
+        if state.player.wanted < old_wanted:
+            clear_roadblocks(state)
+            state.roadblock_wanted_level = state.player.wanted
+            state.roadblocks_cleared_on_drop = True
     set_message(state, f"Done: {label}")
 
 
@@ -193,6 +203,21 @@ def _near_intersection(x, y, state, margin=105):
     return any(abs(x - rx) < margin for rx in state.roads_v) and any(abs(y - ry) < margin for ry in state.roads_h)
 
 
+def _rect_outside_view(state, rect, margin=130):
+    view = pygame.Rect(int(state.cam[0]), int(state.cam[1]), W, H).inflate(margin * 2, margin * 2)
+    return not view.colliderect(rect)
+
+
+def clear_roadblocks(state):
+    state.roadblocks.clear()
+    for car in list(state.cars):
+        if getattr(car, "is_roadblock_support", False) and car is not state.in_car:
+            if car._siren_channel is not None:
+                audio.stop_loop(car._siren_channel)
+                car._siren_channel = None
+            state.cars.remove(car)
+
+
 def _roadblock_spawn_near(state, tx, ty):
     for _ in range(220):
         road_axis = "v" if random.random() < 0.5 else "h"
@@ -211,6 +236,8 @@ def _roadblock_spawn_near(state, tx, ty):
             continue
         roadblock = Roadblock(x, y, road_axis)
         probe = roadblock.rect.inflate(70, 70)
+        if not _rect_outside_view(state, roadblock.rect):
+            continue
         if _near_intersection(x, y, state):
             continue
         if any(probe.colliderect(other.rect) for other in state.roadblocks):
@@ -249,13 +276,19 @@ def escalate_police(state):
     """Small wanted-level extras beyond normal cop spawns."""
     wanted = state.player.wanted
     if wanted < 3:
-        state.roadblocks.clear()
-        for car in list(state.cars):
-            if getattr(car, "is_roadblock_support", False) and car is not state.in_car:
-                if car._siren_channel is not None:
-                    audio.stop_loop(car._siren_channel)
-                    car._siren_channel = None
-                state.cars.remove(car)
+        clear_roadblocks(state)
+        state.roadblock_wanted_level = wanted
+        state.roadblocks_cleared_on_drop = False
+        return
+    if wanted < state.roadblock_wanted_level:
+        clear_roadblocks(state)
+        state.roadblock_wanted_level = wanted
+        state.roadblocks_cleared_on_drop = True
+        return
+    if wanted > state.roadblock_wanted_level:
+        state.roadblocks_cleared_on_drop = False
+    state.roadblock_wanted_level = wanted
+    if state.roadblocks_cleared_on_drop:
         return
     limit = 4 if wanted == 3 else 7 if wanted == 4 else 10
     while len(state.roadblocks) < limit:
@@ -264,6 +297,8 @@ def escalate_police(state):
         if roadblock is None:
             break
         car = _spawn_roadblock_cop_car(state, roadblock)
+        if not _rect_outside_view(state, car.rect(), margin=80):
+            continue
         state.cars.append(car)
         state.roadblocks.append(roadblock)
 
@@ -275,7 +310,9 @@ def lose_cops_after_repaint(state):
     state.player.wanted = 0
     state.player.crime_timer = 0
     state.cops.clear()
-    state.roadblocks.clear()
+    clear_roadblocks(state)
+    state.roadblock_wanted_level = 0
+    state.roadblocks_cleared_on_drop = False
     for car in list(state.cars):
         if car.is_cop and car is not state.in_car:
             if car._siren_channel is not None:

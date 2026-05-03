@@ -281,15 +281,19 @@ def main():
                 cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
                 if cop_spawn <= 0 and active_cop_cars < cop_limit:
                     cop_spawn = max(1.2, 8 - player.wanted*1.35)
-                    cx, cy, angle = cop_car_spawn_near(player.x, player.y, state.cam)
-                    car = Car(cx, cy, (245,245,250), is_cop=True)
-                    car.angle = angle
-                    car.max_spd += max(0, player.wanted - 3) * 30
-                    state.cars.append(car)
+                    spawn = cop_car_spawn_near(player.x, player.y, state.cam)
+                    if spawn is not None:
+                        cx, cy, angle = spawn
+                        car = Car(cx, cy, (245,245,250), is_cop=True)
+                        car.angle = angle
+                        car.max_spd += max(0, player.wanted - 3) * 30
+                        state.cars.append(car)
                 escalate_police(state)
             else:
                 state.cops.clear()
                 state.roadblocks.clear()
+                state.roadblock_wanted_level = 0
+                state.roadblocks_cleared_on_drop = False
                 for c in list(state.cars):
                     if c.is_cop and c is not state.in_car:
                         if c._siren_channel is not None:

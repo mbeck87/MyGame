@@ -23,6 +23,7 @@ class GameState:
     pedestrian_nodes: list = field(default_factory=list) # [(x, y), ...]
     pedestrian_edges: dict = field(default_factory=dict) # {node_idx: [neighbor_idx, ...]}
     pedestrian_park_nodes: set = field(default_factory=set)
+    central_bank_rect: Any = None
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x
     AI_OBSTACLES: list = field(default_factory=list)     # Häuser + Wasser
@@ -62,6 +63,8 @@ class GameState:
     garages: list = field(default_factory=list)          # [(x, y), ...]
     shops:   list = field(default_factory=list)          # [(x, y), ...]
     roadblocks: list = field(default_factory=list)       # [Roadblock, ...]
+    roadblock_wanted_level: int = 0
+    roadblocks_cleared_on_drop: bool = False
 
     # ── Loop / Frame ────────────────────────────────────────────────
     cam: list = field(default_factory=lambda: [0, 0])

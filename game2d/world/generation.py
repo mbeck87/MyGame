@@ -12,6 +12,121 @@ from game2d.render.sprites import make_building
 from game2d.world.geometry import rect_overlaps_street_space, rebuild_pedestrian_graph
 
 
+COMMERCIAL_KINDS = {"bar", "restaurant", "disco", "supermarket", "fastfood"}
+SPECIAL_LIMITS = {
+    "bar": 8,
+    "restaurant": 10,
+    "disco": 4,
+    "supermarket": 5,
+    "fastfood": 8,
+    "highrise": 16,
+}
+SPECIAL_MINIMUMS = {
+    "disco": 2,
+    "supermarket": 3,
+    "highrise": 7,
+}
+
+
+def _block_zone(bx, by):
+    cx = bx + BLOCK / 2
+    cy = by + BLOCK / 2
+    center_blocks = max(abs(cx - WORLD_W / 2), abs(cy - WORLD_H / 2)) / BLOCK
+    if center_blocks <= 1.7:
+        return "downtown"
+    if center_blocks <= 3.3:
+        return "mixed"
+    return "residential"
+
+
+def _near_same_special(kind, rect, placed_specials):
+    margin = BLOCK if kind == "disco" else 170
+    if kind == "highrise":
+        margin = 120
+    probe = rect.inflate(margin, margin)
+    return any(other_kind == kind and probe.colliderect(other_rect) for other_kind, other_rect in placed_specials)
+
+
+def _weighted_choice(weighted):
+    total = sum(weight for _, weight in weighted)
+    pick = random.uniform(0, total)
+    upto = 0
+    for kind, weight in weighted:
+        upto += weight
+        if pick <= upto:
+            return kind
+    return weighted[-1][0]
+
+
+def _choose_building_kind(w_cells, h_cells, zone, block_counts, city_counts, rect, placed_specials):
+    highrise_chance = {"downtown": 0.30, "mixed": 0.05, "residential": 0.0}[zone]
+    if city_counts.get("highrise", 0) < SPECIAL_MINIMUMS["highrise"]:
+        highrise_chance = {"downtown": 0.58, "mixed": 0.12, "residential": 0.0}[zone]
+    highrise_block_limit = 2 if zone == "downtown" else 1
+    if (
+        w_cells >= 4 and h_cells >= 5
+        and block_counts.get("highrise", 0) < highrise_block_limit
+        and city_counts.get("highrise", 0) < SPECIAL_LIMITS["highrise"]
+        and not _near_same_special("highrise", rect, placed_specials)
+        and random.random() < highrise_chance
+    ):
+        return "highrise"
+
+    commercial_budget = 2 if zone == "downtown" else 1
+    commercial_chance = {"downtown": 0.18, "mixed": 0.09, "residential": 0.02}[zone]
+    missing_amenity = (
+        zone != "residential"
+        and (
+            city_counts.get("disco", 0) < SPECIAL_MINIMUMS["disco"]
+            or city_counts.get("supermarket", 0) < SPECIAL_MINIMUMS["supermarket"]
+        )
+    )
+    if missing_amenity:
+        commercial_chance = max(commercial_chance, 0.22)
+    if block_counts.get("commercial", 0) >= commercial_budget or random.random() > commercial_chance:
+        return None
+
+    if zone == "downtown":
+        weighted = [("restaurant", 3), ("bar", 2), ("fastfood", 2), ("disco", 2), ("supermarket", 1)]
+    elif zone == "mixed":
+        weighted = [("restaurant", 3), ("bar", 2), ("fastfood", 2), ("supermarket", 2)]
+    else:
+        weighted = [("restaurant", 2), ("bar", 1), ("fastfood", 1), ("supermarket", 1)]
+
+    min_size = {
+        "bar": (3, 3),
+        "restaurant": (4, 3),
+        "fastfood": (4, 3),
+        "supermarket": (5, 4),
+        "disco": (5, 4),
+    }
+    priority = []
+    for kind in ("disco", "supermarket"):
+        if (
+            city_counts.get(kind, 0) < SPECIAL_MINIMUMS.get(kind, 0)
+            and w_cells >= min_size[kind][0]
+            and h_cells >= min_size[kind][1]
+            and city_counts.get(kind, 0) < SPECIAL_LIMITS[kind]
+            and not _near_same_special(kind, rect, placed_specials)
+            and (kind != "disco" or zone == "downtown")
+        ):
+            priority.append(kind)
+    if priority and random.random() < 0.9:
+        return random.choice(priority)
+
+    candidates = [
+        (kind, weight + (5 if city_counts.get(kind, 0) < SPECIAL_MINIMUMS.get(kind, 0) else 0))
+        for kind, weight in weighted
+        if w_cells >= min_size[kind][0]
+        and h_cells >= min_size[kind][1]
+        and city_counts.get(kind, 0) < SPECIAL_LIMITS[kind]
+        and not _near_same_special(kind, rect, placed_specials)
+    ]
+    if not candidates:
+        return None
+    return _weighted_choice(candidates)
+
+
 def _build_park_rect():
     start_x = BLOCK * 3
     start_y = BLOCK * 3
@@ -22,6 +137,18 @@ def _build_park_rect():
         BLOCK * 2 - margin * 2,
         BLOCK * 3 - margin * 2,
     )
+
+
+def _central_bank_layout():
+    bx = (WORLD_W // 2 // BLOCK) * BLOCK
+    by = (WORLD_H // 2 // BLOCK) * BLOCK
+    setback = ROAD_W // 2 + SIDEWALK_W + 18
+    x0 = max(bx + setback, INNER_LO + SIDEWALK_W + 12)
+    y0 = max(by + setback, INNER_LO + SIDEWALK_W + 12)
+    x1 = min(bx + BLOCK - setback, INNER_HI_X - SIDEWALK_W - 12)
+    y1 = min(by + BLOCK - setback, INNER_HI_Y - SIDEWALK_W - 12)
+    w, h = 10 * 32, 6 * 32
+    return pygame.Rect(x0 + (x1 - x0 - w) // 2, y0 + (y1 - y0 - h) // 2, w - 4, h - 4)
 
 
 def _smooth_points(points, rounds=4, closed=True):
@@ -192,8 +319,14 @@ def build_world(state):
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
     state.park_trees[:] = []
     state.park_ducks[:] = []
+    bank_rect = _central_bank_layout()
+    state.central_bank_rect = None
+    city_counts = {}
+    placed_specials = []
     for bx in range(0, WORLD_W, BLOCK):
         for by in range(0, WORLD_H, BLOCK):
+            zone = _block_zone(bx, by)
+            block_counts = {}
             setback = ROAD_W//2 + SIDEWALK_W + 18
             x0 = max(bx + setback, INNER_LO + SIDEWALK_W + 12)
             y0 = max(by + setback, INNER_LO + SIDEWALK_W + 12)
@@ -204,23 +337,40 @@ def build_world(state):
             cur_y = y0
             while cur_y < y1 - 60:
                 cur_x = x0
-                row_h = random.randint(3, 5)
+                if zone == "downtown" and random.random() < 0.45:
+                    row_h = random.randint(5, 8)
+                elif zone == "mixed" and random.random() < 0.16:
+                    row_h = random.randint(4, 6)
+                else:
+                    row_h = random.randint(3, 5)
                 while cur_x < x1 - 60:
-                    bw_cells = random.randint(3, 6)
+                    bw_cells = random.randint(4, 7) if zone == "downtown" and random.random() < 0.35 else random.randint(3, 6)
                     bh = row_h
                     bw = bw_cells * 32
                     bhp = bh * 32
                     if cur_x + bw > x1: break
                     if cur_y + bhp > y1: break
-                    surf = make_building(bw_cells, bh, seed); seed += 1
                     rect = pygame.Rect(cur_x, cur_y, bw - 4, bhp - 4)
-                    if any(rect.colliderect(park) for park in state.parks):
+                    if any(rect.colliderect(park) for park in state.parks) or rect.colliderect(bank_rect.inflate(18, 18)):
                         cur_x += bw + random.randint(4, 14)
                         continue
                     if not rect_overlaps_street_space(rect):
+                        kind = _choose_building_kind(bw_cells, bh, zone, block_counts, city_counts, rect, placed_specials)
+                        surf = make_building(bw_cells, bh, seed, kind); seed += 1
                         state.buildings.append((rect, surf))
+                        if kind:
+                            city_counts[kind] = city_counts.get(kind, 0) + 1
+                            block_counts[kind] = block_counts.get(kind, 0) + 1
+                            placed_specials.append((kind, rect.copy()))
+                            if kind in COMMERCIAL_KINDS:
+                                block_counts["commercial"] = block_counts.get("commercial", 0) + 1
                     cur_x += bw + random.randint(4, 14)
                 cur_y += row_h * 32 + random.randint(8, 18)
+
+    bank_surf = make_building(10, 6, 9001, "bank")
+    if not rect_overlaps_street_space(bank_rect) and not any(bank_rect.colliderect(park) for park in state.parks):
+        state.buildings.append((bank_rect, bank_surf))
+        state.central_bank_rect = bank_rect.copy()
 
     for park in state.parks:
         state.park_trees.extend(_build_park_trees(park))

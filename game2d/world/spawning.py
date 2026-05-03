@@ -144,4 +144,5 @@ def cop_car_spawn_near(tx, ty, cam=None):
             x, y, angle = road_spawn()
             if _outside_view(x, y, cam):
                 return x, y, angle
+        return None
     return road_spawn()

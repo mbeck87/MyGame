@@ -120,6 +120,14 @@ def draw_minimap(screen, state, font):
         if br.w > 2 and br.h > 2:
             pygame.draw.rect(panel, (165, 145, 112), br, 1)
 
+    bank_rect = getattr(state, "central_bank_rect", None)
+    if bank_rect:
+        br = _local_rect(bank_rect, rect)
+        pygame.draw.rect(panel, (220, 206, 148), br)
+        pygame.draw.rect(panel, (74, 94, 122), br, 1)
+        if br.w >= 4 and br.h >= 4:
+            pygame.draw.circle(panel, (74, 94, 122), br.center, max(2, min(br.w, br.h) // 4))
+
     for gx, gy in state.garages:
         building, driveway, apron = garage_layout(gx, gy)
         pygame.draw.rect(panel, (82, 84, 88), _local_rect(driveway, rect))
