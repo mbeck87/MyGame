@@ -16,6 +16,7 @@ from game2d.world.geometry import (
 )
 from game2d.world.traffic import traffic_light_allows
 from game2d.systems.effects import spawn_blood, make_corpse, trigger_game_over
+from game2d.systems.services import add_wanted_heat
 from game2d.systems import audio
 from game2d.entities.ped import Ped
 
@@ -156,7 +157,7 @@ LAW_CAR_PROFILES = {
         "ai_spd": (125, 195),
         "look_distance": 116,
         "look_width": 58,
-        "deploy_count": 4,
+        "deploy_count": 2,
     },
     "military": {
         "label": "Militär-Truck",
@@ -174,7 +175,7 @@ LAW_CAR_PROFILES = {
         "ai_spd": (135, 210),
         "look_distance": 116,
         "look_width": 60,
-        "deploy_count": 4,
+        "deploy_count": 2,
     },
 }
 
@@ -927,8 +928,7 @@ class Car:
             s.corpses.append((make_corpse(ped), ped.x, ped.y, ped.angle))
             spawn_blood(ped.x, ped.y, 18 if is_cop else 16)
             if self is s.in_car:
-                s.player.wanted = min(5, s.player.wanted + 1)
-                s.player.crime_timer = 30
+                add_wanted_heat(s, "kill_cop" if is_cop else "kill_ped")
                 if not is_cop:
                     s.player.money += random.randint(10, 35)
         return True
@@ -1052,7 +1052,7 @@ class Car:
             self.spd = 0
             self.ai_spd = 0
             return
-        if not self.is_cop and self.driver is None:
+        if self.driver is None:
             self.spd *= max(0, 1 - 2.5 * dt)
             return
         self.yield_timer = max(0.0, self.yield_timer - dt)
@@ -1126,20 +1126,32 @@ class Car:
                     steer = -1 if diff > 0 else 1
                     self.turn_cd = random.uniform(0.6, 1.2)
             self.update(dt, accel, steer)
-            target_slow = (abs(s.in_car.spd) < 28) if s.in_car else True
-            if dist < 120 and target_slow and self.deployed_cops < self.deploy_count and len(s.cops) < s.player.wanted * 3:
-                side = -1 if random.random() < 0.5 else 1
-                ang = math.radians(self.angle + 90 * side)
-                side_dist = max(34, self.coll_w / 2 + 14)
-                px = self.x + math.sin(ang) * side_dist
-                py = self.y - math.cos(ang) * side_dist
-                pr = pygame.Rect(px - 10, py - 10, 20, 20)
-                if in_city(px, py, 8) and not any(pr.colliderect(b[0]) for b in s.AI_OBSTACLES):
-                    cop = Ped(px, py, is_cop=True, cop_kind=self.kind)
-                    cop.shoot_tick = 0.35
-                    s.cops.append(cop)
-                    self.deployed_cops += 1
-                    self.spd *= 0.35
+            target_slow = (abs(s.in_car.spd) < 90) if s.in_car else True
+            max_active_by_wanted = {3: 12, 4: 16, 5: 20}
+            max_active_cops = max_active_by_wanted.get(s.player.wanted, max(2, s.player.wanted * 3))
+            if dist < 230 and target_slow and self.deployed_cops < self.deploy_count and len(s.cops) < max_active_cops:
+                for _ in range(10):
+                    if self.deployed_cops >= self.deploy_count or len(s.cops) >= max_active_cops:
+                        break
+                    side = -1 if self.deployed_cops % 2 == 0 else 1
+                    forward = -12 + self.deployed_cops * 24
+                    side_ang = math.radians(self.angle + 90 * side)
+                    forward_ang = math.radians(self.angle)
+                    side_dist = max(34, self.coll_w / 2 + 14)
+                    px = self.x + math.sin(side_ang) * side_dist + math.sin(forward_ang) * forward
+                    py = self.y - math.cos(side_ang) * side_dist - math.cos(forward_ang) * forward
+                    pr = pygame.Rect(px - 10, py - 10, 20, 20)
+                    blocked = any(pr.colliderect(b[0]) for b in s.AI_OBSTACLES)
+                    blocked = blocked or any(pr.colliderect(car.rect()) for car in s.cars if car is not self and not car.dead)
+                    if in_city(px, py, 8) and not blocked:
+                        cop = Ped(px, py, is_cop=True, cop_kind=self.kind)
+                        cop.shoot_tick = 0.25
+                        s.cops.append(cop)
+                        self.deployed_cops += 1
+                        self.spd *= 0.35
+                if self.deployed_cops >= self.deploy_count:
+                    self.driver = None
+                    self.spd = 0
             return
         if self.arc is not None:
             arc = self.arc

@@ -43,6 +43,8 @@ class GameState:
     unlocked_weapons: set = field(default_factory=lambda: {0, 1})
     fire_cd: float = 0.0
     cop_spawn: float = 0.0
+    wanted_heat: float = 0.0
+    last_wanted_level: int = 0
 
     # ── Pickups ─────────────────────────────────────────────────────
     pickups: list = field(default_factory=list)          # [[x, y, kind, respawn_cd], ...]

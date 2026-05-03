@@ -36,8 +36,8 @@ from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
 )
 from game2d.systems.services import (
-    add_money,
-    buy_shop_item, cop_damage_for_wanted, cop_fire_rate_for_wanted,
+    add_money, add_wanted_heat, cop_weapon_profile, sync_wanted_heat_after_drop,
+    buy_shop_item, clear_roadblocks,
     escalate_police, init_services, nearby_service, use_garage_item,
     SHOP_ITEMS, GARAGE_ITEMS,
 )
@@ -205,10 +205,10 @@ def main():
                                     ejected = Ped(ex, ey)
                                     ejected.state = 'flee'
                                     state.peds.append(ejected)
-                                    player.wanted = min(5, player.wanted + 1)
-                                    player.crime_timer = max(player.crime_timer, 20)
+                                    add_wanted_heat(state, "carjack", timer=20)
                                 state.in_car = c
                                 c.driver = player
+                                c.signal_dir = 0
                                 audio.play('door_open', pos=(c.x, c.y))
                                 break
                 if e.key == pygame.K_f and not state.in_car and not state.game_over:
@@ -216,8 +216,7 @@ def main():
                         if math.hypot(p.x-player.x, p.y-player.y) < 35:
                             add_money(player, random.randint(15, 50))
                             p.state = 'flee'
-                            player.wanted = min(5, player.wanted + 1)
-                            player.crime_timer = 30
+                            add_wanted_heat(state, "robbery")
                             audio.play('robbery', pos=(p.x, p.y))
                             break
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over and not state.paused and not state.menu:
@@ -283,10 +282,38 @@ def main():
                 player.crime_timer -= dt
                 if player.crime_timer <= 0:
                     player.wanted = max(0, player.wanted - 1)
+                    sync_wanted_heat_after_drop(state)
                     player.crime_timer = 25
                 cop_spawn -= dt
                 law_kind = law_kind_for_wanted(player.wanted)
-                active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead and not getattr(c, "sunk", False) and not getattr(c, "is_roadblock_support", False))
+                wanted_increased = player.wanted > state.last_wanted_level
+                view = pygame.Rect(int(state.cam[0]), int(state.cam[1]), W, H)
+                if not wanted_increased and any(
+                    getattr(car, "is_roadblock_support", False) and getattr(car, "kind", "cop") != law_kind
+                    for car in state.cars
+                ):
+                    clear_roadblocks(state)
+                for cop in list(state.cops):
+                    if getattr(cop, "cop_kind", "cop") != law_kind:
+                        if wanted_increased and view.colliderect(cop.rect()):
+                            cop.keep_after_tier_change = True
+                        elif not getattr(cop, "keep_after_tier_change", False):
+                            state.cops.remove(cop)
+                for car in list(state.cars):
+                    if (
+                        car.is_cop
+                        and car is not state.in_car
+                        and getattr(car, "kind", "cop") != law_kind
+                        and not getattr(car, "is_roadblock_support", False)
+                        and not getattr(car, "keep_after_tier_change", False)
+                    ):
+                        if wanted_increased and view.colliderect(car.rect()):
+                            car.keep_after_tier_change = True
+                            continue
+                        if car._siren_channel is not None:
+                            audio.stop_loop(car._siren_channel)
+                            car._siren_channel = None
+                        state.cars.remove(car)
                 active_tier_cars = sum(
                     1 for c in state.cars
                     if (
@@ -297,9 +324,9 @@ def main():
                         and not getattr(c, "is_roadblock_support", False)
                     )
                 )
-                cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
-                tier_min = 0 if law_kind == "cop" else 1
-                if cop_spawn <= 0 and (active_cop_cars < cop_limit or active_tier_cars < tier_min):
+                cop_limit_by_wanted = {3: 6, 4: 8, 5: 10}
+                cop_limit = cop_limit_by_wanted.get(player.wanted, max(1, player.wanted))
+                if cop_spawn <= 0 and active_tier_cars < cop_limit:
                     cop_spawn = max(1.2, 8 - player.wanted*1.35)
                     spawn = cop_car_spawn_near(player.x, player.y, state.cam, law_kind)
                     if spawn is not None:
@@ -309,11 +336,13 @@ def main():
                         car.max_spd += max(0, player.wanted - 3) * 30
                         state.cars.append(car)
                 escalate_police(state)
+                state.last_wanted_level = player.wanted
             else:
                 state.cops.clear()
                 state.roadblocks.clear()
                 state.roadblock_wanted_level = 0
                 state.roadblocks_cleared_on_drop = False
+                state.last_wanted_level = 0
                 for c in list(state.cars):
                     if c.is_cop and c is not state.in_car:
                         if c._siren_channel is not None:
@@ -336,12 +365,16 @@ def main():
                 wants_shoot = c.update(dt, player)
                 c.animate(dt)
                 if wants_shoot:
-                    c.shoot_tick = cop_fire_rate_for_wanted(player.wanted)
+                    profile = cop_weapon_profile(getattr(c, "cop_kind", "cop"), player.wanted)
+                    c.shoot_tick = profile["rate"]
                     dx, dy = player.x - c.x, player.y - c.y
                     d = math.hypot(dx, dy) or 1
-                    state.bullets.append([c.x, c.y, dx/d*700, dy/d*700, 0.8, True,
-                                          cop_damage_for_wanted(player.wanted)])
-                    audio.play('cop_shoot', pos=(c.x, c.y))
+                    base = math.atan2(dy, dx)
+                    spread = random.uniform(-profile["spread"], profile["spread"])
+                    vx = math.cos(base + spread) * profile["speed"]
+                    vy = math.sin(base + spread) * profile["speed"]
+                    state.bullets.append([c.x, c.y, vx, vy, 0.8, True, profile["damage"]])
+                    audio.play(profile["sound"], pos=(c.x, c.y))
 
             for b in list(state.bullets):
                 b[0] += b[2]*dt; b[1] += b[3]*dt; b[4] -= dt
@@ -386,8 +419,7 @@ def main():
                                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                                 spawn_blood(p.x, p.y, 20)
                                 add_money(player, random.randint(15, 60))
-                                player.wanted = min(5, player.wanted + 1)
-                                player.crime_timer = 30
+                                add_wanted_heat(state, "kill_ped")
                             state.bullets.remove(b); hit_any=True; break
                     if hit_any: continue
                     for c in list(state.cops):
@@ -400,8 +432,7 @@ def main():
                                 state.cops.remove(c)
                                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                                 spawn_blood(c.x, c.y, 24)
-                                player.wanted = min(5, player.wanted + 1)
-                                player.crime_timer = 30
+                                add_wanted_heat(state, "kill_cop")
                             state.bullets.remove(b); break
 
             for c in list(state.cars):
@@ -455,8 +486,7 @@ def main():
                     audio.stop_loop(r[5])
                     do_explosion(r[0], r[1])
                     state.rockets.remove(r)
-                    player.wanted = min(5, player.wanted + 1)
-                    player.crime_timer = 30
+                    add_wanted_heat(state, "explosion")
                 else:
                     audio.update_loop(r[5], pos=(r[0], r[1]))
 

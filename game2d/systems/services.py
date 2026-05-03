@@ -17,6 +17,39 @@ SHOP_ITEMS = {
     6: ("Wanted -1", 500, "wanted"),
 }
 
+WANTED_HEAT_PER_STAR = 100
+WANTED_HEAT = {
+    "assault": 25,
+    "carjack": 55,
+    "robbery": 65,
+    "kill_ped": 38,
+    "kill_cop": 75,
+    "explosion": 85,
+}
+
+
+def _wanted_from_heat(heat):
+    if heat <= 0:
+        return 0
+    return min(5, 1 + int(heat // WANTED_HEAT_PER_STAR))
+
+
+def add_wanted_heat(state, crime="kill_ped", heat=None, timer=30):
+    """Raise wanted level by accumulated heat instead of one star per crime."""
+    amount = WANTED_HEAT.get(crime, WANTED_HEAT["kill_ped"]) if heat is None else heat
+    if state.wanted_heat <= 0 and state.player.wanted > 0:
+        state.wanted_heat = state.player.wanted * WANTED_HEAT_PER_STAR
+    state.wanted_heat = min(5 * WANTED_HEAT_PER_STAR, state.wanted_heat + amount)
+    old_wanted = state.player.wanted
+    state.player.wanted = max(state.player.wanted, _wanted_from_heat(state.wanted_heat))
+    state.player.crime_timer = max(state.player.crime_timer, timer)
+    if state.player.wanted > old_wanted:
+        state.roadblock_wanted_level = min(state.roadblock_wanted_level, state.player.wanted)
+
+
+def sync_wanted_heat_after_drop(state):
+    state.wanted_heat = min(state.wanted_heat, state.player.wanted * WANTED_HEAT_PER_STAR)
+
 GARAGE_ITEMS = {
     1: ("Repair car", 150, "repair"),
     2: ("Repaint car", 80, "repaint"),
@@ -109,6 +142,7 @@ def buy_shop_item(state, key):
     elif action == "wanted":
         old_wanted = state.player.wanted
         state.player.wanted = max(0, state.player.wanted - 1)
+        sync_wanted_heat_after_drop(state)
         state.player.crime_timer = 25
         if state.player.wanted < old_wanted:
             clear_roadblocks(state)
@@ -144,6 +178,7 @@ def use_garage_item(state, key):
     elif action == "clear_wanted":
         old_wanted = state.player.wanted
         state.player.wanted = max(0, state.player.wanted - 2)
+        sync_wanted_heat_after_drop(state)
         state.player.crime_timer = 25
         if state.player.wanted < old_wanted:
             clear_roadblocks(state)
@@ -308,6 +343,7 @@ def lose_cops_after_repaint(state):
         return
     state.player.wanted = 0
     state.player.crime_timer = 0
+    state.wanted_heat = 0
     state.cops.clear()
     clear_roadblocks(state)
     state.roadblock_wanted_level = 0
@@ -327,3 +363,19 @@ def cop_damage_for_wanted(wanted):
 
 def cop_fire_rate_for_wanted(wanted):
     return max(0.65, 1.5 - max(0, wanted - 2) * 0.2)
+
+
+COP_WEAPON_PROFILES = {
+    "cop": {"rate": 1.35, "damage": 13, "speed": 700, "spread": 0.025, "sound": "cop_shoot"},
+    "fbi": {"rate": 1.05, "damage": 16, "speed": 760, "spread": 0.035, "sound": "cop_shoot"},
+    "swat": {"rate": 0.16, "damage": 15, "speed": 820, "spread": 0.075, "sound": "shoot_smg"},
+    "military": {"rate": 0.09, "damage": 24, "speed": 860, "spread": 0.06, "sound": "shoot_mg"},
+}
+
+
+def cop_weapon_profile(cop_kind, wanted):
+    profile = COP_WEAPON_PROFILES.get(cop_kind, COP_WEAPON_PROFILES["cop"]).copy()
+    if cop_kind in ("cop", "fbi"):
+        profile["rate"] = cop_fire_rate_for_wanted(wanted)
+        profile["damage"] = cop_damage_for_wanted(wanted)
+    return profile
