@@ -9,7 +9,7 @@ from game2d.config import (
     ROAD_W, SIDEWALK_W,
 )
 from game2d.render.sprites import make_building
-from game2d.world.geometry import rect_overlaps_street_space, rebuild_pedestrian_graph
+from game2d.world.geometry import amusement_path_points, rect_overlaps_street_space, rebuild_pedestrian_graph
 
 
 COMMERCIAL_KINDS = {"bar", "restaurant", "disco", "supermarket", "fastfood"}
@@ -137,6 +137,15 @@ def _build_park_rect():
         BLOCK * 2 - margin * 2,
         BLOCK * 3 - margin * 2,
     )
+
+
+def _build_amusement_park_rect():
+    margin = ROAD_W // 2 + SIDEWALK_W
+    left = BLOCK * 7 + margin
+    top = INNER_LO
+    right = INNER_HI_X
+    bottom = BLOCK * 3 - margin
+    return pygame.Rect(left, top, right - left, bottom - top)
 
 
 def _central_bank_layout():
@@ -290,6 +299,47 @@ def _build_park_ducks(park):
     return fitted
 
 
+def _build_amusement_stands(park):
+    path = amusement_path_points(park)
+    specs = (
+        (0.14, -1, "popcorn"),
+        (0.27, 1, "pretzel"),
+        (0.41, -1, "icecream"),
+        (0.58, 1, "candy"),
+        (0.72, -1, "soda"),
+        (0.86, 1, "hotdog"),
+    )
+    stands = []
+    offset = 76
+    margin_x = 34
+    margin_y = 44
+    for frac, side, kind in specs:
+        idx = max(2, min(len(path) - 3, int((len(path) - 1) * frac)))
+        px, py = path[idx]
+        ax, ay = path[idx - 2]
+        bx, by = path[idx + 2]
+        tx = bx - ax
+        ty = by - ay
+        length = (tx * tx + ty * ty) ** 0.5 or 1
+        nx = -ty / length
+        ny = tx / length
+        choices = (side, -side)
+        placed = None
+        for sign in choices:
+            x = px + nx * offset * sign
+            y = py + ny * offset * sign
+            body = pygame.Rect(int(x - 28), int(y - 36), 56, 62)
+            if park.contains(body.inflate(margin_x - 28, margin_y - 31)):
+                placed = (x, y, kind)
+                break
+        if placed is None:
+            x = max(park.left + margin_x, min(park.right - margin_x, px + nx * offset * side))
+            y = max(park.top + margin_y, min(park.bottom - margin_y, py + ny * offset * side))
+            placed = (x, y, kind)
+        stands.append(placed)
+    return stands
+
+
 def build_world(state):
     """Initialisiert state.WATER_RECTS, roads_h/v, buildings, AI_OBSTACLES."""
     state.WATER_RECTS[:] = [
@@ -316,9 +366,11 @@ def build_world(state):
     seed = 0
     state.buildings.clear()
     state.parks[:] = [_build_park_rect()]
+    state.amusement_parks[:] = [_build_amusement_park_rect()]
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
     state.park_trees[:] = []
     state.park_ducks[:] = []
+    state.amusement_stands[:] = []
     bank_rect = _central_bank_layout()
     state.central_bank_rect = None
     city_counts = {}
@@ -351,7 +403,8 @@ def build_world(state):
                     if cur_x + bw > x1: break
                     if cur_y + bhp > y1: break
                     rect = pygame.Rect(cur_x, cur_y, bw - 4, bhp - 4)
-                    if any(rect.colliderect(park) for park in state.parks) or rect.colliderect(bank_rect.inflate(18, 18)):
+                    reserved = list(state.parks) + list(state.amusement_parks)
+                    if any(rect.colliderect(park) for park in reserved) or rect.colliderect(bank_rect.inflate(18, 18)):
                         cur_x += bw + random.randint(4, 14)
                         continue
                     if not rect_overlaps_street_space(rect):
@@ -368,17 +421,21 @@ def build_world(state):
                 cur_y += row_h * 32 + random.randint(8, 18)
 
     bank_surf = make_building(10, 6, 9001, "bank")
-    if not rect_overlaps_street_space(bank_rect) and not any(bank_rect.colliderect(park) for park in state.parks):
+    reserved = list(state.parks) + list(state.amusement_parks)
+    if not rect_overlaps_street_space(bank_rect) and not any(bank_rect.colliderect(park) for park in reserved):
         state.buildings.append((bank_rect, bank_surf))
         state.central_bank_rect = bank_rect.copy()
 
     for park in state.parks:
         state.park_trees.extend(_build_park_trees(park))
         state.park_ducks.extend(_build_park_ducks(park))
+    for park in state.amusement_parks:
+        state.amusement_stands.extend(_build_amusement_stands(park))
 
     state.AI_OBSTACLES[:] = (
         list(state.buildings)
         + [(r, None) for r in state.WATER_RECTS]
         + [(r, None) for r in state.parks]
+        + [(r, None) for r in state.amusement_parks]
     )
     rebuild_pedestrian_graph(state)

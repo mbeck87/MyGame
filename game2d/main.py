@@ -193,6 +193,14 @@ def main():
         px, py = safe_spawn()
         state.pickups.append([px, py, kind, 0.0])
     init_services(state)
+    amusement_nodes = list(state.amusement_park_nodes)
+    for _ in range(38):
+        if not amusement_nodes:
+            break
+        x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
+        ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
+        ped.route_replan = random.uniform(0.1, 1.0)
+        state.peds.append(ped)
 
     cop_spawn = 0.0
 

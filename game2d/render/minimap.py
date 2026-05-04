@@ -114,6 +114,11 @@ def draw_minimap(screen, state, font):
         path = _local_polyline(_park_path_points(park), rect)
         pygame.draw.lines(panel, (150, 105, 56), False, path, 1)
 
+    for park in state.amusement_parks:
+        pr = _local_rect(park, rect)
+        pygame.draw.rect(panel, (78, 150, 92), pr)
+        pygame.draw.rect(panel, (210, 88, 110), pr, 1)
+
     for building_rect, _ in state.buildings:
         br = _local_rect(building_rect, rect)
         pygame.draw.rect(panel, (120, 100, 80), br)

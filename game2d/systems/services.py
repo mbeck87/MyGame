@@ -88,7 +88,6 @@ def init_services(state):
         (ROAD_HI_X - 230, ROAD_HI_Y - 160),
     ]
     state.shops[:] = [
-        (ROAD_HI_X - 45, ROAD_LO + 45),
         (ROAD_LO + 45, ROAD_HI_Y - 45),
     ]
     state.barbers[:] = [
@@ -111,6 +110,7 @@ def init_services(state):
         list(state.buildings)
         + [(r, None) for r in state.WATER_RECTS]
         + [(r, None) for r in state.parks]
+        + [(r, None) for r in state.amusement_parks]
     )
     rebuild_pedestrian_graph(state)
 

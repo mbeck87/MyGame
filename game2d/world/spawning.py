@@ -34,6 +34,7 @@ def safe_spawn():
         if (
             in_city(x, y, 20)
             and not any(r.colliderect(b[0]) for b in s.buildings)
+            and not any(r.colliderect(park) for park in s.amusement_parks)
             and not rect_in_park_pond(r)
         ):
             return x, y
@@ -41,7 +42,7 @@ def safe_spawn():
         x = random.randint(INNER_LO + 30, INNER_HI_X - 30)
         y = random.randint(INNER_LO + 30, INNER_HI_Y - 30)
         r = pygame.Rect(x-15, y-15, 30, 30)
-        if not any(r.colliderect(b[0]) for b in s.buildings) and not rect_in_park_pond(r):
+        if not any(r.colliderect(b[0]) for b in s.buildings) and not any(r.colliderect(park) for park in s.amusement_parks) and not rect_in_park_pond(r):
             return x, y
     return ROAD_LO, ROAD_LO
 
@@ -85,6 +86,8 @@ def car_spawn_clear(x, y, margin=22, angle=0, kind="sedan", is_cop=False):
     if any(probe.colliderect(b[0]) for b in s.buildings):
         return False
     if any(probe.colliderect(park) for park in s.parks):
+        return False
+    if any(probe.colliderect(park) for park in s.amusement_parks):
         return False
     if any(probe.colliderect(c.rect()) for c in s.cars):
         return False

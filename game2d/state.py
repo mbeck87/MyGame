@@ -20,9 +20,12 @@ class GameState:
     park_ponds: list = field(default_factory=list)       # [[(x, y), ...], ...]
     park_trees: list = field(default_factory=list)       # [(x, y, crown, trunk, dark_g, light_g), ...]
     park_ducks: list = field(default_factory=list)       # [(kind, family, follow_slot, x, y, rx, ry, speed, phase), ...]
+    amusement_parks: list = field(default_factory=list)  # [rect, ...]
+    amusement_stands: list = field(default_factory=list) # [(x, y, kind), ...]
     pedestrian_nodes: list = field(default_factory=list) # [(x, y), ...]
     pedestrian_edges: dict = field(default_factory=dict) # {node_idx: [neighbor_idx, ...]}
     pedestrian_park_nodes: set = field(default_factory=set)
+    amusement_park_nodes: set = field(default_factory=set)
     central_bank_rect: Any = None
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x

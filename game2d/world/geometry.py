@@ -35,6 +35,8 @@ def rect_on_road(rect, margin=10):
     s = current()
     if any(rect.colliderect(park) for park in s.parks):
         return False
+    if any(rect.colliderect(park) for park in s.amusement_parks):
+        return False
     cx, cy = rect.center
     half = ROAD_W * 0.5 - margin
     for y in s.roads_h:
@@ -155,6 +157,68 @@ def park_path_points(park):
     return points
 
 
+def amusement_path_points(park):
+    w = park.w
+    h = park.h
+    points = []
+    curves = (
+        (
+            (park.left + 120, park.bottom),
+            (park.left + 120, park.bottom - h * 0.30),
+            (park.left + w * 0.24, park.top + h * 0.70),
+            (park.left + w * 0.40, park.top + h * 0.66),
+        ),
+        (
+            (park.left + w * 0.40, park.top + h * 0.66),
+            (park.left + w * 0.58, park.top + h * 0.62),
+            (park.left + w * 0.46, park.top + h * 0.28),
+            (park.left + w * 0.68, park.top + h * 0.34),
+        ),
+        (
+            (park.left + w * 0.68, park.top + h * 0.34),
+            (park.left + w * 0.92, park.top + h * 0.42),
+            (park.right - 120, park.bottom - h * 0.34),
+            (park.right - 120, park.bottom),
+        ),
+    )
+    for curve_idx, (a, b, c, d) in enumerate(curves):
+        for i in range(34):
+            if curve_idx and i == 0:
+                continue
+            t = i / 33
+            mt = 1 - t
+            x = mt**3 * a[0] + 3 * mt**2 * t * b[0] + 3 * mt * t**2 * c[0] + t**3 * d[0]
+            y = mt**3 * a[1] + 3 * mt**2 * t * b[1] + 3 * mt * t**2 * c[1] + t**3 * d[1]
+            points.append((x, y))
+    return points
+
+
+def _dist_to_segment_sq(px, py, ax, ay, bx, by):
+    vx = bx - ax
+    vy = by - ay
+    denom = vx * vx + vy * vy
+    if denom <= 0:
+        return (px - ax) ** 2 + (py - ay) ** 2
+    t = max(0.0, min(1.0, ((px - ax) * vx + (py - ay) * vy) / denom))
+    cx = ax + vx * t
+    cy = ay + vy * t
+    return (px - cx) ** 2 + (py - cy) ** 2
+
+
+def point_on_amusement_path(x, y, radius=24):
+    s = current()
+    for park in s.amusement_parks:
+        if not park.collidepoint(x, y):
+            continue
+        points = amusement_path_points(park)
+        limit = radius * radius
+        for a, b in zip(points, points[1:]):
+            if _dist_to_segment_sq(x, y, a[0], a[1], b[0], b[1]) <= limit:
+                return True
+        return False
+    return True
+
+
 def _ped_probe_rect(ax, ay, bx=None, by=None, radius=12):
     if bx is None or by is None:
         return pygame.Rect(int(ax - radius), int(ay - radius), radius * 2, radius * 2)
@@ -188,13 +252,19 @@ def _ped_segment_clear(a, b, allow_park=False):
         return False
     if rect_in_park_pond(probe):
         return False
-    if not allow_park and any(probe.colliderect(park) for park in s.parks):
+    park_rects = list(s.parks) + list(s.amusement_parks)
+    if not allow_park and any(probe.colliderect(park) for park in park_rects):
         return False
     return True
 
 
 def pedestrian_step_clear(x, y, allow_park=False):
-    return _ped_point_clear(x, y) and (allow_park or not any(_ped_probe_rect(x, y, radius=11).colliderect(park) for park in current().parks))
+    park_rects = list(current().parks) + list(current().amusement_parks)
+    if not _ped_point_clear(x, y):
+        return False
+    if allow_park:
+        return point_on_amusement_path(x, y)
+    return not any(_ped_probe_rect(x, y, radius=11).colliderect(park) for park in park_rects)
 
 
 def pedestrian_segment_clear(a, b, allow_park=False):
@@ -205,6 +275,7 @@ def rebuild_pedestrian_graph(state):
     nodes = []
     edges = {}
     park_nodes = set()
+    amusement_nodes = set()
     index_by_key = {}
     corner_nodes = {}
 
@@ -293,9 +364,32 @@ def rebuild_pedestrian_graph(state):
                     edges[candidate].add(endpoint)
                     break
 
+    for park in state.amusement_parks:
+        sampled = amusement_path_points(park)
+        sampled = sampled[::3] + ([sampled[-1]] if sampled[-1] != sampled[::3][-1] else [])
+        path_ids = [add_node(x, y, is_park=True) for x, y in sampled]
+        path_ids = [idx for idx in path_ids if idx is not None]
+        amusement_nodes.update(path_ids)
+        for a, b in zip(path_ids, path_ids[1:]):
+            connect(a, b, allow_park=True)
+        for endpoint in (path_ids[:1] + path_ids[-1:]):
+            ex, ey = nodes[endpoint]
+            candidates = sorted(
+                street_node_ids,
+                key=lambda idx: math.hypot(nodes[idx][0] - ex, nodes[idx][1] - ey),
+            )
+            for candidate in candidates[:14]:
+                if math.hypot(nodes[candidate][0] - ex, nodes[candidate][1] - ey) > 230:
+                    continue
+                if _ped_segment_clear(nodes[endpoint], nodes[candidate], allow_park=True):
+                    edges[endpoint].add(candidate)
+                    edges[candidate].add(endpoint)
+                    break
+
     state.pedestrian_nodes[:] = nodes
     state.pedestrian_edges = {idx: sorted(neigh) for idx, neigh in edges.items()}
     state.pedestrian_park_nodes = park_nodes
+    state.amusement_park_nodes = amusement_nodes
 
 
 def nearest_pedestrian_node(x, y):
@@ -338,15 +432,34 @@ def random_pedestrian_destination(prefer_park=False, avoid_idx=None):
     s = current()
     if not s.pedestrian_nodes:
         return None
-    if prefer_park and s.pedestrian_park_nodes:
+    reachable = None
+    if avoid_idx is not None and 0 <= avoid_idx < len(s.pedestrian_nodes):
+        reachable = {avoid_idx}
+        queue = deque([avoid_idx])
+        while queue:
+            node = queue.popleft()
+            for nxt in s.pedestrian_edges.get(node, ()):
+                if nxt not in reachable:
+                    reachable.add(nxt)
+                    queue.append(nxt)
+
+    def can_choose(idx):
+        return (
+            idx != avoid_idx
+            and s.pedestrian_edges.get(idx)
+            and (reachable is None or idx in reachable)
+        )
+
+    park_node_ids = set(s.pedestrian_park_nodes) | set(s.amusement_park_nodes)
+    if prefer_park and park_node_ids:
         pool = [
-            idx for idx in s.pedestrian_park_nodes
-            if idx != avoid_idx and s.pedestrian_edges.get(idx)
+            idx for idx in park_node_ids
+            if can_choose(idx)
         ]
         if pool:
             return random.choice(pool)
     pool = [
         idx for idx in range(len(s.pedestrian_nodes))
-        if idx != avoid_idx and s.pedestrian_edges.get(idx)
+        if can_choose(idx)
     ]
     return random.choice(pool) if pool else avoid_idx

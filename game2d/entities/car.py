@@ -780,7 +780,8 @@ class Car:
             self.x + math.sin(rad) * 220,
             self.y - math.cos(rad) * 220,
         )
-        if any(look.colliderect(park) for park in current().parks):
+        blocked_areas = list(current().parks) + list(current().amusement_parks)
+        if any(look.colliderect(park) for park in blocked_areas):
             return True
         if heading == 0:
             return self.y < ROAD_LO + margin
@@ -807,9 +808,12 @@ class Car:
                 continue
             lx, ly = lane_center_for_car(angle, self.x, self.y)
             rad = math.radians(angle)
-            tx = lx + math.sin(rad) * 120
-            ty = ly - math.cos(rad) * 120
-            if rect_on_road(self.rect_at_angle(lx, ly, angle)) and rect_on_road(self.rect_at_angle(tx, ty, angle)):
+            probes = [self.rect_at_angle(lx, ly, angle)]
+            for dist in (120, 260, 420):
+                tx = lx + math.sin(rad) * dist
+                ty = ly - math.cos(rad) * dist
+                probes.append(self.rect_at_angle(tx, ty, angle))
+            if all(rect_on_road(probe) for probe in probes):
                 choices.append(angle)
         return choices
 
