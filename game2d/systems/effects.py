@@ -58,7 +58,7 @@ def do_explosion(x, y, radius=140, dmg=500):
     for c in list(state.cars):
         if c.dead: continue
         if math.hypot(c.x-x, c.y-y) < radius:
-            c.take_damage(dmg)
+            c.take_damage(dmg, source_pos=(x, y))
     for p in list(state.peds):
         if math.hypot(p.x-x, p.y-y) < radius:
             p.hp -= dmg

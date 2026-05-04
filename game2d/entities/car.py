@@ -308,6 +308,48 @@ class Car:
         self._drifting = False
         self._skid_cd = 0.0
 
+    def _local_from_world(self, wx, wy):
+        rad = math.radians(self.angle)
+        cs, sn = math.cos(rad), math.sin(rad)
+        dx = wx - self.x
+        dy = wy - self.y
+        return dx * cs + dy * sn, -dx * sn + dy * cs
+
+    def _local_impact_from_source(self, sx, sy):
+        lx, ly = self._local_from_world(sx, sy)
+        if abs(lx) < 0.001 and abs(ly) < 0.001:
+            ly = -1.0
+        half_w = self.w * 0.42
+        half_h = self.h * 0.42
+        scale = max(abs(lx) / half_w if half_w else 0, abs(ly) / half_h if half_h else 0, 0.001)
+        return max(-half_w, min(half_w, lx / scale)), max(-half_h, min(half_h, ly / scale))
+
+    def _clamp_damage_local(self, lx, ly):
+        return (
+            max(-self.w * 0.42, min(self.w * 0.42, lx)),
+            max(-self.h * 0.42, min(self.h * 0.42, ly)),
+        )
+
+    def _add_dents(self, dmg, local_pos=None):
+        n = max(1, int(dmg // 18))
+        if local_pos is None:
+            base_x = random.uniform(-self.w * 0.30, self.w * 0.30)
+            base_y = random.uniform(-self.h * 0.30, self.h * 0.30)
+        else:
+            base_x, base_y = self._clamp_damage_local(*local_pos)
+        for _ in range(min(n, 5)):
+            if len(self.dents) >= 45:
+                break
+            spread = max(2.0, min(12.0, dmg * 0.09))
+            lx = base_x + random.uniform(-spread, spread)
+            ly = base_y + random.uniform(-spread, spread)
+            lx, ly = self._clamp_damage_local(lx, ly)
+            severity = max(0.35, min(1.0, dmg / 85.0 + random.uniform(-0.08, 0.18)))
+            rx = random.uniform(5.0, 9.0) * (0.75 + severity)
+            ry = random.uniform(2.5, 5.0) * (0.85 + severity * 0.55)
+            angle = random.uniform(-28.0, 28.0)
+            self.dents.append((lx, ly, rx, ry, angle, severity))
+
     def repaint(self, body):
         self.body = body
         if self.is_cop:
@@ -318,19 +360,49 @@ class Car:
             self.sprite = make_car_sprite(self.body, sw, sh, kind=self.kind)
         self.w, self.h = self.sprite.get_size()
 
-    def take_damage(self, dmg):
+    def take_damage(self, dmg, world_pos=None, local_pos=None, source_pos=None):
         if self.dead or self.sunk or dmg <= 0: return
         self.hp -= dmg
-        n = max(1, int(dmg // 18))
-        for _ in range(min(n, 4)):
-            if len(self.dents) >= 35: break
-            rx = random.uniform(-self.w*0.42, self.w*0.42)
-            ry = random.uniform(-self.h*0.42, self.h*0.42)
-            self.dents.append((rx, ry, random.randint(3, 6)))
+        if local_pos is None and world_pos is not None:
+            local_pos = self._local_from_world(*world_pos)
+        if local_pos is None and source_pos is not None:
+            local_pos = self._local_impact_from_source(*source_pos)
+        self._add_dents(dmg, local_pos)
         if self.hp <= 0 and not self.burning:
             self.hp = 0
             self.burning = True
             self.burn_timer = random.uniform(2.5, 4.0)
+
+    def _damage_overlay(self):
+        overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        for dent in self.dents:
+            if len(dent) == 3:
+                lx, ly, old_r = dent
+                rx, ry, angle, severity = old_r * 1.7, old_r * 0.8, 0.0, 0.65
+            else:
+                lx, ly, rx, ry, angle, severity = dent
+            pw = max(8, int(rx * 2 + 8))
+            ph = max(8, int(ry * 2 + 8))
+            patch = pygame.Surface((pw, ph), pygame.SRCALPHA)
+            rect = pygame.Rect(4, 4, pw - 8, ph - 8)
+            shade = int(95 + 70 * severity)
+            pygame.draw.ellipse(patch, (18, 17, 19, shade), rect)
+            pygame.draw.ellipse(patch, (8, 8, 10, int(35 + 45 * severity)), rect.inflate(-max(1, pw // 4), -max(1, ph // 4)))
+            hi = rect.move(-1, -1).inflate(-max(1, pw // 5), -max(1, ph // 4))
+            pygame.draw.arc(patch, (235, 235, 220, int(35 + 45 * severity)), hi, math.radians(190), math.radians(330), 1)
+            pygame.draw.arc(patch, (0, 0, 0, int(35 + 45 * severity)), rect.move(1, 1), math.radians(20), math.radians(160), 1)
+            if abs(angle) > 0.1:
+                patch = pygame.transform.rotate(patch, angle)
+            pr = patch.get_rect(center=(int(self.w * 0.5 + lx), int(self.h * 0.5 + ly)))
+            overlay.blit(patch, pr)
+        return overlay
+
+    def _sprite_with_damage(self):
+        if not self.dents:
+            return self.sprite
+        surf = self.sprite.copy()
+        surf.blit(self._damage_overlay(), (0, 0))
+        return surf
 
     def explode(self):
         s = current()
@@ -363,7 +435,7 @@ class Car:
         for c in s.cars:
             if c is self or c.dead: continue
             if math.hypot(c.x-self.x, c.y-self.y) < R + 10:
-                c.take_damage(110)
+                c.take_damage(110, source_pos=(self.x, self.y))
         if math.hypot(s.player.x-self.x, s.player.y-self.y) < R:
             s.player.hp -= 95 if s.in_car is self else 60
             if s.player.hp <= 0:
@@ -380,11 +452,11 @@ class Car:
             a = random.uniform(0, 6.28); sp = random.uniform(40, 180)
             s.smoke_particles.append([self.x, self.y, math.cos(a)*sp, math.sin(a)*sp - 30,
                                       random.uniform(1.8, 3.5), 3.5, random.randint(6, 11)])
-        wreck_surf = self.sprite.copy()
+        wreck_surf = self._sprite_with_damage().copy()
         scorch = pygame.Surface(wreck_surf.get_size(), pygame.SRCALPHA)
         scorch.fill((20, 20, 20, 200))
         wreck_surf.blit(scorch, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
-        s.wrecks.append((wreck_surf, self.x, self.y, self.angle, list(self.dents)))
+        s.wrecks.append((wreck_surf, self.x, self.y, self.angle, []))
         if not self.is_cop:
             s.player.money += random.randint(20, 50)
 
@@ -544,7 +616,7 @@ class Car:
             self.y += push if dy >= 0 else -push
         impact = abs(prev_spd)
         if impact > 55:
-            self.take_damage(impact * 0.05)
+            self.take_damage(impact * 0.05, source_pos=(roadblock.x, roadblock.y))
             audio.play('crash_metal', volume=min(0.25, impact / 1040.0), pos=(self.x, self.y))
         self.spd *= -0.18 if impact > 45 else 0
 
@@ -615,8 +687,8 @@ class Car:
         impact = max(abs(self.spd), abs(other.spd), abs(rel))
         if impact > 75:
             dmg = impact * (0.022 if controlled else 0.02)
-            self.take_damage(dmg)
-            other.take_damage(dmg * (0.85 if controlled else 1.0))
+            self.take_damage(dmg, source_pos=(other.x, other.y))
+            other.take_damage(dmg * (0.85 if controlled else 1.0), source_pos=(self.x, self.y))
             cx = (self.x + other.x) * 0.5
             cy = (self.y + other.y) * 0.5
             audio.play('crash_metal', volume=min(0.25, impact / 1040.0), pos=(cx, cy))
@@ -1011,21 +1083,23 @@ class Car:
         if hit_x and hit_y:
             self.spd *= -0.2
             if abs(prev_spd) > 60:
-                self.take_damage(abs(prev_spd) * 0.09)
+                self.take_damage(abs(prev_spd) * 0.09, source_pos=(nx, ny))
         elif hit_x or hit_y:
             if hit_x:
                 perp, par = abs(dx) / mag, abs(dy) / mag
                 self.y = ny
                 target = 0 if dy < 0 else 180
+                source_pos = (self.x + (1 if dx > 0 else -1) * self.w, self.y)
             else:
                 perp, par = abs(dy) / mag, abs(dx) / mag
                 self.x = nx
                 target = 90 if dx > 0 else 270
+                source_pos = (self.x, self.y + (1 if dy > 0 else -1) * self.h)
             self.spd *= 1.0 - 0.43 * perp
             diff = ((target - self.angle + 180) % 360) - 180
             self.angle += diff * min(1.0, perp * 6 * dt)
             if abs(prev_spd) > 80 and perp > 0.25:
-                self.take_damage(abs(prev_spd) * perp * 0.045)
+                self.take_damage(abs(prev_spd) * perp * 0.045, source_pos=source_pos)
         else:
             self.x, self.y = nx, ny
         other = self.overlaps_other_car()
@@ -1233,19 +1307,11 @@ class Car:
         if self.sunk:
             self.draw_sunk(surf, cam)
             return
-        rot = pygame.transform.rotate(self.sprite, -self.angle)
+        rot = pygame.transform.rotate(self._sprite_with_damage(), -self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
         if self.is_roadblock:
             self.draw_roadblock_markers(surf, cam)
-        if self.dents:
-            rad = math.radians(self.angle)
-            cs, sn = math.cos(rad), math.sin(rad)
-            cx_ = self.x - cam[0]; cy_ = self.y - cam[1]
-            for dx_, dy_, dr_ in self.dents:
-                wx = dx_ * cs - dy_ * sn
-                wy = dx_ * sn + dy_ * cs
-                pygame.draw.circle(surf, (25, 25, 28), (int(cx_ + wx), int(cy_ + wy)), dr_)
         self.draw_turn_signal(surf, cam)
 
     def draw_turn_signal(self, surf, cam):

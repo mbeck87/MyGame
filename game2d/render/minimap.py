@@ -141,6 +141,8 @@ def draw_minimap(screen, state, font):
         pygame.draw.circle(screen, (80, 180, 255), _map_point(gx, gy, rect), 4)
     for sx, sy in state.shops:
         pygame.draw.circle(screen, (60, 220, 90), _map_point(sx, sy, rect), 4)
+    for bx, by in state.barbers:
+        pygame.draw.circle(screen, (220, 80, 180), _map_point(bx, by, rect), 4)
     for c in state.cars:
         if c.is_cop and not c.dead:
             kind = getattr(c, "kind", "cop")

@@ -4,7 +4,7 @@ import random
 
 import pygame
 
-from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W, W, H
+from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W, SIDEWALK_W, W, H
 from game2d.systems import audio
 
 
@@ -56,26 +56,57 @@ GARAGE_ITEMS = {
     3: ("Wanted -2", 300, "clear_wanted"),
 }
 
+BARBER_STYLES = (
+    ("Short hair", 20, "short"),
+    ("Buzz cut", 20, "buzz"),
+    ("Side part", 20, "parted"),
+    ("Mohawk", 20, "mohawk"),
+    ("Bald", 20, "bald"),
+    ("Bob", 20, "bob"),
+    ("Long hair", 20, "long"),
+    ("Ponytail", 20, "ponytail"),
+)
+
+BARBER_COLORS = (
+    ("Black", 5, (28, 22, 18)),
+    ("Brown", 5, (58, 38, 24)),
+    ("Auburn", 5, (96, 58, 28)),
+    ("Copper", 5, (154, 104, 48)),
+    ("Blond", 5, (214, 176, 92)),
+    ("Silver", 5, (188, 188, 176)),
+    ("Red", 5, (126, 42, 34)),
+    ("Jet black", 5, (18, 18, 20)),
+)
+
 
 def init_services(state):
     """Place service markers near reachable roads."""
     from game2d.world.geometry import rebuild_pedestrian_graph
 
     state.garages[:] = [
-        (ROAD_LO + 160, ROAD_LO + 160),
-        (ROAD_HI_X - 160, ROAD_HI_Y - 160),
+        (ROAD_LO + 230, ROAD_LO + 160),
+        (ROAD_HI_X - 230, ROAD_HI_Y - 160),
     ]
     state.shops[:] = [
         (ROAD_HI_X - 45, ROAD_LO + 45),
         (ROAD_LO + 45, ROAD_HI_Y - 45),
     ]
+    state.barbers[:] = [
+        (ROAD_LO + 220, ROAD_LO + 410),
+    ]
     clear = []
     for gx, gy in state.garages:
         clear.extend(garage_layout(gx, gy))
+    for bx, by in state.barbers:
+        clear.extend(barber_layout(bx, by))
     state.buildings[:] = [
         item for item in state.buildings
         if not any(item[0].colliderect(area.inflate(12, 12)) for area in clear)
     ]
+    for gx, gy in state.garages:
+        state.buildings.append((garage_layout(gx, gy)[0], None))
+    for bx, by in state.barbers:
+        state.buildings.append((barber_layout(bx, by)[0], None))
     state.AI_OBSTACLES[:] = (
         list(state.buildings)
         + [(r, None) for r in state.WATER_RECTS]
@@ -90,14 +121,30 @@ def _pos(state):
 
 
 def garage_layout(x, y):
-    building = pygame.Rect(int(x - 58), int(y - 38), 116, 76)
+    building = pygame.Rect(int(x - 62), int(y - 42), 124, 84)
+    road_margin = ROAD_W // 2 + SIDEWALK_W
     if x < (ROAD_LO + ROAD_HI_X) / 2:
-        driveway = pygame.Rect(ROAD_LO + 44, int(y - 16), int(building.left - (ROAD_LO + 44)), 32)
-        apron = pygame.Rect(int(x - 36), int(y + 30), 72, 28)
+        sidewalk_edge = ROAD_LO + road_margin
+        apron = pygame.Rect(building.left - 18, int(y - 28), 28, 56)
+        driveway = pygame.Rect(sidewalk_edge, int(y - 18), max(1, apron.left - sidewalk_edge), 36)
     else:
-        driveway = pygame.Rect(building.right, int(y - 16), int((ROAD_HI_X - 44) - building.right), 32)
-        apron = pygame.Rect(int(x - 36), int(y - 58), 72, 28)
+        sidewalk_edge = ROAD_HI_X - road_margin
+        apron = pygame.Rect(building.right - 10, int(y - 28), 28, 56)
+        driveway = pygame.Rect(apron.right, int(y - 18), max(1, sidewalk_edge - apron.right), 36)
     return building, driveway, apron
+
+
+def barber_layout(x, y):
+    building = pygame.Rect(int(x - 54), int(y - 42), 108, 84)
+    road_margin = ROAD_W // 2 + SIDEWALK_W
+    if x < (ROAD_LO + ROAD_HI_X) / 2:
+        sidewalk_edge = ROAD_LO + road_margin
+        walk = pygame.Rect(sidewalk_edge, int(y - 14), max(1, building.left - sidewalk_edge), 28)
+    else:
+        sidewalk_edge = ROAD_HI_X - road_margin
+        walk = pygame.Rect(building.right, int(y - 14), max(1, sidewalk_edge - building.right), 28)
+    sign = pygame.Rect(int(x - 34), int(y - 34), 68, 18)
+    return building, walk, sign
 
 
 def nearby_service(state, radius=85):
@@ -109,6 +156,10 @@ def nearby_service(state, radius=85):
     for sx, sy in state.shops:
         if math.hypot(x - sx, y - sy) <= radius:
             return "shop"
+    for bx, by in state.barbers:
+        building, walk, _ = barber_layout(bx, by)
+        if building.inflate(radius, radius).collidepoint(x, y) or walk.inflate(18, 18).collidepoint(x, y):
+            return "barber"
     return ""
 
 
@@ -187,6 +238,45 @@ def use_garage_item(state, key):
     set_message(state, f"Done: {label}")
 
 
+def _rebuild_player_appearance(player):
+    from game2d.render.sprites import make_ped_frames, make_swim_frames
+
+    shirt = getattr(player, "shirt", (40, 100, 200))
+    skin = getattr(player, "skin", (236, 190, 150))
+    hair = getattr(player, "hair_color", (30, 20, 15))
+    gender = getattr(player, "gender", "m")
+    hair_style = getattr(player, "hair_style", "short")
+    player.frames = make_ped_frames(shirt, skin=skin, hair=hair, gender=gender, hair_style=hair_style)
+    player.back_frames = make_ped_frames(shirt, skin=skin, hair=hair, gender=gender, hair_style=hair_style, back=True)
+    player.swim_frames = make_swim_frames(shirt, skin=skin, hair=hair, gender=gender, hair_style=hair_style)
+    player.sprite = player.back_frames[getattr(player, "frame_idx", 0) % len(player.back_frames)]
+
+
+def use_barber_item(state, key):
+    if state.in_car:
+        set_message(state, "Leave the car first")
+        return
+    if state.barber_step == "color":
+        if not 1 <= key <= len(BARBER_COLORS):
+            return
+        label, price, color = BARBER_COLORS[key - 1]
+        if not spend(state, price):
+            return
+        state.player.hair_color = color
+        _rebuild_player_appearance(state.player)
+        set_message(state, f"Hair color: {label}")
+        return
+    if not 1 <= key <= len(BARBER_STYLES):
+        return
+    label, price, style = BARBER_STYLES[key - 1]
+    if not spend(state, price):
+        return
+    state.player.hair_style = style
+    _rebuild_player_appearance(state.player)
+    state.barber_step = "color"
+    set_message(state, f"Haircut: {label}")
+
+
 def shop_lines():
     return [f"{key}. {label} ${price}" for key, (label, price, _) in SHOP_ITEMS.items()]
 
@@ -195,6 +285,15 @@ def garage_lines(in_car):
     lines = [f"{key}. {label} ${price}" for key, (label, price, _) in GARAGE_ITEMS.items()]
     if not in_car:
         lines.insert(0, "Drive a car inside for repair/repaint")
+    return lines
+
+
+def barber_lines(state):
+    in_car = state.in_car
+    items = BARBER_COLORS if state.barber_step == "color" else BARBER_STYLES
+    lines = [f"{idx}. {label} ${price}" for idx, (label, price, _) in enumerate(items, start=1)]
+    if in_car:
+        lines.insert(0, "Leave the car first")
     return lines
 
 

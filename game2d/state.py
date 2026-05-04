@@ -64,6 +64,7 @@ class GameState:
     # Service locations and police extras.
     garages: list = field(default_factory=list)          # [(x, y), ...]
     shops:   list = field(default_factory=list)          # [(x, y), ...]
+    barbers: list = field(default_factory=list)          # [(x, y), ...]
     roadblocks: list = field(default_factory=list)       # [Roadblock, ...]
     roadblock_wanted_level: int = 0
     roadblocks_cleared_on_drop: bool = False
@@ -71,6 +72,10 @@ class GameState:
     # ── Loop / Frame ────────────────────────────────────────────────
     cam: list = field(default_factory=lambda: [0, 0])
     traffic_time: float = 0.0
+    duck_easter_timer: float = 0.0
+    duck_easter_done: bool = False
+    duck_easter_duck: Any = None                         # [x, y, target_x, target_y, ttl]
+    duck_easter_last_pos: Any = None
     running: bool = True
     paused: bool = False
     message: str = ""
@@ -85,6 +90,7 @@ class GameState:
     # ── Menü / Settings ─────────────────────────────────────────────
     menu: Optional[str] = None                           # None | 'pause' | 'options'
     settings: dict = field(default_factory=dict)
+    barber_step: str = "style"
 
 
 # ── Singleton-Accessor ──────────────────────────────────────────────

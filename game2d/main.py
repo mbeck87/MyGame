@@ -16,11 +16,11 @@ from game2d.persistence import name_input_screen
 from game2d.render.hud import draw_star
 from game2d.render.menus import draw_hint, draw_overlay_menu, draw_service_markers
 from game2d.render.minimap import draw_minimap
-from game2d.render.sprites import make_ped_frames, get_pickup_icon
+from game2d.render.sprites import make_ped_frames, make_swim_frames, get_pickup_icon
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
-from game2d.world.geometry import in_water
+from game2d.world.geometry import in_water, point_in_polygon
 from game2d.world.spawning import (
     safe_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
@@ -38,13 +38,83 @@ from game2d.systems.effects import (
 from game2d.systems.services import (
     add_money, add_wanted_heat, cop_weapon_profile, sync_wanted_heat_after_drop,
     buy_shop_item, clear_roadblocks,
-    escalate_police, init_services, nearby_service, use_garage_item,
-    SHOP_ITEMS, GARAGE_ITEMS,
+    escalate_police, init_services, nearby_service, use_barber_item, use_garage_item,
+    SHOP_ITEMS, GARAGE_ITEMS, BARBER_COLORS, BARBER_STYLES,
 )
 from game2d.systems.weapons import fire, aim_to_mouse
 from game2d.systems import audio
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
+
+
+def _nearest_point_on_segment(px, py, ax, ay, bx, by):
+    vx = bx - ax
+    vy = by - ay
+    seg_len_sq = vx * vx + vy * vy
+    if seg_len_sq <= 0:
+        return ax, ay, (px - ax) ** 2 + (py - ay) ** 2
+    t = max(0.0, min(1.0, ((px - ax) * vx + (py - ay) * vy) / seg_len_sq))
+    x = ax + vx * t
+    y = ay + vy * t
+    return x, y, (px - x) ** 2 + (py - y) ** 2
+
+
+def _nearest_pond_edge_point(state, x, y):
+    best = None
+    best_dist_sq = None
+    for pond in state.park_ponds:
+        for p0, p1 in zip(pond, pond[1:] + pond[:1]):
+            px, py, dist_sq = _nearest_point_on_segment(x, y, p0[0], p0[1], p1[0], p1[1])
+            if best_dist_sq is None or dist_sq < best_dist_sq:
+                best = (px, py)
+                best_dist_sq = dist_sq
+    return best, math.sqrt(best_dist_sq) if best_dist_sq is not None else 999999
+
+
+def _player_at_pond_shore(state):
+    if state.in_car or not state.park_ponds:
+        return False, None
+    x, y = state.player.x, state.player.y
+    if any(point_in_polygon(x, y, pond) for pond in state.park_ponds):
+        return False, None
+    edge, dist = _nearest_pond_edge_point(state, x, y)
+    return dist <= 42, edge
+
+
+def _update_duck_easter(state, dt, moved):
+    if state.duck_easter_duck:
+        duck = state.duck_easter_duck
+        dx = duck[2] - duck[0]
+        dy = duck[3] - duck[1]
+        dist = math.hypot(dx, dy)
+        if dist > 1:
+            step = min(dist, 48 * dt)
+            duck[0] += dx / dist * step
+            duck[1] += dy / dist * step
+        duck[4] -= dt
+        if duck[4] <= 0:
+            state.duck_easter_duck = None
+
+    if state.duck_easter_done:
+        return
+    at_shore, edge = _player_at_pond_shore(state)
+    if at_shore and moved < 1.0:
+        state.duck_easter_timer += dt
+    else:
+        state.duck_easter_timer = 0.0
+    if state.duck_easter_timer < 5.0 or edge is None:
+        return
+
+    px, py = state.player.x, state.player.y
+    vx = px - edge[0]
+    vy = py - edge[1]
+    dist = math.hypot(vx, vy) or 1
+    target_x = px - vx / dist * 22
+    target_y = py - vy / dist * 22
+    state.duck_easter_duck = [edge[0], edge[1], target_x, target_y, 8.0]
+    state.duck_easter_done = True
+    state.message = "Die Enten wissen Bescheid"
+    state.message_timer = 3.5
 
 
 def main():
@@ -89,8 +159,14 @@ def main():
     # Spieler
     player_x, player_y = safe_spawn()
     player = Ped(player_x, player_y)
-    player.frames = make_ped_frames((40, 100, 200), hair=(30,20,15))
-    player.sprite = player.frames[0]
+    player.shirt = (40, 100, 200)
+    player.gender = "m"
+    player.hair_style = "short"
+    player.hair_color = (30, 20, 15)
+    player.frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.back_frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style, back=True)
+    player.swim_frames = make_swim_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.sprite = player.back_frames[0]
     player.hp = 100
     player.money = 0
     player.total_money_earned = 0
@@ -150,16 +226,26 @@ def main():
                     state.running = False
                 continue
 
-            if state.menu in ("shop", "garage"):
-                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g):
+            if state.menu in ("shop", "garage", "barber"):
+                if e.type == pygame.KEYDOWN and state.menu == "barber" and e.key == pygame.K_h:
+                    state.barber_step = "style"
+                    continue
+                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g, pygame.K_h):
                     state.menu = None
                     continue
-                max_key = max(SHOP_ITEMS if state.menu == "shop" else GARAGE_ITEMS)
+                if state.menu == "shop":
+                    max_key = max(SHOP_ITEMS)
+                elif state.menu == "garage":
+                    max_key = max(GARAGE_ITEMS)
+                else:
+                    max_key = len(BARBER_COLORS if state.barber_step == "color" else BARBER_STYLES)
                 if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key < pygame.K_1 + max_key:
                     if state.menu == "shop":
                         buy_shop_item(state, e.key - pygame.K_0)
-                    else:
+                    elif state.menu == "garage":
                         use_garage_item(state, e.key - pygame.K_0)
+                    else:
+                        use_barber_item(state, e.key - pygame.K_0)
                     continue
                 continue
 
@@ -182,6 +268,10 @@ def main():
                     continue
                 if e.key == pygame.K_g and nearby_service(state) == "garage" and not state.game_over:
                     state.menu = "garage"
+                    continue
+                if e.key == pygame.K_h and nearby_service(state) == "barber" and not state.game_over:
+                    state.menu = "barber"
+                    state.barber_step = "style"
                     continue
                 if pygame.K_1 <= e.key < pygame.K_1 + len(WPN_NAMES):
                     w = e.key - pygame.K_1
@@ -272,6 +362,11 @@ def main():
                                                 math.cos(a)*sp_, math.sin(a)*sp_,
                                                 random.uniform(0.3, 0.7), random.randint(2,4)])
                     trigger_game_over()
+
+            prev_duck_pos = state.duck_easter_last_pos
+            duck_moved = 999.0 if prev_duck_pos is None else math.hypot(player.x - prev_duck_pos[0], player.y - prev_duck_pos[1])
+            _update_duck_easter(state, dt, duck_moved)
+            state.duck_easter_last_pos = (player.x, player.y)
 
             tx = (state.in_car.x if state.in_car else player.x) - W//2
             ty = (state.in_car.y if state.in_car else player.y) - H//2
@@ -385,7 +480,7 @@ def main():
                     state.bullets.remove(b); continue
                 if b[5]:
                     if state.in_car and br.colliderect(state.in_car.rect()):
-                        state.in_car.take_damage(b[6] * 0.6)
+                        state.in_car.take_damage(b[6] * 0.6, world_pos=(b[0], b[1]))
                         audio.play('hit_metal', volume=0.6, pos=(b[0], b[1]))
                         state.bullets.remove(b)
                         continue
@@ -404,7 +499,7 @@ def main():
                     for c in state.cars:
                         if c is state.in_car or c.dead: continue
                         if br.colliderect(c.rect()):
-                            c.take_damage(b[6] * 0.5)
+                            c.take_damage(b[6] * 0.5, world_pos=(b[0], b[1]))
                             audio.play('hit_metal', volume=0.55, pos=(b[0], b[1]))
                             state.bullets.remove(b); hit_any = True; break
                     if hit_any: continue
@@ -545,7 +640,11 @@ def main():
                 r = rot.get_rect(center=(wx - icam[0], wy - icam[1]))
                 screen.blit(rot, r)
                 rad = math.radians(wa); cs_, sn_ = math.cos(rad), math.sin(rad)
-                for dx_, dy_, dr_ in wd:
+                for dent in wd:
+                    if len(dent) == 3:
+                        dx_, dy_, dr_ = dent
+                    else:
+                        dx_, dy_, dr_ = dent[0], dent[1], max(3, int(dent[2] * 0.7))
                     wxr = dx_ * cs_ - dy_ * sn_
                     wyr = dx_ * sn_ + dy_ * cs_
                     pygame.draw.circle(screen, (10,10,12),
@@ -644,7 +743,7 @@ def main():
             draw_hud_text(label, (10, wy), col)
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-6 Waffe",
+        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | H Friseur | P Pause | 1-6 Waffe",
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
         if state.in_car:

@@ -49,7 +49,7 @@ def _lightsaber_swing():
         dx, dy = car.x - p.x, car.y - p.y
         dist = math.hypot(dx, dy)
         if dist <= swing_range + 12 and _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
-            car.take_damage(WPN_DMG[LIGHTSABER_IDX])
+            car.take_damage(WPN_DMG[LIGHTSABER_IDX], source_pos=(p.x, p.y))
             audio.play('hit_metal', volume=0.7, pos=(car.x, car.y))
             add_wanted_heat(s, "assault")
 

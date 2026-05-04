@@ -267,7 +267,50 @@ def make_cop_car_sprite(kind="cop", w=None, h=None):
     return s
 
 
-def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
+def _draw_hair(surf, cx, head_y, hair, hair_style="short", swim=False):
+    if hair_style == "bald":
+        pygame.draw.arc(surf, _shade(hair, 45), (cx - 3, head_y - 3, 6, 5), math.radians(205), math.radians(335), 1)
+        return
+    if swim:
+        if hair_style in ("bob", "long", "ponytail"):
+            pygame.draw.ellipse(surf, _shade(hair, -12), (cx - 6, head_y - 5, 12, 8))
+            if hair_style == "ponytail":
+                pygame.draw.ellipse(surf, hair, (cx + 4, head_y - 2, 5, 5))
+        elif hair_style == "mohawk":
+            pygame.draw.polygon(surf, hair, [(cx, head_y - 9), (cx + 2, head_y - 2), (cx - 2, head_y - 2)])
+        else:
+            pygame.draw.circle(surf, hair, (cx, head_y), 4)
+        return
+    if hair_style == "bob":
+        pygame.draw.ellipse(surf, _shade(hair, -14), (cx - 6, head_y - 4, 12, 10))
+        pygame.draw.rect(surf, hair, (cx - 6, head_y - 1, 12, 6))
+        pygame.draw.line(surf, _shade(hair, 28), (cx - 4, head_y - 3), (cx + 4, head_y - 3), 1)
+    elif hair_style == "long":
+        pygame.draw.ellipse(surf, _shade(hair, -14), (cx - 6, head_y - 5, 12, 11))
+        pygame.draw.rect(surf, hair, (cx - 6, head_y - 1, 3, 10))
+        pygame.draw.rect(surf, hair, (cx + 3, head_y - 1, 3, 10))
+        pygame.draw.rect(surf, _shade(hair, -25), (cx - 5, head_y + 6, 10, 3))
+    elif hair_style == "ponytail":
+        pygame.draw.circle(surf, hair, (cx, head_y), 5)
+        pygame.draw.ellipse(surf, _shade(hair, -8), (cx + 3, head_y - 2, 7, 8))
+        pygame.draw.circle(surf, _shade(hair, 35), (cx + 4, head_y - 1), 1)
+    elif hair_style == "mohawk":
+        pygame.draw.circle(surf, _shade(hair, -45), (cx, head_y), 3)
+        pygame.draw.polygon(surf, hair, [(cx, head_y - 10), (cx + 3, head_y - 2), (cx - 3, head_y - 2)])
+        pygame.draw.line(surf, _shade(hair, 45), (cx, head_y - 9), (cx, head_y - 3), 1)
+    elif hair_style == "buzz":
+        pygame.draw.circle(surf, _shade(hair, -35), (cx, head_y), 4)
+        pygame.draw.circle(surf, _shade(hair, 20), (cx - 1, head_y - 2), 1)
+    elif hair_style == "parted":
+        pygame.draw.ellipse(surf, hair, (cx - 5, head_y - 4, 10, 8))
+        pygame.draw.polygon(surf, _shade(hair, -18), [(cx - 1, head_y - 4), (cx + 5, head_y - 2), (cx + 4, head_y + 1), (cx, head_y)])
+        pygame.draw.line(surf, _shade(hair, 55), (cx - 1, head_y - 4), (cx - 4, head_y), 1)
+    else:
+        pygame.draw.ellipse(surf, hair, (cx - 5, head_y - 4, 10, 8))
+        pygame.draw.rect(surf, _shade(hair, -12), (cx - 4, head_y - 4, 8, 2))
+
+
+def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop", gender="m", hair_style="short", back=False):
     s = pygame.Surface((20, 24), pygame.SRCALPHA)
     cx, cy = 10, 12
     pants = (40, 40, 80)
@@ -286,9 +329,15 @@ def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
     pygame.draw.rect(s, pants, (cx + 1, leg_r_y, 2, 5))
     pygame.draw.rect(s, boot,  (cx - 3, leg_l_y + 5, 2, 2))
     pygame.draw.rect(s, boot,  (cx + 1, leg_r_y + 5, 2, 2))
-    pygame.draw.ellipse(s, shirt_col, (cx - 5, cy - 3, 10, 9))
+    torso = (cx - 4, cy - 3, 8, 9) if gender == "w" and not is_cop else (cx - 5, cy - 3, 10, 9)
+    pygame.draw.ellipse(s, shirt_col, torso)
     hl = tuple(min(255, c + 30) for c in shirt_col)
-    pygame.draw.ellipse(s, hl, (cx - 4, cy - 2, 8, 3))
+    if back:
+        pygame.draw.ellipse(s, _shade(shirt_col, -25), (torso[0] + 1, cy + 2, torso[2] - 2, 3))
+    else:
+        pygame.draw.ellipse(s, hl, (torso[0] + 1, cy - 2, torso[2] - 2, 3))
+    if gender == "w" and not is_cop:
+        pygame.draw.polygon(s, _shade(shirt_col, -24), [(cx - 5, cy + 4), (cx + 5, cy + 4), (cx + 3, cy + 8), (cx - 3, cy + 8)])
     arm_l_y = cy + phase * 2
     arm_r_y = cy - phase * 2
     pygame.draw.rect(s, shirt_col, (cx - 7, arm_l_y, 2, 4))
@@ -296,8 +345,11 @@ def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
     pygame.draw.rect(s, skin,      (cx - 7, arm_l_y + 4, 2, 2))
     pygame.draw.rect(s, skin,      (cx + 5, arm_r_y + 4, 2, 2))
     head_y = cy - 5
-    pygame.draw.circle(s, hair, (cx, head_y), 4)
-    pygame.draw.circle(s, skin, (cx, head_y - 1), 3)
+    _draw_hair(s, cx, head_y, hair, hair_style)
+    if back:
+        pygame.draw.circle(s, hair if hair_style != "bald" else _shade(skin, -18), (cx, head_y - 1), 3)
+    else:
+        pygame.draw.circle(s, skin, (cx, head_y - 1), 3)
     if is_cop and cop_kind == "fbi":
         pygame.draw.circle(s, (18, 18, 20), (cx, head_y), 4)
         pygame.draw.rect(s, (235, 235, 225), (cx - 2, cy - 3, 4, 7))
@@ -321,16 +373,16 @@ def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
     return s
 
 
-def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop"):
+def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop", gender="m", hair_style="short", back=False):
     return [
-        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
-        _draw_ped_frame(shirt_col, skin, hair, 1, is_cop, cop_kind),
-        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
-        _draw_ped_frame(shirt_col, skin, hair, -1, is_cop, cop_kind),
+        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style, back),
+        _draw_ped_frame(shirt_col, skin, hair, 1, is_cop, cop_kind, gender, hair_style, back),
+        _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style, back),
+        _draw_ped_frame(shirt_col, skin, hair, -1, is_cop, cop_kind, gender, hair_style, back),
     ]
 
 
-def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop"):
+def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop", gender="m", hair_style="short"):
     s = pygame.Surface((20, 24), pygame.SRCALPHA)
     cx, water_y = 10, 14
     wave_col = (72, 152, 208, 170)
@@ -358,7 +410,7 @@ def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop")
         badge_col = (90, 130, 150) if cop_kind == "swat" else (230, 200, 60)
         pygame.draw.rect(s, badge_col, (cx - 1, torso_y - 4, 2, 2))
     else:
-        pygame.draw.circle(s, hair, (cx, torso_y - 4), 4)
+        _draw_hair(s, cx, torso_y - 4, hair, hair_style, swim=True)
 
     for wx in range(3, 18, 4):
         pygame.draw.arc(s, wave_col, (wx - 3, water_y - 1, 7, 5), 3.2, 6.1, 2)
@@ -366,12 +418,12 @@ def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop")
     return s
 
 
-def make_swim_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop"):
+def make_swim_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop", gender="m", hair_style="short"):
     return [
-        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
-        _draw_swim_frame(shirt_col, skin, hair, 1, is_cop, cop_kind),
-        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind),
-        _draw_swim_frame(shirt_col, skin, hair, -1, is_cop, cop_kind),
+        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style),
+        _draw_swim_frame(shirt_col, skin, hair, 1, is_cop, cop_kind, gender, hair_style),
+        _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style),
+        _draw_swim_frame(shirt_col, skin, hair, -1, is_cop, cop_kind, gender, hair_style),
     ]
 
 

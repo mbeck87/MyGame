@@ -329,6 +329,33 @@ def _draw_ducks(surf, cam):
         )
         surf.blit(duck, duck.get_rect(center=(int(sx), int(sy))))
 
+    special = s.duck_easter_duck
+    if special:
+        x, y, target_x, target_y, ttl = special
+        sx = x - cam[0]
+        sy = y - cam[1]
+        if -50 < sx < W + 50 and -50 < sy < H + 50:
+            facing = 1 if target_x >= x else -1
+            duck = make_duck_sprite(
+                "hen",
+                swim_phase=int(math.sin(s.traffic_time * 5.0) * 1.5),
+                facing=facing,
+                paddle_phase=s.traffic_time * 8.0,
+            )
+            surf.blit(duck, duck.get_rect(center=(int(sx), int(sy))))
+            crown_y = int(sy - 22)
+            crown = [
+                (int(sx - 8), crown_y + 8),
+                (int(sx - 5), crown_y),
+                (int(sx), crown_y + 6),
+                (int(sx + 5), crown_y),
+                (int(sx + 8), crown_y + 8),
+            ]
+            pygame.draw.polygon(surf, (245, 205, 52), crown)
+            pygame.draw.line(surf, (136, 92, 22), crown[0], crown[-1], 2)
+            for px, py in crown[1:4]:
+                pygame.draw.circle(surf, (255, 236, 112), (px, py), 2)
+
 
 def draw_park_street_closures(surf, cam):
     s = current()

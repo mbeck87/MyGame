@@ -39,6 +39,30 @@ COP_KIND_PROFILES = {
 }
 
 
+HAIR_COLORS = (
+    (28, 22, 18),
+    (58, 38, 24),
+    (96, 58, 28),
+    (154, 104, 48),
+    (214, 176, 92),
+    (188, 188, 176),
+    (126, 42, 34),
+    (18, 18, 20),
+)
+
+SKIN_TONES = (
+    (236, 190, 150),
+    (220, 165, 122),
+    (186, 124, 82),
+    (134, 82, 54),
+    (96, 58, 40),
+    (242, 206, 172),
+)
+
+MALE_HAIR_STYLES = ("short", "buzz", "parted", "mohawk", "bald")
+FEMALE_HAIR_STYLES = ("bob", "long", "ponytail", "short", "parted")
+
+
 def normalize_cop_kind(kind):
     aliases = {
         "police": "cop",
@@ -56,6 +80,10 @@ class Ped:
         self.x, self.y = x, y
         self.is_cop = is_cop
         self.cop_kind = normalize_cop_kind(cop_kind) if is_cop else None
+        self.gender = "m"
+        self.hair_style = "short"
+        self.hair_color = (60, 40, 30)
+        self.skin = SKIN_TONES[0]
         if is_cop:
             profile = COP_KIND_PROFILES[self.cop_kind]
             shirt = profile["shirt"]
@@ -63,8 +91,25 @@ class Ped:
             self.swim_frames = make_swim_frames(shirt, is_cop=True, cop_kind=self.cop_kind)
         else:
             shirt = (random.randint(80,220), random.randint(60,200), random.randint(60,200))
-            self.frames = make_ped_frames(shirt)
-            self.swim_frames = make_swim_frames(shirt)
+            self.gender = random.choice(("m", "w"))
+            self.hair_color = random.choice(HAIR_COLORS)
+            self.skin = random.choice(SKIN_TONES)
+            styles = FEMALE_HAIR_STYLES if self.gender == "w" else MALE_HAIR_STYLES
+            self.hair_style = random.choice(styles)
+            self.frames = make_ped_frames(
+                shirt,
+                skin=self.skin,
+                hair=self.hair_color,
+                gender=self.gender,
+                hair_style=self.hair_style,
+            )
+            self.swim_frames = make_swim_frames(
+                shirt,
+                skin=self.skin,
+                hair=self.hair_color,
+                gender=self.gender,
+                hair_style=self.hair_style,
+            )
         self.sprite = self.frames[0]
         self.anim_t = 0.0
         self.frame_idx = 0
@@ -92,7 +137,8 @@ class Ped:
         else:
             self.anim_t += dt * (1.8 if swim else 0.0)
             self.frame_idx = int(self.anim_t) % 4 if swim else 0
-        self.sprite = (self.swim_frames if swim else self.frames)[self.frame_idx]
+        frames = self.swim_frames if swim else getattr(self, "back_frames", self.frames)
+        self.sprite = frames[self.frame_idx]
 
     def rect(self):
         return pygame.Rect(self.x-10, self.y-10, 20, 20)
