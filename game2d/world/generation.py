@@ -9,7 +9,7 @@ from game2d.config import (
     ROAD_W, SIDEWALK_W,
 )
 from game2d.render.sprites import make_building
-from game2d.world.geometry import amusement_path_points, rect_overlaps_street_space, rebuild_pedestrian_graph
+from game2d.world.geometry import RoadSegment, amusement_path_points, rect_overlaps_street_space, rebuild_pedestrian_graph
 
 
 COMMERCIAL_KINDS = {"bar", "restaurant", "disco", "supermarket", "fastfood"}
@@ -340,8 +340,62 @@ def _build_amusement_stands(park):
     return stands
 
 
+def _road_axis_extents(axis, coord):
+    road_half = ROAD_W // 2
+    if axis == "h":
+        if coord == ROAD_LO or coord == ROAD_HI_Y:
+            return ROAD_LO - road_half, ROAD_HI_X + road_half
+        return ROAD_LO + road_half, ROAD_HI_X - road_half
+    if coord == ROAD_LO or coord == ROAD_HI_X:
+        return ROAD_LO - road_half, ROAD_HI_Y + road_half
+    return ROAD_LO + road_half, ROAD_HI_Y - road_half
+
+
+def _subtract_ranges(start, end, cuts, min_len=ROAD_W):
+    ranges = [(start, end)]
+    for cut_start, cut_end in sorted(cuts):
+        next_ranges = []
+        for lo, hi in ranges:
+            c0 = max(lo, cut_start)
+            c1 = min(hi, cut_end)
+            if c1 <= lo or c0 >= hi:
+                next_ranges.append((lo, hi))
+                continue
+            if c0 - lo >= min_len:
+                next_ranges.append((lo, c0))
+            if hi - c1 >= min_len:
+                next_ranges.append((c1, hi))
+        ranges = next_ranges
+    return ranges
+
+
+def _build_road_segments(state):
+    road_half = ROAD_W // 2
+    blockers = list(state.parks) + list(state.amusement_parks)
+    segments = []
+    for y in state.roads_h:
+        start, end = _road_axis_extents("h", y)
+        cuts = [
+            (park.left, park.right)
+            for park in blockers
+            if y + road_half > park.top and y - road_half < park.bottom
+        ]
+        for x0, x1 in _subtract_ranges(start, end, cuts):
+            segments.append(RoadSegment("h", (int(x0), int(y)), (int(x1), int(y))))
+    for x in state.roads_v:
+        start, end = _road_axis_extents("v", x)
+        cuts = [
+            (park.top, park.bottom)
+            for park in blockers
+            if x + road_half > park.left and x - road_half < park.right
+        ]
+        for y0, y1 in _subtract_ranges(start, end, cuts):
+            segments.append(RoadSegment("v", (int(x), int(y0)), (int(x), int(y1))))
+    return segments
+
+
 def build_world(state):
-    """Initialisiert state.WATER_RECTS, roads_h/v, buildings, AI_OBSTACLES."""
+    """Initialisiert Wasser, StraÃŸenachsen/-segmente, GebÃ¤ude und AI_OBSTACLES."""
     state.WATER_RECTS[:] = [
         pygame.Rect(0, 0, WORLD_W, WATER_W),
         pygame.Rect(0, WORLD_H - WATER_W, WORLD_W, WATER_W),
@@ -367,6 +421,7 @@ def build_world(state):
     state.buildings.clear()
     state.parks[:] = [_build_park_rect()]
     state.amusement_parks[:] = [_build_amusement_park_rect()]
+    state.road_segments[:] = _build_road_segments(state)
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
     state.park_trees[:] = []
     state.park_ducks[:] = []

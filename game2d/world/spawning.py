@@ -6,30 +6,31 @@ import pygame
 from game2d.config import (
     W, H,
     INNER_LO, INNER_HI_X, INNER_HI_Y,
-    ROAD_LO, ROAD_HI_X, ROAD_HI_Y,
     ROAD_W, SIDEWALK_W, WORLD_W, WORLD_H,
 )
 from game2d.state import current
-from game2d.entities.car import car_rect_at
+from game2d.entities.car import car_collision_size, car_rect_at
 from game2d.world.geometry import (
     in_city, rect_hits_city_edge, lane_center_for_car, random_pedestrian_destination,
-    rect_in_park_pond,
+    rect_in_park_pond, rect_on_road,
 )
 
 
 def safe_spawn():
     s = current()
     for _ in range(300):
-        if random.random() < 0.5:
-            road_y = random.choice(s.roads_h)
+        segments = [seg for seg in s.road_segments if seg.length > 90]
+        if not segments:
+            break
+        seg = random.choice(segments)
+        if seg.axis == "h":
             side = -1 if random.random() < 0.5 else 1
-            x = random.randint(ROAD_LO + 30, ROAD_HI_X - 30)
-            y = int(road_y + side * (ROAD_W//2 + SIDEWALK_W//2))
+            x = random.randint(int(seg.lo + 30), int(seg.hi - 30))
+            y = int(seg.fixed + side * (ROAD_W//2 + SIDEWALK_W//2))
         else:
-            road_x = random.choice(s.roads_v)
             side = -1 if random.random() < 0.5 else 1
-            x = int(road_x + side * (ROAD_W//2 + SIDEWALK_W//2))
-            y = random.randint(ROAD_LO + 30, ROAD_HI_Y - 30)
+            x = int(seg.fixed + side * (ROAD_W//2 + SIDEWALK_W//2))
+            y = random.randint(int(seg.lo + 30), int(seg.hi - 30))
         r = pygame.Rect(x-12, y-12, 24, 24)
         if (
             in_city(x, y, 20)
@@ -82,6 +83,8 @@ def car_spawn_clear(x, y, margin=22, angle=0, kind="sedan", is_cop=False):
     r = car_rect_at(x, y, angle, kind, is_cop=is_cop)
     if rect_hits_city_edge(r):
         return False
+    if not rect_on_road(r):
+        return False
     probe = r.inflate(margin * 2, margin * 2)
     if any(probe.colliderect(b[0]) for b in s.buildings):
         return False
@@ -97,14 +100,20 @@ def car_spawn_clear(x, y, margin=22, angle=0, kind="sedan", is_cop=False):
 def road_spawn(kind="sedan", is_cop=False):
     s = current()
     for _ in range(200):
-        if random.random() < 0.5:
+        _coll_w, coll_h = car_collision_size(kind, is_cop=is_cop)
+        buffer = max(70, coll_h // 2 + 24)
+        segments = [seg for seg in s.road_segments if seg.length > buffer * 2]
+        if not segments:
+            break
+        seg = random.choice(segments)
+        if seg.axis == "h":
             angle = random.choice([90, 270])
-            x = random.randint(ROAD_LO + 50, ROAD_HI_X - 50)
-            y = random.choice(s.roads_h) + (28 if angle == 90 else -28)
+            x = random.randint(int(seg.lo + buffer), int(seg.hi - buffer))
+            y = seg.fixed + (28 if angle == 90 else -28)
         else:
             angle = random.choice([0, 180])
-            x = random.choice(s.roads_v) + (28 if angle == 0 else -28)
-            y = random.randint(ROAD_LO + 50, ROAD_HI_Y - 50)
+            x = seg.fixed + (28 if angle == 0 else -28)
+            y = random.randint(int(seg.lo + buffer), int(seg.hi - buffer))
         if car_spawn_clear(x, y, angle=angle, kind=kind, is_cop=is_cop):
             return x, y, angle
     for _ in range(200):
@@ -129,20 +138,23 @@ def cop_car_spawn_near(tx, ty, cam=None, kind="cop"):
     min_dist = max(W, H) * 0.65
     max_dist = max(W, H) * 1.15
     for _ in range(260):
-        ang = random.uniform(0, math.tau)
-        dist = random.uniform(min_dist, max_dist)
-        sx = tx + math.cos(ang) * dist
-        sy = ty + math.sin(ang) * dist
-        sx = max(ROAD_LO + 50, min(ROAD_HI_X - 50, sx))
-        sy = max(ROAD_LO + 50, min(ROAD_HI_Y - 50, sy))
-        if random.random() < 0.5:
+        _coll_w, coll_h = car_collision_size(kind, is_cop=True)
+        buffer = max(70, coll_h // 2 + 24)
+        segments = [seg for seg in s.road_segments if seg.length > buffer * 2]
+        if not segments:
+            break
+        seg = random.choice(segments)
+        if seg.axis == "h":
             angle = random.choice([90, 270])
-            x = int(sx)
-            y = random.choice(s.roads_h) + (28 if angle == 90 else -28)
+            x = random.randint(int(seg.lo + buffer), int(seg.hi - buffer))
+            y = seg.fixed + (28 if angle == 90 else -28)
         else:
             angle = random.choice([0, 180])
-            x = random.choice(s.roads_v) + (28 if angle == 0 else -28)
-            y = int(sy)
+            x = seg.fixed + (28 if angle == 0 else -28)
+            y = random.randint(int(seg.lo + buffer), int(seg.hi - buffer))
+        dist = math.hypot(x - tx, y - ty)
+        if dist < min_dist or dist > max_dist:
+            continue
         if _outside_view(x, y, cam) and car_spawn_clear(x, y, margin=30, angle=angle, kind=kind, is_cop=True):
             return x, y, angle
     if cam is not None:

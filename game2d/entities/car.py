@@ -102,6 +102,38 @@ CAR_PROFILES = {
         "look_distance": 72,
         "look_width": 36,
     },
+    "semi": {
+        "label": "Semi",
+        "sprite_size": (58, 150),
+        "collision_size": (44, 132),
+        "max_spd": 235,
+        "max_hp": 1150,
+        "accel": 145,
+        "brake": 210,
+        "turn": 58,
+        "drift_turn": 72,
+        "drag": 1.05,
+        "drift_drag": 1.0,
+        "ai_spd": (55, 105),
+        "look_distance": 170,
+        "look_width": 66,
+    },
+    "bus": {
+        "label": "Bus",
+        "sprite_size": (56, 136),
+        "collision_size": (42, 116),
+        "max_spd": 255,
+        "max_hp": 980,
+        "accel": 165,
+        "brake": 220,
+        "turn": 70,
+        "drift_turn": 88,
+        "drag": 1.12,
+        "drift_drag": 0.94,
+        "ai_spd": (60, 115),
+        "look_distance": 154,
+        "look_width": 64,
+    },
 }
 
 LAW_CAR_PROFILES = {
@@ -185,6 +217,8 @@ CAR_KIND_WEIGHTS = (
     ("sport", 16),
     ("lamborghini", 14),
     ("limo", 8),
+    ("bus", 7),
+    ("semi", 5),
 )
 
 
@@ -232,6 +266,8 @@ def random_car_color(kind=None):
         "sport": [(210, 40, 35), (245, 190, 40), (40, 125, 225), (35, 200, 110), (235, 235, 235)],
         "lamborghini": [(245, 190, 35), (225, 85, 35), (35, 210, 110), (35, 120, 230), (230, 230, 225)],
         "mini": [(220, 70, 55), (55, 145, 215), (245, 210, 75), (80, 190, 110), (230, 230, 230)],
+        "semi": [(180, 38, 34), (235, 235, 225), (38, 98, 168), (54, 132, 82), (215, 150, 58)],
+        "bus": [(238, 190, 44), (220, 72, 58), (52, 134, 196), (70, 166, 94)],
     }
     if kind in palettes and random.random() < 0.85:
         return random.choice(palettes[kind])
@@ -620,6 +656,50 @@ class Car:
             audio.play('crash_metal', volume=min(0.25, impact / 1040.0), pos=(self.x, self.y))
         self.spd *= -0.18 if impact > 45 else 0
 
+    def resolve_building_collisions(self, prev_spd):
+        s = current()
+        impact = abs(prev_spd)
+        resolved = False
+
+        def overlap_area(rect, building_rect):
+            overlap_x = min(rect.right, building_rect.right) - max(rect.left, building_rect.left)
+            overlap_y = min(rect.bottom, building_rect.bottom) - max(rect.top, building_rect.top)
+            if overlap_x <= 0 or overlap_y <= 0:
+                return 0
+            return overlap_x * overlap_y
+
+        def total_overlap(rect):
+            return sum(overlap_area(rect, building_rect) for building_rect, _surf in s.buildings)
+
+        for _ in range(8):
+            own = self.rect()
+            colliders = [building_rect for building_rect, _surf in s.buildings if own.colliderect(building_rect)]
+            if not colliders:
+                break
+            candidates = []
+            for building_rect in colliders:
+                candidates.extend((
+                    (self.x - (own.right - building_rect.left + 1), self.y),
+                    (self.x + (building_rect.right - own.left + 1), self.y),
+                    (self.x, self.y - (own.bottom - building_rect.top + 1)),
+                    (self.x, self.y + (building_rect.bottom - own.top + 1)),
+                ))
+            best_x, best_y = min(
+                candidates,
+                key=lambda pos: (
+                    total_overlap(self.rect_at(pos[0], pos[1])),
+                    (pos[0] - self.x) ** 2 + (pos[1] - self.y) ** 2,
+                ),
+            )
+            self.x, self.y = best_x, best_y
+            resolved = True
+        if not resolved:
+            return
+        if impact > 65:
+            self.take_damage(impact * 0.055, source_pos=(self.x, self.y))
+            audio.play('crash_metal', volume=min(0.28, impact / 980.0), pos=(self.x, self.y))
+        self.spd *= -0.16 if impact > 45 else 0.0
+
     def resolve_car_collision(self, other, controlled):
         s = current()
         dx = self.x - other.x
@@ -638,33 +718,32 @@ class Car:
         overlap_y = min(own_rect.bottom, other_rect.bottom) - max(own_rect.top, other_rect.top)
         if overlap_x <= 0 or overlap_y <= 0:
             return
-        push = max(1.5, min(overlap_x, overlap_y, 10.0))
         anchored_self = self.is_roadblock and not controlled
         anchored_other = other.is_roadblock and other is not s.in_car
         if anchored_self and anchored_other:
             anchored_self = False
-        if anchored_self:
-            self.x += nx * push * 0.08
-            self.y += ny * push * 0.08
-        elif anchored_other:
-            other.x -= nx * push * 0.08
-            other.y -= ny * push * 0.08
-        elif controlled:
-            self.x += nx * push * 0.2
-            self.y += ny * push * 0.2
-            other.x -= nx * push * 0.55
-            other.y -= ny * push * 0.55
+        if overlap_x < overlap_y:
+            side = 1 if self.x >= other.x else -1
+            move_x, move_y = side * (overlap_x + 2), 0
         else:
-            if overlap_x < overlap_y:
-                side = 1 if self.x >= other.x else -1
-                sep = overlap_x + 2
-                self.x += side * sep * 0.5
-                other.x -= side * sep * 0.5
-            else:
-                side = 1 if self.y >= other.y else -1
-                sep = overlap_y + 2
-                self.y += side * sep * 0.5
-                other.y -= side * sep * 0.5
+            side = 1 if self.y >= other.y else -1
+            move_x, move_y = 0, side * (overlap_y + 2)
+        if anchored_self:
+            other.x -= move_x
+            other.y -= move_y
+        elif anchored_other:
+            self.x += move_x
+            self.y += move_y
+        elif controlled:
+            self.x += move_x * 0.45
+            self.y += move_y * 0.45
+            other.x -= move_x * 0.65
+            other.y -= move_y * 0.65
+        else:
+            self.x += move_x * 0.55
+            self.y += move_y * 0.55
+            other.x -= move_x * 0.55
+            other.y -= move_y * 0.55
             self.yield_timer = max(self.yield_timer, 0.28)
             self.spd *= 0.18
             if other is not s.in_car:
@@ -714,47 +793,71 @@ class Car:
         return intersection_zone_at(px, py, margin=12)
 
     def should_yield_at_intersection(self):
-        zone = self.upcoming_intersection()
+        zone = self.upcoming_intersection(118)
         if not zone:
             return False
         ix, iy, _ = zone
-        my_vertical = self.is_vertical()
         my_dist = math.hypot(self.x - ix, self.y - iy)
         for other in current().cars:
-            if other is self or other.dead:
+            if other is self or other.dead or other.sunk:
                 continue
-            other_zone = other.upcoming_intersection(65)
+            other_zone = other.upcoming_intersection(132)
             if not other_zone:
-                other_zone = intersection_zone_at(other.x, other.y, margin=18)
+                other_zone = intersection_zone_at(other.x, other.y, margin=34)
             if not other_zone:
                 continue
             ox, oy, orect = other_zone
             if abs(ox - ix) > 6 or abs(oy - iy) > 6:
                 continue
-            if other.is_vertical() == my_vertical:
-                continue
             other_dist = math.hypot(other.x - ix, other.y - iy)
-            other_in_box = orect.collidepoint(other.x, other.y)
-            if other_in_box or other_dist + 10 < my_dist or (abs(other_dist - my_dist) <= 10 and id(other) < id(self)):
-                self.yield_timer = max(self.yield_timer, random.uniform(0.12, 0.28))
+            other_in_box = orect.inflate(54, 54).colliderect(other.rect())
+            if other_in_box or other_dist + 28 < my_dist or (abs(other_dist - my_dist) <= 28 and id(other) < id(self)):
+                self.yield_timer = max(self.yield_timer, random.uniform(0.28, 0.56))
                 return True
         return False
 
     def car_ahead(self):
-        probe = self.look_rect()
         rad = math.radians(self.angle)
         fx, fy = math.sin(rad), -math.cos(rad)
+        rx, ry = math.cos(rad), math.sin(rad)
+        look_ahead = self.look_distance + max(55, abs(self.spd) * 0.42)
         for other in current().cars:
-            if other is self or other.dead:
+            if other is self or other.dead or other.sunk:
                 continue
             diff = abs(((other.angle - self.angle + 180) % 360) - 180)
-            if diff > 35:
+            if diff > 55:
                 continue
             ox, oy = other.x - self.x, other.y - self.y
             ahead = ox * fx + oy * fy
-            if 0 < ahead < self.look_distance + 25 and probe.colliderect(other.rect()):
+            lateral = abs(ox * rx + oy * ry)
+            lane_width = (self.coll_w + other.coll_w) * 0.5 + 16
+            if 0 < ahead < look_ahead and lateral <= lane_width:
                 return other
         return None
+
+    def civilian_ahead(self, look_ahead=None, width=None):
+        look_ahead = look_ahead if look_ahead is not None else self.look_distance + 24
+        width = width if width is not None else self.look_width + 28
+        probe = self.look_rect(distance=look_ahead, width=width)
+        rad = math.radians(self.angle)
+        fx, fy = math.sin(rad), -math.cos(rad)
+        for ped in current().peds:
+            if getattr(ped, "dead", False):
+                continue
+            ox, oy = ped.x - self.x, ped.y - self.y
+            ahead = ox * fx + oy * fy
+            if 0 < ahead < look_ahead and probe.colliderect(ped.rect()):
+                return ped
+        return None
+
+    def cop_rect_clear(self, rect):
+        if not in_city(rect.centerx, rect.centery, 12):
+            return False
+        if any(rect.colliderect(b[0]) for b in current().buildings):
+            return False
+        if any(rect.colliderect(rb.rect) for rb in current().roadblocks):
+            return False
+        return not rect_in_park_pond(rect)
 
     def reserve_intersection(self, urgent=False):
         zone = self.upcoming_intersection(92)
@@ -1027,8 +1130,9 @@ class Car:
             return
         s = current()
         dmg = max(18, min(120, int(speed_mag * 0.45)))
-        for p in list(s.peds):
-            self._run_over_ped(p, s.peds, dmg, is_cop=False)
+        if not self.is_cop:
+            for p in list(s.peds):
+                self._run_over_ped(p, s.peds, dmg, is_cop=False)
         for c in list(s.cops):
             self._run_over_ped(c, s.cops, dmg + 12, is_cop=True)
         self._run_over_player(dmg + 10)
@@ -1076,13 +1180,15 @@ class Car:
         dy = -math.cos(rad) * self.spd * dt
         nx, ny = self.x + dx, self.y + dy
         tx = self.rect_at(nx, self.y)
+        x_clear = self.cop_rect_clear(tx) if self.is_cop and not controlled else rect_on_road(tx)
         hit_x = (any(tx.colliderect(b[0]) for b in s.buildings) or
                  self.roadblock_at(tx) is not None or
-                 (not controlled and not rect_on_road(tx)))
+                 (not controlled and not x_clear))
         ty = self.rect_at(self.x, ny)
+        y_clear = self.cop_rect_clear(ty) if self.is_cop and not controlled else rect_on_road(ty)
         hit_y = (any(ty.colliderect(b[0]) for b in s.buildings) or
                  self.roadblock_at(ty) is not None or
-                 (not controlled and not rect_on_road(ty)))
+                 (not controlled and not y_clear))
         mag = math.hypot(dx, dy) or 1
         if hit_x and hit_y:
             self.spd *= -0.2
@@ -1106,9 +1212,12 @@ class Car:
                 self.take_damage(abs(prev_spd) * perp * 0.045, source_pos=source_pos)
         else:
             self.x, self.y = nx, ny
-        other = self.overlaps_other_car()
-        if other:
+        for _ in range(4):
+            other = self.overlaps_other_car()
+            if not other:
+                break
             self.resolve_car_collision(other, controlled)
+        self.resolve_building_collisions(prev_spd)
         roadblock = self.roadblock_at(self.rect())
         if roadblock:
             self.resolve_roadblock_collision(roadblock, prev_spd)
@@ -1164,8 +1273,10 @@ class Car:
             if ahead and ahead is not s.in_car:
                 accel = -1
                 steer *= 0.45
-            red_light = not traffic_light_allows(self)
-            if red_light or self.yield_timer > 0 or (dist > 110 and self.should_yield_at_intersection()) or not self.reserve_intersection(urgent=dist < 180):
+            if self.civilian_ahead():
+                accel = -1
+                steer *= 0.35
+            if self.yield_timer > 0:
                 accel = -1
                 steer *= 0.35
             if abs(diff) > 115 and dist < 140:
@@ -1178,7 +1289,7 @@ class Car:
                 nx = self.x + math.sin(rad) * speed_guess * dt * 1.2
                 ny = self.y - math.cos(rad) * speed_guess * dt * 1.2
                 test = self.rect_at(nx, ny)
-                blocked = any(test.colliderect(b[0]) for b in s.AI_OBSTACLES) or not rect_on_road(test)
+                blocked = not self.cop_rect_clear(test)
                 if not blocked:
                     blocker = self.car_blocking_rect(test, padding=8)
                     if blocker and not (blocker.is_cop and s.in_car and blocker is not s.in_car and math.hypot(blocker.x - target.x, blocker.y - target.y) < 90):
@@ -1190,9 +1301,7 @@ class Car:
                         nx2 = self.x + math.sin(rad2) * speed_guess * dt
                         ny2 = self.y - math.cos(rad2) * speed_guess * dt
                         test2 = self.rect_at(nx2, ny2)
-                        clear = (not any(test2.colliderect(b[0]) for b in s.AI_OBSTACLES) and
-                                 not any(test2.colliderect(rb.rect) for rb in s.roadblocks) and
-                                 rect_on_road(test2))
+                        clear = self.cop_rect_clear(test2)
                         if clear:
                             clear = self.car_blocking_rect(test2, padding=8) is None
                         if clear:
@@ -1299,8 +1408,10 @@ class Car:
         if at_intersection and (self.turn_cd <= 0 or self.near_road_end()):
             self.choose_intersection_turn(allow_reverse=self.near_road_end())
         self.x, self.y = nx, ny
-        other = self.overlaps_other_car()
-        if other:
+        for _ in range(4):
+            other = self.overlaps_other_car()
+            if not other:
+                break
             self.resolve_car_collision(other, False)
             self.turn_cd = random.uniform(1.2, 2.6)
             self.arc = None
@@ -1316,13 +1427,15 @@ class Car:
         surf.blit(rot, r)
         if self.is_roadblock:
             self.draw_roadblock_markers(surf, cam)
+        if self.hazard_lights_active():
+            self.draw_indicator_lamps(surf, cam, (-1, 1))
+            return
         self.draw_turn_signal(surf, cam)
 
-    def draw_turn_signal(self, surf, cam):
-        if self.signal_dir == 0:
-            return
-        if self.arc is None and self.planned_turn is None:
-            return
+    def hazard_lights_active(self):
+        return self.driver is None and not self.is_roadblock and abs(self.spd) < 8 and not self.burning
+
+    def draw_indicator_lamps(self, surf, cam, sides):
         if (pygame.time.get_ticks() // 280) % 2:
             return
         rad = math.radians(self.angle)
@@ -1331,15 +1444,23 @@ class Car:
         cy = self.y - cam[1]
         front_y = -self.h * 0.34
         back_y = self.h * 0.34
-        side_x = self.w * 0.34 * self.signal_dir
         lamp_col = (255, 180, 40)
         glow_col = (255, 220, 120)
-        for dx_, dy_ in ((side_x, front_y), (side_x, back_y)):
-            wx = dx_ * cs - dy_ * sn
-            wy = dx_ * sn + dy_ * cs
-            pos = (int(cx + wx), int(cy + wy))
-            pygame.draw.circle(surf, glow_col, pos, 4)
-            pygame.draw.circle(surf, lamp_col, pos, 2)
+        for side in sides:
+            side_x = self.w * 0.34 * side
+            for dx_, dy_ in ((side_x, front_y), (side_x, back_y)):
+                wx = dx_ * cs - dy_ * sn
+                wy = dx_ * sn + dy_ * cs
+                pos = (int(cx + wx), int(cy + wy))
+                pygame.draw.circle(surf, glow_col, pos, 4)
+                pygame.draw.circle(surf, lamp_col, pos, 2)
+
+    def draw_turn_signal(self, surf, cam):
+        if self.signal_dir == 0:
+            return
+        if self.arc is None and self.planned_turn is None:
+            return
+        self.draw_indicator_lamps(surf, cam, (self.signal_dir,))
 
     def draw_sunk(self, surf, cam):
         rear_h = max(18, int(self.h * 0.34))

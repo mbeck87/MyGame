@@ -29,6 +29,7 @@ class GameState:
     central_bank_rect: Any = None
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x
+    road_segments: list = field(default_factory=list)    # befahrbare Straßensegmente
     AI_OBSTACLES: list = field(default_factory=list)     # Häuser + Wasser
     WATER_RECTS:  list = field(default_factory=list)
 

@@ -1,5 +1,6 @@
 """Welt-Geometrie: Wasser-/Stadt-Tests, Straßen-Kollision, Lane-Helfer."""
 from collections import deque
+from dataclasses import dataclass
 import math
 import random
 
@@ -17,6 +18,29 @@ from game2d.state import current
 PEDESTRIAN_OFFSET = ROAD_W // 2 + SIDEWALK_W // 2
 
 
+@dataclass(frozen=True)
+class RoadSegment:
+    axis: str
+    start: tuple
+    end: tuple
+
+    @property
+    def fixed(self):
+        return self.start[1] if self.axis == "h" else self.start[0]
+
+    @property
+    def lo(self):
+        return min(self.start[0], self.end[0]) if self.axis == "h" else min(self.start[1], self.end[1])
+
+    @property
+    def hi(self):
+        return max(self.start[0], self.end[0]) if self.axis == "h" else max(self.start[1], self.end[1])
+
+    @property
+    def length(self):
+        return self.hi - self.lo
+
+
 def in_water(x, y):
     return x < WATER_W or x > WORLD_W - WATER_W or y < WATER_W or y > WORLD_H - WATER_W
 
@@ -31,21 +55,38 @@ def rect_hits_city_edge(rect):
             rect.top < INNER_LO or rect.bottom > INNER_HI_Y)
 
 
-def rect_on_road(rect, margin=10):
-    s = current()
-    if any(rect.colliderect(park) for park in s.parks):
-        return False
-    if any(rect.colliderect(park) for park in s.amusement_parks):
-        return False
-    cx, cy = rect.center
+def road_segment_rect(segment, width=ROAD_W):
+    half = width // 2
+    if segment.axis == "h":
+        return pygame.Rect(int(segment.lo), int(segment.fixed - half), int(segment.length), width)
+    return pygame.Rect(int(segment.fixed - half), int(segment.lo), width, int(segment.length))
+
+
+def road_segments(axis=None):
+    segments = current().road_segments
+    if axis is None:
+        return segments
+    return [seg for seg in segments if seg.axis == axis]
+
+
+def _segment_supports_rect(segment, rect, margin=10):
     half = ROAD_W * 0.5 - margin
-    for y in s.roads_h:
-        if ROAD_LO <= cx <= ROAD_HI_X and abs(cy - y) <= half:
-            return True
-    for x in s.roads_v:
-        if ROAD_LO <= cy <= ROAD_HI_Y and abs(cx - x) <= half:
-            return True
-    return False
+    cx, cy = rect.center
+    if segment.axis == "h":
+        return (
+            rect.left >= segment.lo
+            and rect.right <= segment.hi
+            and abs(cy - segment.fixed) <= half
+        )
+    return (
+        rect.top >= segment.lo
+        and rect.bottom <= segment.hi
+        and abs(cx - segment.fixed) <= half
+    )
+
+
+def rect_on_road(rect, margin=10):
+    return any(_segment_supports_rect(seg, rect, margin=margin) for seg in current().road_segments)
 
 
 def point_in_polygon(x, y, points):
@@ -87,10 +128,12 @@ def lane_center_for_car(angle, x, y):
     heading = int(round(angle / 90.0)) * 90 % 360
     lane_off = 28
     if heading in (0, 180):
-        base = min(s.roads_v, key=lambda rx: abs(rx - x))
+        seg = nearest_road_segment("v", x, y)
+        base = seg.fixed if seg else min(s.roads_v, key=lambda rx: abs(rx - x))
         side = lane_off if heading == 0 else -lane_off
         return base + side, y
-    base = min(s.roads_h, key=lambda ry: abs(ry - y))
+    seg = nearest_road_segment("h", x, y)
+    base = seg.fixed if seg else min(s.roads_h, key=lambda ry: abs(ry - y))
     side = lane_off if heading == 90 else -lane_off
     return x, base + side
 
@@ -114,11 +157,40 @@ def nearest_road_y(y):
     return min(s.roads_h, key=lambda ry: abs(ry - y))
 
 
+def nearest_road_segment(axis, x, y):
+    candidates = road_segments(axis)
+    if not candidates:
+        return None
+    if axis == "h":
+        return min(candidates, key=lambda seg: abs(seg.fixed - y) + max(0, seg.lo - x, x - seg.hi) * 0.35)
+    return min(candidates, key=lambda seg: abs(seg.fixed - x) + max(0, seg.lo - y, y - seg.hi) * 0.35)
+
+
+def road_connections_at(ix, iy, state=None):
+    s = current() if state is None else state
+    has_north = has_south = has_west = has_east = False
+    # Sample just outside the intersection body; edge roads end at the curb line, not at the node center.
+    probe = ROAD_W // 2 + 2
+    for seg in s.road_segments:
+        if seg.axis == "v" and int(seg.fixed) == int(ix):
+            if seg.lo <= iy - probe <= seg.hi:
+                has_north = True
+            if seg.lo <= iy + probe <= seg.hi:
+                has_south = True
+        elif seg.axis == "h" and int(seg.fixed) == int(iy):
+            if seg.lo <= ix - probe <= seg.hi:
+                has_west = True
+            if seg.lo <= ix + probe <= seg.hi:
+                has_east = True
+    return has_north, has_south, has_west, has_east
+
+
 def intersection_zone_at(x, y, margin=18):
     ix = nearest_road_x(x)
     iy = nearest_road_y(y)
     half = ROAD_W * 0.5 + margin
-    if abs(x - ix) <= half and abs(y - iy) <= half:
+    has_north, has_south, has_west, has_east = road_connections_at(ix, iy)
+    if abs(x - ix) <= half and abs(y - iy) <= half and (has_north or has_south) and (has_west or has_east):
         size = int(half * 2)
         return ix, iy, pygame.Rect(int(ix - half), int(iy - half), size, size)
     return None
@@ -127,6 +199,9 @@ def intersection_zone_at(x, y, margin=18):
 def rect_overlaps_street_space(rect, buffer=14):
     s = current()
     half = ROAD_W // 2 + SIDEWALK_W + buffer
+    if s.road_segments:
+        width = half * 2
+        return any(rect.colliderect(road_segment_rect(seg, width=width)) for seg in s.road_segments)
     road_x0 = ROAD_LO - half
     road_x1 = ROAD_HI_X + half
     road_y0 = ROAD_LO - half

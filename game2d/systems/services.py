@@ -1,20 +1,19 @@
 """Garage, shop and wanted escalation helpers."""
-import math
 import random
 
 import pygame
 
-from game2d.config import ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W, SIDEWALK_W, W, H
+from game2d.config import BLOCK, ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W, SIDEWALK_W, W, H
 from game2d.systems import audio
 
 
 SHOP_ITEMS = {
-    1: ("Health +50", 120, "health"),
-    2: ("SMG ammo +120", 180, "ammo_2"),
-    3: ("Shotgun ammo +20", 240, "ammo_3"),
-    4: ("MG ammo +200", 360, "ammo_4"),
-    5: ("RPG ammo +5", 700, "ammo_5"),
-    6: ("Wanted -1", 500, "wanted"),
+    1: ("Health +50", 12, "health"),
+    2: ("SMG ammo +120", 18, "ammo_2"),
+    3: ("Shotgun ammo +20", 24, "ammo_3"),
+    4: ("MG ammo +200", 36, "ammo_4"),
+    5: ("RPG ammo +5", 70, "ammo_5"),
+    6: ("Wanted -1", 50, "wanted"),
 }
 
 WANTED_HEAT_PER_STAR = 100
@@ -88,7 +87,7 @@ def init_services(state):
         (ROAD_HI_X - 230, ROAD_HI_Y - 160),
     ]
     state.shops[:] = [
-        (ROAD_LO + 45, ROAD_HI_Y - 45),
+        (ROAD_LO + 220, ROAD_HI_Y - 220),
     ]
     state.barbers[:] = [
         (ROAD_LO + 220, ROAD_LO + 410),
@@ -96,6 +95,8 @@ def init_services(state):
     clear = []
     for gx, gy in state.garages:
         clear.extend(garage_layout(gx, gy))
+    for sx, sy in state.shops:
+        clear.extend(shop_layout(sx, sy))
     for bx, by in state.barbers:
         clear.extend(barber_layout(bx, by))
     state.buildings[:] = [
@@ -104,6 +105,8 @@ def init_services(state):
     ]
     for gx, gy in state.garages:
         state.buildings.append((garage_layout(gx, gy)[0], None))
+    for sx, sy in state.shops:
+        state.buildings.append((shop_layout(sx, sy)[0], None))
     for bx, by in state.barbers:
         state.buildings.append((barber_layout(bx, by)[0], None))
     state.AI_OBSTACLES[:] = (
@@ -147,6 +150,19 @@ def barber_layout(x, y):
     return building, walk, sign
 
 
+def shop_layout(x, y):
+    building = pygame.Rect(int(x - 58), int(y - 44), 116, 88)
+    road_margin = ROAD_W // 2 + SIDEWALK_W
+    if x < (ROAD_LO + ROAD_HI_X) / 2:
+        sidewalk_edge = ROAD_LO + road_margin
+        walk = pygame.Rect(sidewalk_edge, int(y - 15), max(1, building.left - sidewalk_edge), 30)
+    else:
+        sidewalk_edge = ROAD_HI_X - road_margin
+        walk = pygame.Rect(building.right, int(y - 15), max(1, sidewalk_edge - building.right), 30)
+    sign = pygame.Rect(int(x - 38), int(y - 36), 76, 20)
+    return building, walk, sign
+
+
 def nearby_service(state, radius=85):
     x, y = _pos(state)
     for gx, gy in state.garages:
@@ -154,7 +170,8 @@ def nearby_service(state, radius=85):
         if building.inflate(radius, radius).collidepoint(x, y) or driveway.inflate(18, 18).collidepoint(x, y) or apron.inflate(18, 18).collidepoint(x, y):
             return "garage"
     for sx, sy in state.shops:
-        if math.hypot(x - sx, y - sy) <= radius:
+        building, walk, _ = shop_layout(sx, sy)
+        if building.inflate(radius, radius).collidepoint(x, y) or walk.inflate(18, 18).collidepoint(x, y):
             return "shop"
     for bx, by in state.barbers:
         building, walk, _ = barber_layout(bx, by)
@@ -302,7 +319,9 @@ class Roadblock:
         self.x = x
         self.y = y
         self.road_axis = road_axis
-        self.road_key = (road_axis, int(x if road_axis == "v" else y))
+        fixed = x if road_axis == "v" else y
+        along = y if road_axis == "v" else x
+        self.road_key = (road_axis, int(fixed), int(along // BLOCK))
         if road_axis == "v":
             self.rect = pygame.Rect(0, 0, ROAD_W + 34, 24)
         else:
@@ -340,6 +359,10 @@ def _rect_outside_view(state, rect, margin=130):
     return not view.colliderect(rect)
 
 
+def _rect_hits_park_area(state, rect):
+    return any(rect.colliderect(park) for park in list(state.parks) + list(state.amusement_parks))
+
+
 def clear_roadblocks(state):
     state.roadblocks.clear()
     for car in list(state.cars):
@@ -355,15 +378,20 @@ def _roadblock_spawn_near(state, tx, ty):
         road_axis = "v" if random.random() < 0.5 else "h"
         dist = random.uniform(300, 850)
         sign = -1 if random.random() < 0.5 else 1
+        segments = [seg for seg in state.road_segments if seg.axis == road_axis and seg.length > 220]
+        if not segments:
+            continue
         if road_axis == "v":
-            roads = [rx for rx in state.roads_v if abs(rx - tx) <= 900] or sorted(state.roads_v, key=lambda rx: abs(rx - tx))[:4]
-            x = random.choice(roads)
-            y = max(ROAD_LO + 80, min(ROAD_HI_Y - 80, ty + sign * dist))
+            near = [seg for seg in segments if abs(seg.fixed - tx) <= 900]
+            seg = random.choice(near or sorted(segments, key=lambda item: abs(item.fixed - tx))[:4])
+            x = seg.fixed
+            y = max(seg.lo + 90, min(seg.hi - 90, ty + sign * dist))
         else:
-            x = max(ROAD_LO + 80, min(ROAD_HI_X - 80, tx + sign * dist))
-            roads = [ry for ry in state.roads_h if abs(ry - ty) <= 900] or sorted(state.roads_h, key=lambda ry: abs(ry - ty))[:4]
-            y = random.choice(roads)
-        road_key = (road_axis, int(x if road_axis == "v" else y))
+            near = [seg for seg in segments if abs(seg.fixed - ty) <= 900]
+            seg = random.choice(near or sorted(segments, key=lambda item: abs(item.fixed - ty))[:4])
+            x = max(seg.lo + 90, min(seg.hi - 90, tx + sign * dist))
+            y = seg.fixed
+        road_key = (road_axis, int(x if road_axis == "v" else y), int((y if road_axis == "v" else x) // BLOCK))
         if any(other.road_key == road_key for other in state.roadblocks):
             continue
         roadblock = Roadblock(x, y, road_axis)
@@ -378,7 +406,7 @@ def _roadblock_spawn_near(state, tx, ty):
             continue
         if any(probe.colliderect(b[0]) for b in state.buildings):
             continue
-        if any(probe.colliderect(park) for park in state.parks):
+        if _rect_hits_park_area(state, probe):
             continue
         return roadblock
     return None
@@ -431,6 +459,8 @@ def escalate_police(state):
             break
         car = _spawn_roadblock_cop_car(state, roadblock)
         if not _rect_outside_view(state, car.rect(), margin=80):
+            continue
+        if _rect_hits_park_area(state, car.rect()):
             continue
         state.cars.append(car)
         state.roadblocks.append(roadblock)

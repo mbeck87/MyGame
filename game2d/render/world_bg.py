@@ -14,6 +14,7 @@ from game2d.config import (
 from game2d.render.sprites import make_duck_sprite
 from game2d.state import current
 from game2d.world.geometry import amusement_path_points as _amusement_path_points
+from game2d.world.geometry import road_connections_at
 from game2d.world.traffic import traffic_light_state
 
 
@@ -53,50 +54,52 @@ def draw_crosswalks(surf, cam):
     crosswalk_len = 18
     half_crosswalk = crosswalk_len // 2
     offset = ROAD_W // 2 + 10
+
+    def segment_covers(axis, fixed, lo, hi):
+        for seg in s.road_segments:
+            if seg.axis == axis and int(seg.fixed) == int(fixed) and seg.lo <= lo and seg.hi >= hi:
+                return True
+        return False
+
+    def draw_vertical_crosswalk(y):
+        top = y - half_crosswalk
+        x_left = sx - span // 2
+        for x in range(int(x_left), int(x_left + span), stripe_w + gap):
+            pygame.draw.rect(surf, stripe, (x, top, stripe_w, crosswalk_len))
+
+    def draw_horizontal_crosswalk(x):
+        left = x - half_crosswalk
+        y_top = sy - span // 2
+        for y in range(int(y_top), int(y_top + span), stripe_w + gap):
+            pygame.draw.rect(surf, stripe, (left, y, crosswalk_len, stripe_w))
+
     for ix in s.roads_v:
         sx = ix - cam[0]
         if sx < -120 or sx > W + 120:
             continue
-        has_west = ix != ROAD_LO
-        has_east = ix != ROAD_HI_X
         for iy in s.roads_h:
             sy = iy - cam[1]
             if sy < -120 or sy > H + 120:
                 continue
-            has_north = iy != ROAD_LO
-            has_south = iy != ROAD_HI_Y
-            for park in list(s.parks) + list(s.amusement_parks):
-                margin = ROAD_W // 2 + SIDEWALK_W
-                left_road = park.left - margin
-                right_road = park.right + margin
-                top_road = park.top - margin
-                bottom_road = park.bottom + margin
-                if park.left < ix < park.right:
-                    if iy == top_road:
-                        has_south = False
-                    elif iy == bottom_road:
-                        has_north = False
-                if park.top < iy < park.bottom:
-                    if ix == left_road:
-                        has_east = False
-                    elif ix == right_road:
-                        has_west = False
-            y_top = sy - offset - half_crosswalk
-            y_bottom = sy + offset - half_crosswalk
-            x_left = sx - span // 2
-            for x in range(int(x_left), int(x_left + span), stripe_w + gap):
-                if has_north:
-                    pygame.draw.rect(surf, stripe, (x, y_top, stripe_w, crosswalk_len))
-                if has_south:
-                    pygame.draw.rect(surf, stripe, (x, y_bottom, stripe_w, crosswalk_len))
-            x_left_side = sx - offset - half_crosswalk
-            x_right_side = sx + offset - half_crosswalk
-            y_top_side = sy - span // 2
-            for y in range(int(y_top_side), int(y_top_side + span), stripe_w + gap):
-                if has_west:
-                    pygame.draw.rect(surf, stripe, (x_left_side, y, crosswalk_len, stripe_w))
-                if has_east:
-                    pygame.draw.rect(surf, stripe, (x_right_side, y, crosswalk_len, stripe_w))
+            has_north, has_south, has_west, has_east = road_connections_at(ix, iy, s)
+            if not ((has_north or has_south) and (has_west or has_east)):
+                continue
+            north_lo = iy - offset - half_crosswalk
+            north_hi = iy - offset + half_crosswalk
+            south_lo = iy + offset - half_crosswalk
+            south_hi = iy + offset + half_crosswalk
+            west_lo = ix - offset - half_crosswalk
+            west_hi = ix - offset + half_crosswalk
+            east_lo = ix + offset - half_crosswalk
+            east_hi = ix + offset + half_crosswalk
+            if has_north and segment_covers("v", ix, north_lo, north_hi):
+                draw_vertical_crosswalk(sy - offset)
+            if has_south and segment_covers("v", ix, south_lo, south_hi):
+                draw_vertical_crosswalk(sy + offset)
+            if has_west and segment_covers("h", iy, west_lo, west_hi):
+                draw_horizontal_crosswalk(sx - offset)
+            if has_east and segment_covers("h", iy, east_lo, east_hi):
+                draw_horizontal_crosswalk(sx + offset)
 
 
 def draw_traffic_lights(surf, cam):
@@ -111,6 +114,9 @@ def draw_traffic_lights(surf, cam):
                 continue
             is_corner = (ix in (ROAD_LO, ROAD_HI_X)) and (iy in (ROAD_LO, ROAD_HI_Y))
             if is_corner:
+                continue
+            has_north, has_south, has_west, has_east = road_connections_at(ix, iy, s)
+            if not ((has_north or has_south) and (has_west or has_east)):
                 continue
             axis, phase = traffic_light_state(ix, iy)
             ns_state = phase if axis == 'NS' else 'red'
@@ -144,24 +150,33 @@ def draw_center_line_dashes(surf, cam, horizontal, center, start, end):
 def draw_center_lines(surf, cam):
     s = current()
     intersection_gap = ROAD_W // 2 + 12
-    for y in s.roads_h:
-        sy = y - cam[1]
-        if not (-10 < sy < H + 10):
-            continue
-        for x0, x1 in zip(s.roads_v, s.roads_v[1:]):
-            start = x0 + intersection_gap
-            end = x1 - intersection_gap
-            if end > start:
-                draw_center_line_dashes(surf, cam, True, y, start, end)
-    for x in s.roads_v:
-        sx = x - cam[0]
-        if not (-10 < sx < W + 10):
-            continue
-        for y0, y1 in zip(s.roads_h, s.roads_h[1:]):
-            start = y0 + intersection_gap
-            end = y1 - intersection_gap
-            if end > start:
-                draw_center_line_dashes(surf, cam, False, x, start, end)
+    for seg in s.road_segments:
+        if seg.axis == "h":
+            y = seg.fixed
+            sy = y - cam[1]
+            if not (-10 < sy < H + 10):
+                continue
+            start = seg.lo
+            for ix in [x for x in s.roads_v if seg.lo < x < seg.hi]:
+                end = ix - intersection_gap
+                if end > start:
+                    draw_center_line_dashes(surf, cam, True, y, start, end)
+                start = ix + intersection_gap
+            if seg.hi > start:
+                draw_center_line_dashes(surf, cam, True, y, start, seg.hi)
+        else:
+            x = seg.fixed
+            sx = x - cam[0]
+            if not (-10 < sx < W + 10):
+                continue
+            start = seg.lo
+            for iy in [y for y in s.roads_h if seg.lo < y < seg.hi]:
+                end = iy - intersection_gap
+                if end > start:
+                    draw_center_line_dashes(surf, cam, False, x, start, end)
+                start = iy + intersection_gap
+            if seg.hi > start:
+                draw_center_line_dashes(surf, cam, False, x, start, seg.hi)
 
 
 def _smooth_points(points, rounds=3, closed=False):
@@ -396,26 +411,28 @@ def _draw_carousel(surf, cx, cy, t):
 
 
 def _draw_roller_coaster(surf, rect, t):
-    area = pygame.Rect(rect.left + 430, rect.top + 44, 520, 196)
-    pad = area.inflate(22, 18)
-    pygame.draw.rect(surf, (44, 104, 68), pad, border_radius=7)
-    pygame.draw.rect(surf, (122, 54, 64), pad, 4, border_radius=7)
-    for x in range(pad.left + 18, pad.right - 12, 32):
-        pygame.draw.circle(surf, (242, 214, 90), (x, pad.top + 9), 4)
-        pygame.draw.circle(surf, (242, 214, 90), (x, pad.bottom - 9), 4)
-    for y in range(pad.top + 22, pad.bottom - 18, 32):
-        pygame.draw.circle(surf, (242, 214, 90), (pad.left + 9, y), 4)
-        pygame.draw.circle(surf, (242, 214, 90), (pad.right - 9, y), 4)
+    area = pygame.Rect(rect.left + 410, rect.top + 34, 560, 218)
+    ground_y = area.bottom - 12
 
-    station = pygame.Rect(area.left + 18, area.bottom - 48, 120, 38)
-    pygame.draw.rect(surf, (74, 44, 48), station.move(3, 4), border_radius=4)
-    pygame.draw.rect(surf, (110, 50, 58), station, border_radius=4)
-    pygame.draw.rect(surf, (238, 196, 82), (station.x + 7, station.y + 7, station.w - 14, 8), border_radius=2)
-    pygame.draw.rect(surf, (36, 34, 38), (station.x + 18, station.bottom - 16, station.w - 36, 16), border_radius=2)
+    station = pygame.Rect(area.left + 24, ground_y - 50, 132, 44)
+    pygame.draw.rect(surf, (66, 50, 46), station.move(4, 5), border_radius=3)
+    pygame.draw.rect(surf, (166, 56, 62), station, border_radius=3)
+    pygame.draw.polygon(
+        surf,
+        (238, 190, 58),
+        [
+            (station.left - 8, station.top + 4),
+            (station.centerx, station.top - 26),
+            (station.right + 8, station.top + 4),
+        ],
+    )
+    pygame.draw.rect(surf, (52, 42, 40), (station.x + 15, station.bottom - 22, station.w - 30, 22), border_radius=2)
+    for x in range(station.left + 18, station.right - 8, 24):
+        pygame.draw.line(surf, (248, 226, 118), (x, station.top + 9), (x + 12, station.top + 9), 3)
 
     def catmull(points, steps=16):
         samples = []
-        padded = [points[-2]] + points + [points[1]]
+        padded = [points[0]] + points + [points[-1]]
         for i in range(1, len(padded) - 2):
             p0, p1, p2, p3 = padded[i - 1], padded[i], padded[i + 1], padded[i + 2]
             for j in range(steps):
@@ -435,56 +452,116 @@ def _draw_roller_coaster(surf, rect, t):
                     + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * u3
                 )
                 samples.append((int(x), int(y)))
+        samples.append(points[-1])
         return samples
 
-    base = area.bottom - 42
+    base = ground_y - 26
     control = [
-        (area.left + 58, base),
-        (area.left + 118, area.top + 76),
-        (area.left + 214, area.top + 46),
-        (area.left + 322, area.top + 84),
-        (area.left + 420, area.top + 54),
-        (area.right - 54, area.top + 100),
-        (area.right - 82, base - 4),
-        (area.left + 338, area.bottom - 56),
-        (area.left + 206, area.bottom - 40),
-        (area.left + 58, base),
+        (station.left + 18, station.top + 19),
+        (area.left + 170, base - 28),
+        (area.left + 245, area.top + 20),
+        (area.left + 328, area.top + 108),
+        (area.left + 392, area.top + 56),
+        (area.left + 484, area.top + 128),
+        (area.right - 48, base - 8),
+        (area.right - 152, base + 2),
+        (area.left + 322, base - 6),
+        (area.left + 185, base + 8),
+        (station.right - 16, station.top + 18),
     ]
     pts = catmull(control)
-    loop = (area.left + 265, area.top + 116)
-    loop_rx, loop_ry = 48, 64
-    loop_rect = (loop[0] - loop_rx, loop[1] - loop_ry, loop_rx * 2, loop_ry * 2)
-    pygame.draw.ellipse(surf, (60, 42, 48), pygame.Rect(loop_rect).move(3, 4), 10)
-    pygame.draw.ellipse(surf, (92, 58, 62), loop_rect, 8)
-    pygame.draw.ellipse(surf, (228, 72, 66), loop_rect, 3)
 
-    for x, y in pts[::15]:
-        pygame.draw.line(surf, (82, 78, 76), (x - 4, y + 4), (x - 14, area.bottom - 8), 2)
-        pygame.draw.line(surf, (82, 78, 76), (x + 4, y + 4), (x + 14, area.bottom - 8), 2)
-    for x in (loop[0] - loop_rx, loop[0], loop[0] + loop_rx):
-        pygame.draw.line(surf, (82, 78, 76), (x, loop[1] + loop_ry), (x, area.bottom - 8), 2)
+    loop = (area.left + 388, area.top + 126)
+    loop_rx, loop_ry = 42, 58
+    loop_rect = pygame.Rect(loop[0] - loop_rx, loop[1] - loop_ry, loop_rx * 2, loop_ry * 2)
+
+    support_col = (76, 78, 82)
+    support_shadow = (50, 54, 58)
+    concrete = (126, 126, 116)
+    rail_dark = (74, 68, 70)
+    rail_mid = (178, 40, 48)
+    rail_light = (238, 82, 72)
+    tie_col = (56, 54, 58)
+
+    pygame.draw.line(surf, (90, 84, 78), (area.left + 12, ground_y), (area.right - 14, ground_y), 3)
+    for sx in (area.left + 78, area.left + 164, area.left + 238, area.left + 314, area.left + 480, area.right - 78):
+        pygame.draw.ellipse(surf, concrete, (sx - 13, ground_y - 3, 26, 8))
+
+    for idx in range(12, len(pts) - 8, 18):
+        x, y = pts[idx]
+        foot = ground_y - (idx % 3) * 3
+        pygame.draw.line(surf, support_shadow, (x + 4, y + 6), (x - 18, foot), 5)
+        pygame.draw.line(surf, support_col, (x - 1, y + 4), (x - 22, foot), 3)
+        pygame.draw.line(surf, support_col, (x + 7, y + 4), (x + 18, foot), 3)
+        pygame.draw.line(surf, support_col, (x - 13, (y + foot) // 2), (x + 13, (y + foot) // 2 - 10), 2)
+
+    for x in (loop_rect.left + 8, loop_rect.centerx, loop_rect.right - 8):
+        pygame.draw.line(surf, support_shadow, (x + 3, loop_rect.bottom - 3), (x + 18, ground_y), 5)
+        pygame.draw.line(surf, support_col, (x, loop_rect.bottom - 6), (x + 15, ground_y), 3)
+    pygame.draw.line(
+        surf,
+        support_col,
+        (loop_rect.left + 12, loop_rect.centery + 8),
+        (loop_rect.right - 12, loop_rect.centery - 8),
+        2,
+    )
 
     rail_shadow = [(x + 3, y + 4) for x, y in pts]
-    pygame.draw.lines(surf, (60, 42, 48), True, rail_shadow, 10)
-    pygame.draw.lines(surf, (92, 58, 62), True, pts, 8)
-    pygame.draw.lines(surf, (228, 72, 66), True, pts, 3)
-    pygame.draw.circle(surf, (240, 212, 88), (loop[0], loop[1] - loop_ry), 5)
+    pygame.draw.lines(surf, rail_dark, False, rail_shadow, 11)
+    pygame.draw.lines(surf, rail_mid, False, pts, 9)
+    pygame.draw.lines(surf, rail_light, False, pts, 3)
+    pygame.draw.ellipse(surf, rail_dark, loop_rect.move(3, 4), 11)
+    pygame.draw.ellipse(surf, rail_mid, loop_rect, 9)
+    pygame.draw.ellipse(surf, rail_light, loop_rect, 3)
 
-    car_idx = int((t * 36) % len(pts))
+    for idx in range(4, len(pts) - 5, 7):
+        x, y = pts[idx]
+        nx, ny = pts[idx + 1]
+        ang = math.atan2(ny - y, nx - x)
+        px, py = -math.sin(ang), math.cos(ang)
+        pygame.draw.line(surf, tie_col, (int(x - px * 8), int(y - py * 8)), (int(x + px * 8), int(y + py * 8)), 2)
+    for i in range(28):
+        ang = i * math.tau / 28
+        x = loop[0] + math.cos(ang) * loop_rx
+        y = loop[1] + math.sin(ang) * loop_ry
+        px, py = math.cos(ang), math.sin(ang)
+        pygame.draw.line(surf, tie_col, (int(x - px * 7), int(y - py * 7)), (int(x + px * 7), int(y + py * 7)), 2)
+
+    chain_start = (area.left + 174, base - 29)
+    chain_end = (area.left + 246, area.top + 22)
+    pygame.draw.line(surf, (42, 46, 50), chain_start, chain_end, 2)
+    for i in range(7):
+        u = i / 6
+        x = int(chain_start[0] + (chain_end[0] - chain_start[0]) * u)
+        y = int(chain_start[1] + (chain_end[1] - chain_start[1]) * u)
+        pygame.draw.circle(surf, (224, 214, 116), (x, y), 2)
+
+    car_idx = int((t * 42) % max(1, len(pts) - 3))
     x, y = pts[car_idx]
-    nx, ny = pts[(car_idx + 2) % len(pts)]
+    nx, ny = pts[min(car_idx + 2, len(pts) - 1)]
     ang = math.atan2(ny - y, nx - x)
     ux, uy = math.cos(ang), math.sin(ang)
     vx, vy = -uy, ux
-    train = []
-    for lx, ly in ((-20, -8), (20, -8), (20, 8), (-20, 8)):
-        train.append((int(x + ux * lx + vx * ly), int(y + uy * lx + vy * ly)))
-    pygame.draw.polygon(surf, (50, 72, 184), train)
-    pygame.draw.lines(surf, (26, 32, 92), True, train, 1)
-    for lx in (-8, 9):
-        wx = int(x + ux * lx + vx * -3)
-        wy = int(y + uy * lx + vy * -3)
-        pygame.draw.circle(surf, (246, 214, 74), (wx, wy), 4)
+    train_cols = ((36, 92, 194), (44, 124, 208), (238, 174, 48))
+    for car_no, offset in enumerate((24, 0, -24)):
+        cx = x - ux * offset
+        cy = y - uy * offset
+        body = []
+        for lx, ly in ((-11, -8), (12, -7), (15, 7), (-13, 8)):
+            body.append((int(cx + ux * lx + vx * ly), int(cy + uy * lx + vy * ly)))
+        pygame.draw.polygon(surf, train_cols[car_no], body)
+        pygame.draw.lines(surf, (24, 30, 56), True, body, 1)
+        pygame.draw.line(
+            surf,
+            (238, 238, 226),
+            (int(cx + ux * -5 + vx * -5), int(cy + uy * -5 + vy * -5)),
+            (int(cx + ux * 7 + vx * -4), int(cy + uy * 7 + vy * -4)),
+            2,
+        )
+        for lx in (-6, 8):
+            wx = int(cx + ux * lx + vx * 7)
+            wy = int(cy + uy * lx + vy * 7)
+            pygame.draw.circle(surf, (32, 34, 38), (wx, wy), 3)
 
 
 def _draw_food_icon(surf, kind, cx, cy):
@@ -675,22 +752,7 @@ def draw_world_bg(surf, cam):
             if -10 < sx < W and -10 < sy < H:
                 pygame.draw.circle(surf, (200, 180, 130), (int(sx), int(sy)), 2)
     sidewalk_total = ROAD_W + SIDEWALK_W * 2
-    road_ext = sidewalk_total // 2
     road_half = ROAD_W // 2
-
-    def h_extents(y):
-        if y == ROAD_LO or y == ROAD_HI_Y:
-            return (ROAD_LO - road_half, ROAD_HI_X + road_half,
-                    ROAD_LO - road_ext, ROAD_HI_X + road_ext)
-        return (ROAD_LO + road_half, ROAD_HI_X - road_half,
-                ROAD_LO + road_half, ROAD_HI_X - road_half)
-
-    def v_extents(x):
-        if x == ROAD_LO or x == ROAD_HI_X:
-            return (ROAD_LO - road_half, ROAD_HI_Y + road_half,
-                    ROAD_LO - road_ext, ROAD_HI_Y + road_ext)
-        return (ROAD_LO + road_half, ROAD_HI_Y - road_half,
-                ROAD_LO + road_half, ROAD_HI_Y - road_half)
 
     curb_col = (125, 125, 130)
     curb_gap = ROAD_W // 2 + 28
@@ -727,36 +789,30 @@ def draw_world_bg(surf, cam):
                              (edge_x - cam[0], seg_start - cam[1]),
                              (edge_x - cam[0], end - cam[1]), 2)
 
-    for y in s.roads_h:
-        sy = y - cam[1]
-        if -sidewalk_total-20 < sy < H+sidewalk_total+20:
-            _, _, s0, s1 = h_extents(y)
-            pygame.draw.rect(surf, SIDEW, (s0 - cam[0], sy - sidewalk_total//2, s1 - s0, sidewalk_total))
-    for x in s.roads_v:
-        sx = x - cam[0]
-        if -sidewalk_total-20 < sx < W+sidewalk_total+20:
-            _, _, s0, s1 = v_extents(x)
-            pygame.draw.rect(surf, SIDEW, (sx - sidewalk_total//2, s0 - cam[1], sidewalk_total, s1 - s0))
-    for y in s.roads_h:
-        sy = y - cam[1]
-        if -ROAD_W < sy < H+ROAD_W:
-            a0, a1, _, _ = h_extents(y)
-            ax = a0 - cam[0]
-            aw = a1 - a0
-            pygame.draw.rect(surf, ASPHALT, (ax, sy - ROAD_W//2, aw, ROAD_W))
-            draw_h_curb(y - road_half, a0, a1)
-            draw_h_curb(y + road_half, a0, a1)
-    for x in s.roads_v:
-        sx = x - cam[0]
-        if -ROAD_W < sx < W+ROAD_W:
-            a0, a1, _, _ = v_extents(x)
-            ay = a0 - cam[1]
-            ah = a1 - a0
-            pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W//2, ay, ROAD_W, ah))
-            draw_v_curb(x - road_half, a0, a1)
-            draw_v_curb(x + road_half, a0, a1)
-    draw_crosswalks(surf, cam)
+    for seg in s.road_segments:
+        if seg.axis == "h":
+            sy = seg.fixed - cam[1]
+            if -sidewalk_total - 20 < sy < H + sidewalk_total + 20:
+                pygame.draw.rect(surf, SIDEW, (seg.lo - cam[0], sy - sidewalk_total // 2, seg.length, sidewalk_total))
+        else:
+            sx = seg.fixed - cam[0]
+            if -sidewalk_total - 20 < sx < W + sidewalk_total + 20:
+                pygame.draw.rect(surf, SIDEW, (sx - sidewalk_total // 2, seg.lo - cam[1], sidewalk_total, seg.length))
+    for seg in s.road_segments:
+        if seg.axis == "h":
+            sy = seg.fixed - cam[1]
+            if -ROAD_W < sy < H + ROAD_W:
+                pygame.draw.rect(surf, ASPHALT, (seg.lo - cam[0], sy - ROAD_W // 2, seg.length, ROAD_W))
+                draw_h_curb(seg.fixed - road_half, seg.lo, seg.hi)
+                draw_h_curb(seg.fixed + road_half, seg.lo, seg.hi)
+        else:
+            sx = seg.fixed - cam[0]
+            if -ROAD_W < sx < W + ROAD_W:
+                pygame.draw.rect(surf, ASPHALT, (sx - ROAD_W // 2, seg.lo - cam[1], ROAD_W, seg.length))
+                draw_v_curb(seg.fixed - road_half, seg.lo, seg.hi)
+                draw_v_curb(seg.fixed + road_half, seg.lo, seg.hi)
     draw_center_lines(surf, cam)
+    draw_crosswalks(surf, cam)
     draw_traffic_lights(surf, cam)
     draw_park_street_closures(surf, cam)
     draw_amusement_park(surf, cam)

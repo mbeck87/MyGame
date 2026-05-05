@@ -2,7 +2,9 @@
 import pygame
 
 from game2d.config import W, H
-from game2d.systems.services import barber_layout, barber_lines, garage_layout, garage_lines, shop_lines
+from game2d.systems.services import (
+    barber_layout, barber_lines, garage_layout, garage_lines, shop_layout, shop_lines,
+)
 
 
 def _world_rect(rect, cam):
@@ -67,12 +69,45 @@ def draw_service_markers(screen, state, cam, font):
         screen.blit(sign, (b.centerx - sign.get_width() // 2, b.y + 5))
 
     for x, y in state.shops:
-        sx, sy = int(x - cam[0]), int(y - cam[1])
-        if -60 <= sx <= W + 60 and -60 <= sy <= H + 60:
-            pygame.draw.circle(screen, (0, 0, 0), (sx, sy), 22)
-            pygame.draw.circle(screen, (60, 220, 90), (sx, sy), 18)
-            txt = font.render("S", 1, (255, 255, 255))
-            screen.blit(txt, (sx - txt.get_width() // 2, sy - txt.get_height() // 2))
+        building, walk, sign_rect = shop_layout(x, y)
+        b = _world_rect(building, cam)
+        wlk = _world_rect(walk, cam)
+        sign = _world_rect(sign_rect, cam)
+        if not (view.colliderect(b) or view.colliderect(wlk)):
+            continue
+        pygame.draw.rect(screen, (134, 132, 124), wlk, border_radius=2)
+        pygame.draw.rect(screen, (34, 42, 34), b.move(4, 5), border_radius=5)
+        pygame.draw.rect(screen, (72, 142, 86), b, border_radius=5)
+        pygame.draw.rect(screen, (204, 232, 172), b, 2, border_radius=5)
+        pygame.draw.rect(screen, (42, 88, 54), (b.x, b.y, b.w, 19), border_radius=5)
+
+        awning_y = b.y + 19
+        stripe_w = 13
+        for i, sx in enumerate(range(b.x + 4, b.right - 4, stripe_w)):
+            col = (238, 246, 218) if i % 2 == 0 else (76, 188, 98)
+            pygame.draw.polygon(screen, col, [(sx, awning_y), (sx + stripe_w, awning_y), (sx + stripe_w - 4, awning_y + 12), (sx + 4, awning_y + 12)])
+        pygame.draw.line(screen, (42, 78, 48), (b.x + 4, awning_y + 12), (b.right - 4, awning_y + 12), 2)
+
+        faces_left = wlk.centerx < b.centerx
+        door = pygame.Rect(b.left + 7, b.centery - 15, 24, 31) if faces_left else pygame.Rect(b.right - 31, b.centery - 15, 24, 31)
+        pygame.draw.rect(screen, (38, 56, 44), door, border_radius=2)
+        pygame.draw.rect(screen, (116, 188, 166), door.inflate(-6, -7), border_radius=1)
+        knob_x = door.right - 5 if faces_left else door.left + 5
+        pygame.draw.circle(screen, (238, 214, 78), (knob_x, door.centery + 5), 2)
+
+        win_x = b.right - 39 if faces_left else b.x + 12
+        win = pygame.Rect(win_x, b.y + 40, 30, 25)
+        pygame.draw.rect(screen, (32, 48, 42), win, border_radius=2)
+        pygame.draw.rect(screen, (126, 202, 188), win.inflate(-4, -4), border_radius=2)
+        pygame.draw.line(screen, (224, 250, 240), (win.x + 5, win.y + 6), (win.right - 5, win.y + 6), 1)
+        pygame.draw.rect(screen, (238, 202, 72), (win.x + 5, win.bottom - 8, 6, 5), border_radius=1)
+        pygame.draw.rect(screen, (220, 82, 74), (win.x + 14, win.bottom - 9, 7, 6), border_radius=1)
+
+        pygame.draw.rect(screen, (28, 46, 34), sign.move(2, 3), border_radius=4)
+        pygame.draw.rect(screen, (38, 84, 48), sign, border_radius=4)
+        pygame.draw.rect(screen, (218, 242, 188), sign, 2, border_radius=4)
+        txt = font.render("SHOP", 1, (250, 252, 238))
+        screen.blit(txt, (sign.centerx - txt.get_width() // 2, sign.centery - txt.get_height() // 2))
 
     for x, y in state.barbers:
         building, walk, sign_rect = barber_layout(x, y)

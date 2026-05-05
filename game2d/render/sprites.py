@@ -133,16 +133,64 @@ def _draw_mini_sprite(body_col, w, h):
     return s
 
 
+def _draw_semi_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=5, inset_y=10)
+    cab_h = max(38, int(h * 0.30))
+    trailer_y = cab_h - 2
+    pygame.draw.rect(s, (42, 42, 46), (4, trailer_y, w - 8, h - trailer_y - 8), border_radius=4)
+    pygame.draw.rect(s, (222, 222, 214), (7, trailer_y + 4, w - 14, h - trailer_y - 16), border_radius=3)
+    pygame.draw.rect(s, (188, 188, 180), (10, trailer_y + 10, w - 20, 7), border_radius=2)
+    pygame.draw.line(s, (150, 150, 145), (w // 2, trailer_y + 7), (w // 2, h - 18), 1)
+    pygame.draw.rect(s, body_col, (6, 6, w - 12, cab_h), border_radius=7)
+    pygame.draw.rect(s, _shade(body_col, 28), (10, 10, w - 20, 8), border_radius=3)
+    pygame.draw.polygon(s, (48, 66, 82), [(11, 20), (w - 11, 20), (w - 15, 35), (15, 35)])
+    pygame.draw.polygon(s, (112, 174, 214), [(13, 21), (w - 13, 21), (w - 16, 33), (16, 33)])
+    pygame.draw.rect(s, _shade(body_col, -24), (11, 39, w - 22, cab_h - 38), border_radius=4)
+    for x in (0, w - 6):
+        pygame.draw.rect(s, (18, 18, 18), (x, 23, 6, 16), border_radius=2)
+        pygame.draw.rect(s, (18, 18, 18), (x, h - 44, 6, 17), border_radius=2)
+        pygame.draw.rect(s, (18, 18, 18), (x, h - 24, 6, 17), border_radius=2)
+    pygame.draw.rect(s, (255, 248, 200), (9, 8, 10, 5), border_radius=2)
+    pygame.draw.rect(s, (255, 248, 200), (w - 19, 8, 10, 5), border_radius=2)
+    pygame.draw.rect(s, (205, 35, 35), (9, h - 12, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (205, 35, 35), (w - 18, h - 12, 9, 5), border_radius=2)
+    return s
+
+
+def _draw_bus_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    _draw_car_shadow(s, w, h, inset_x=5, inset_y=10)
+    _draw_car_wheels(s, w, h, front_y=17, rear_y=h - 35, wheel_w=5, wheel_h=18)
+    pygame.draw.rect(s, (38, 38, 42), (4, 6, w - 8, h - 12), border_radius=7)
+    pygame.draw.rect(s, body_col, (6, 8, w - 12, h - 16), border_radius=6)
+    pygame.draw.rect(s, _shade(body_col, 26), (9, 12, w - 18, 9), border_radius=3)
+    pygame.draw.polygon(s, (42, 58, 74), [(10, 24), (w - 10, 24), (w - 14, 40), (14, 40)])
+    pygame.draw.polygon(s, (110, 178, 218), [(12, 25), (w - 12, 25), (w - 15, 38), (15, 38)])
+    pygame.draw.rect(s, _shade(body_col, -18), (9, 48, w - 18, h - 73), border_radius=4)
+    for y in range(53, h - 42, 18):
+        pygame.draw.rect(s, (112, 176, 214), (11, y, 9, 11), border_radius=2)
+        pygame.draw.rect(s, (112, 176, 214), (w - 20, y, 9, 11), border_radius=2)
+    pygame.draw.rect(s, (36, 42, 48), (w // 2 - 11, h - 31, 22, 14), border_radius=3)
+    pygame.draw.rect(s, (255, 248, 200), (8, 10, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (255, 248, 200), (w - 17, 10, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (205, 35, 35), (8, h - 13, 9, 5), border_radius=2)
+    pygame.draw.rect(s, (205, 35, 35), (w - 17, h - 13, 9, 5), border_radius=2)
+    return s
+
+
 def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
     if kind == "lamborgini":
         kind = "lamborghini"
-    kind = kind if kind in ("sedan", "limo", "sport", "lamborghini", "mini") else "sedan"
+    kind = kind if kind in ("sedan", "limo", "sport", "lamborghini", "mini", "semi", "bus") else "sedan"
     default_sizes = {
         "sedan": (46, 78),
         "limo": (50, 132),
         "sport": (44, 72),
         "lamborghini": (48, 76),
         "mini": (36, 58),
+        "semi": (58, 150),
+        "bus": (56, 136),
     }
     default_w, default_h = default_sizes[kind]
     w = default_w if w is None else w
@@ -155,6 +203,10 @@ def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
         return _draw_lamborghini_sprite(body_col, w, h)
     if kind == "mini":
         return _draw_mini_sprite(body_col, w, h)
+    if kind == "semi":
+        return _draw_semi_sprite(body_col, w, h)
+    if kind == "bus":
+        return _draw_bus_sprite(body_col, w, h)
     return _draw_sedan_sprite(body_col, w, h)
 
 
