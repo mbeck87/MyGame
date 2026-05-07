@@ -182,7 +182,7 @@ def _draw_bus_sprite(body_col, w, h):
 def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
     if kind == "lamborgini":
         kind = "lamborghini"
-    kind = kind if kind in ("sedan", "limo", "sport", "lamborghini", "mini", "semi", "bus") else "sedan"
+    kind = kind if kind in ("sedan", "limo", "sport", "lamborghini", "mini", "semi", "bus", "motorcycle") else "sedan"
     default_sizes = {
         "sedan": (46, 78),
         "limo": (50, 132),
@@ -191,6 +191,7 @@ def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
         "mini": (36, 58),
         "semi": (58, 150),
         "bus": (56, 136),
+        "motorcycle": (24, 56),
     }
     default_w, default_h = default_sizes[kind]
     w = default_w if w is None else w
@@ -207,7 +208,64 @@ def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
         return _draw_semi_sprite(body_col, w, h)
     if kind == "bus":
         return _draw_bus_sprite(body_col, w, h)
+    if kind == "motorcycle":
+        return _draw_motorcycle_sprite(body_col, w, h)
     return _draw_sedan_sprite(body_col, w, h)
+
+
+def _draw_motorcycle_sprite(body_col, w, h):
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    cx = w // 2
+    pygame.draw.ellipse(s, (0, 0, 0, 95), (cx - 8, h // 4, 16, h - h // 2))
+
+    pygame.draw.rect(s, (16, 16, 18), (cx - 4, 4, 8, 14), border_radius=2)
+    pygame.draw.rect(s, (52, 52, 56), (cx - 3, 6, 6, 10), border_radius=1)
+    pygame.draw.line(s, (118, 118, 122), (cx, 7), (cx, 14), 1)
+
+    pygame.draw.line(s, (60, 60, 64), (cx - 3, 14), (cx - 3, 19), 2)
+    pygame.draw.line(s, (60, 60, 64), (cx + 3, 14), (cx + 3, 19), 2)
+
+    pygame.draw.circle(s, (40, 38, 36), (cx, 4), 3)
+    pygame.draw.circle(s, (250, 240, 180), (cx, 4), 2)
+    pygame.draw.circle(s, (255, 255, 220), (cx - 1, 3), 1)
+
+    pygame.draw.line(s, (28, 28, 30), (cx - 9, 14), (cx + 9, 14), 3)
+    pygame.draw.circle(s, (22, 20, 22), (cx - 9, 14), 2)
+    pygame.draw.circle(s, (22, 20, 22), (cx + 9, 14), 2)
+
+    pygame.draw.rect(s, _shade(body_col, -32), (cx - 7, 18, 14, 19), border_radius=4)
+    pygame.draw.rect(s, body_col, (cx - 6, 19, 12, 17), border_radius=3)
+    pygame.draw.line(s, _shade(body_col, 55), (cx - 4, 21), (cx - 4, 32), 2)
+    pygame.draw.line(s, _shade(body_col, -10), (cx + 4, 22), (cx + 4, 32), 1)
+
+    pygame.draw.rect(s, (28, 26, 28), (cx - 6, 36, 12, 9), border_radius=2)
+    pygame.draw.rect(s, (52, 48, 50), (cx - 5, 36, 10, 8), border_radius=2)
+
+    pygame.draw.rect(s, (60, 58, 62), (cx + 5, 38, 4, 13), border_radius=1)
+    pygame.draw.rect(s, (118, 116, 120), (cx + 6, 38, 2, 12), border_radius=1)
+
+    pygame.draw.circle(s, (20, 20, 24), (cx, 28), 5)
+    pygame.draw.circle(s, (38, 38, 42), (cx - 1, 27), 4)
+    pygame.draw.rect(s, (140, 200, 230), (cx - 4, 25, 8, 4), border_radius=2)
+
+    pygame.draw.line(s, (100, 30, 36), (cx - 5, 32), (cx - 9, 16), 4)
+    pygame.draw.line(s, (100, 30, 36), (cx + 5, 32), (cx + 9, 16), 4)
+    pygame.draw.line(s, (190, 50, 60), (cx - 5, 32), (cx - 9, 16), 2)
+    pygame.draw.line(s, (190, 50, 60), (cx + 5, 32), (cx + 9, 16), 2)
+
+    pygame.draw.rect(s, (32, 30, 34), (cx - 7, 31, 14, 12), border_radius=3)
+    pygame.draw.rect(s, (190, 50, 60), (cx - 6, 32, 12, 10), border_radius=2)
+    pygame.draw.line(s, (220, 80, 90), (cx, 33), (cx, 41), 1)
+
+    pygame.draw.circle(s, (28, 26, 28), (cx - 9, 16), 2)
+    pygame.draw.circle(s, (28, 26, 28), (cx + 9, 16), 2)
+
+    pygame.draw.rect(s, (16, 16, 18), (cx - 5, h - 18, 10, 16), border_radius=2)
+    pygame.draw.rect(s, (52, 52, 56), (cx - 4, h - 16, 8, 12), border_radius=1)
+    pygame.draw.line(s, (118, 118, 122), (cx, h - 14), (cx, h - 6), 1)
+
+    pygame.draw.rect(s, (180, 30, 30), (cx - 3, h - 5, 6, 3), border_radius=1)
+    return s
 
 
 _BLOCK_LETTERS = {

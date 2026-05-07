@@ -134,6 +134,22 @@ CAR_PROFILES = {
         "look_distance": 154,
         "look_width": 64,
     },
+    "motorcycle": {
+        "label": "Motorrad",
+        "sprite_size": (24, 56),
+        "collision_size": (18, 42),
+        "max_spd": 470,
+        "max_hp": 180,
+        "accel": 420,
+        "brake": 280,
+        "turn": 175,
+        "drift_turn": 220,
+        "drag": 1.65,
+        "drift_drag": 0.5,
+        "ai_spd": (140, 240),
+        "look_distance": 70,
+        "look_width": 26,
+    },
 }
 
 LAW_CAR_PROFILES = {
@@ -212,10 +228,11 @@ LAW_CAR_PROFILES = {
 }
 
 CAR_KIND_WEIGHTS = (
-    ("sedan", 42),
-    ("mini", 20),
-    ("sport", 16),
-    ("lamborghini", 14),
+    ("sedan", 40),
+    ("mini", 19),
+    ("sport", 15),
+    ("lamborghini", 13),
+    ("motorcycle", 10),
     ("limo", 8),
     ("bus", 7),
     ("semi", 5),
@@ -268,6 +285,7 @@ def random_car_color(kind=None):
         "mini": [(220, 70, 55), (55, 145, 215), (245, 210, 75), (80, 190, 110), (230, 230, 230)],
         "semi": [(180, 38, 34), (235, 235, 225), (38, 98, 168), (54, 132, 82), (215, 150, 58)],
         "bus": [(238, 190, 44), (220, 72, 58), (52, 134, 196), (70, 166, 94)],
+        "motorcycle": [(28, 28, 32), (210, 40, 40), (240, 200, 50), (40, 130, 220), (40, 180, 110), (220, 220, 220)],
     }
     if kind in palettes and random.random() < 0.85:
         return random.choice(palettes[kind])

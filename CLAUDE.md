@@ -99,7 +99,7 @@ Sprite-Koordinatensystem: Y-Achse zeigt nach unten. Fußgänger-Sprites: "vorn" 
 | E | Auto ein-/aussteigen |
 | F | Passanten berauben |
 | 1–6 | Waffe wechseln (6 = RPG) |
-| R | Neustart (nach Game Over) |
+| LEERTASTE | Neustart (nach Game Over, in-process) |
 | ESC | Beenden |
 
 ## Waffensystem (`config.py`)
@@ -179,7 +179,7 @@ Waffen 0+1 von Anfang an. 2–5 per Pickup freischalten. Index 0 (Lichtschwert) 
 - `trigger_game_over()` in `systems/effects.py` setzt `state.game_over = True`, speichert Score in `scores.json`
 - Top-20 werden gespeichert, eigener Eintrag wird gelb hervorgehoben
 - `scores.json` speichert auch `last_name` für Vorausfüllung beim nächsten Start
-- Neustart (R): `os.execv(sys.executable, ...)` — vollständiger Prozess-Neustart
+- Neustart (LEERTASTE): `reset_game(state)` in `main.py` — clearing aller dynamischen Listen + erneuter Spawn (kein Prozess-Neustart, Welt-BG-Tile-Cache bleibt erhalten)
 
 ## Spawning-Logik (`world/spawning.py`)
 

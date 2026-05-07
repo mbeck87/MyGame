@@ -117,6 +117,101 @@ def _update_duck_easter(state, dt, moved):
     state.message_timer = 3.5
 
 
+def _spawn_traffic_and_player(state):
+    for _ in range(50):
+        kind = random_car_kind()
+        x, y, angle = road_spawn(kind)
+        car = Car(x, y, random_car_color(kind), kind=kind)
+        car.angle = angle
+        car.driver = True
+        state.cars.append(car)
+
+    for _ in range(60):
+        x, y = pedestrian_spawn()
+        state.peds.append(Ped(x, y))
+
+    player_x, player_y = safe_spawn()
+    player = Ped(player_x, player_y)
+    player.shirt = (40, 100, 200)
+    player.gender = "m"
+    player.hair_style = "short"
+    player.hair_color = (30, 20, 15)
+    player.frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.back_frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style, back=True)
+    player.swim_frames = make_swim_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.sprite = player.back_frames[0]
+    player.hp = 100
+    player.money = 0
+    player.total_money_earned = 0
+    player.wanted = 0
+    player.crime_timer = 0
+    player.aim_angle = 0
+    player.step_cd = 0.0
+    state.player = player
+    state.in_car = None
+    state.weapon = 0
+    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
+    state.unlocked_weapons = {0, 1}
+    state.fire_cd = 0
+    state.cam = [player.x - W // 2, player.y - H // 2]
+
+    pickup_defs = (
+        [('hp', None)] * 22 +
+        [(2,   None)] * 6 +
+        [(3,   None)] * 4 +
+        [(4,   None)] * 3 +
+        [(5,   None)] * 2
+    )
+    for kind, _ in pickup_defs:
+        px, py = safe_spawn()
+        state.pickups.append([px, py, kind, 0.0])
+
+    amusement_nodes = list(state.amusement_park_nodes)
+    for _ in range(38):
+        if not amusement_nodes:
+            break
+        x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
+        ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
+        ped.route_replan = random.uniform(0.1, 1.0)
+        state.peds.append(ped)
+
+
+def reset_game(state):
+    state.cars.clear()
+    state.peds.clear()
+    state.cops.clear()
+    state.intersection_claims.clear()
+    state.bullets.clear()
+    state.rockets.clear()
+    state.blood_splats.clear()
+    state.blood_particles.clear()
+    state.smoke_particles.clear()
+    state.fire_particles.clear()
+    state.explosions.clear()
+    state.lightsaber_swings.clear()
+    state.wrecks.clear()
+    state.corpses.clear()
+    state.pickups.clear()
+    state.roadblocks.clear()
+    state.cop_spawn = 0.0
+    state.wanted_heat = 0.0
+    state.last_wanted_level = 0
+    state.roadblock_wanted_level = 0
+    state.roadblocks_cleared_on_drop = False
+    state.duck_easter_timer = 0.0
+    state.duck_easter_done = False
+    state.duck_easter_duck = None
+    state.duck_easter_last_pos = None
+    state.message = ""
+    state.message_timer = 0.0
+    state.game_over = False
+    state.score_saved = False
+    state.paused = False
+    state.menu = None
+    state.final_scores = []
+    _spawn_traffic_and_player(state)
+
+
 def main():
     pygame.init()
     audio.init()
@@ -141,71 +236,15 @@ def main():
     state.settings = settings
     state_init(state)
     build_world(state)
+    init_services(state)
     menu_ctrl = MenuController(W, H, settings)
 
-    # Initial-Verkehr und NPCs
-    for _ in range(50):
-        kind = random_car_kind()
-        x, y, angle = road_spawn(kind)
-        car = Car(x, y, random_car_color(kind), kind=kind)
-        car.angle = angle
-        car.driver = True
-        state.cars.append(car)
-
-    for _ in range(60):
-        x, y = pedestrian_spawn()
-        state.peds.append(Ped(x, y))
-
-    # Spieler
-    player_x, player_y = safe_spawn()
-    player = Ped(player_x, player_y)
-    player.shirt = (40, 100, 200)
-    player.gender = "m"
-    player.hair_style = "short"
-    player.hair_color = (30, 20, 15)
-    player.frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
-    player.back_frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style, back=True)
-    player.swim_frames = make_swim_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
-    player.sprite = player.back_frames[0]
-    player.hp = 100
-    player.money = 0
-    player.total_money_earned = 0
-    player.wanted = 0
-    player.crime_timer = 0
-    player.aim_angle = 0
-    player.step_cd = 0.0
-    state.player = player
-    state.in_car = None
-    state.weapon = 0
-    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
-    state.unlocked_weapons = {0, 1}
-    state.fire_cd = 0
-
-    # Pickups
-    pickup_defs = (
-        [('hp', None)] * 22 +
-        [(2,   None)] * 6 +
-        [(3,   None)] * 4 +
-        [(4,   None)] * 3 +
-        [(5,   None)] * 2
-    )
-    for kind, _ in pickup_defs:
-        px, py = safe_spawn()
-        state.pickups.append([px, py, kind, 0.0])
-    init_services(state)
-    amusement_nodes = list(state.amusement_park_nodes)
-    for _ in range(38):
-        if not amusement_nodes:
-            break
-        x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
-        ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
-        ped.route_replan = random.uniform(0.1, 1.0)
-        state.peds.append(ped)
-
-    cop_spawn = 0.0
+    _spawn_traffic_and_player(state)
+    player = state.player
 
     while state.running:
         dt = clock.tick(60) / 1000
+        player = state.player
         if state.message_timer > 0:
             state.message_timer = max(0.0, state.message_timer - dt)
         if not state.menu:
@@ -269,8 +308,9 @@ def main():
                     state.menu = "pause"
                     audio.set_engine(False)
                     continue
-                if state.game_over and e.key == pygame.K_r:
-                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                if state.game_over and e.key == pygame.K_SPACE:
+                    reset_game(state)
+                    continue
                 if e.key == pygame.K_b and nearby_service(state) == "shop" and not state.game_over:
                     state.menu = "shop"
                     continue
@@ -345,11 +385,21 @@ def main():
                 dy = (1 if keys[pygame.K_s] else 0) - (1 if keys[pygame.K_w] else 0)
                 if dx or dy:
                     n = math.hypot(dx, dy)
-                    nx = player.x + dx/n * sp * dt
-                    ny = player.y + dy/n * sp * dt
-                    pr = pygame.Rect(nx-10, ny-10, 20, 20)
-                    if not any(pr.colliderect(b[0]) for b in state.buildings):
-                        player.x, player.y = nx, ny
+                    mvx = dx/n * sp * dt
+                    mvy = dy/n * sp * dt
+                    solid_cars = [c for c in state.cars
+                                  if not c.dead and not getattr(c, 'sunk', False)]
+                    def _blocked(rx, ry):
+                        pr = pygame.Rect(rx-10, ry-10, 20, 20)
+                        if any(pr.colliderect(b[0]) for b in state.buildings):
+                            return True
+                        return any(pr.colliderect(c.rect()) for c in solid_cars)
+                    nx = player.x + mvx
+                    if not _blocked(nx, player.y):
+                        player.x = nx
+                    ny = player.y + mvy
+                    if not _blocked(player.x, ny):
+                        player.y = ny
                     player.angle = math.degrees(math.atan2(dx, -dy))
                     player.step_cd -= dt
                     if player.step_cd <= 0:
@@ -387,7 +437,7 @@ def main():
                     player.wanted = max(0, player.wanted - 1)
                     sync_wanted_heat_after_drop(state)
                     player.crime_timer = 25
-                cop_spawn -= dt
+                state.cop_spawn -= dt
                 law_kind = law_kind_for_wanted(player.wanted)
                 wanted_increased = player.wanted > state.last_wanted_level
                 view = pygame.Rect(int(state.cam[0]), int(state.cam[1]), W, H)
@@ -429,8 +479,8 @@ def main():
                 )
                 cop_limit_by_wanted = {3: 6, 4: 8, 5: 10}
                 cop_limit = cop_limit_by_wanted.get(player.wanted, max(1, player.wanted))
-                if cop_spawn <= 0 and active_tier_cars < cop_limit:
-                    cop_spawn = max(1.2, 8 - player.wanted*1.35)
+                if state.cop_spawn <= 0 and active_tier_cars < cop_limit:
+                    state.cop_spawn = max(1.2, 8 - player.wanted*1.35)
                     spawn = cop_car_spawn_near(player.x, player.y, state.cam, law_kind)
                     if spawn is not None:
                         cx, cy, angle = spawn
@@ -754,6 +804,8 @@ def main():
         screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | H Friseur | P Pause | 1-6 Waffe",
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
+        fps_val = int(clock.get_fps())
+        draw_hud_text(f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
         if state.in_car:
             kmh = int(abs(state.in_car.spd) * 0.5)
             screen.blit(FONT.render(f"{kmh} km/h", 1, (255,255,255)), (W-140, 238))
@@ -786,7 +838,7 @@ def main():
                 line = f"{rank_sym:<4} {entry['name']:<18} ${entry['money']:>8}"
                 lt = FONT.render(line, 1, col)
                 screen.blit(lt, (W//2 - lt.get_width()//2, 175 + i * 30))
-            t2 = FONT.render("[R] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
+            t2 = FONT.render("[LEERTASTE] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
             screen.blit(t2, (W//2 - t2.get_width()//2, H - 50))
         else:
             draw_overlay_menu(screen, state, BIG, MED, FONT)
