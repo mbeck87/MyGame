@@ -9,7 +9,7 @@ from game2d.config import (
     ROAD_W, SIDEWALK_W,
 )
 from game2d.render.sprites import make_building
-from game2d.world.geometry import RoadSegment, amusement_path_points, rect_overlaps_street_space, rebuild_pedestrian_graph
+from game2d.world.geometry import RoadSegment, rect_overlaps_street_space, rebuild_pedestrian_graph
 
 
 COMMERCIAL_KINDS = {"bar", "restaurant", "disco", "supermarket", "fastfood"}
@@ -300,44 +300,27 @@ def _build_park_ducks(park):
 
 
 def _build_amusement_stands(park):
-    path = amusement_path_points(park)
-    specs = (
-        (0.14, -1, "popcorn"),
-        (0.27, 1, "pretzel"),
-        (0.41, -1, "icecream"),
-        (0.58, 1, "candy"),
-        (0.72, -1, "soda"),
-        (0.86, 1, "hotdog"),
-    )
-    stands = []
-    offset = 76
-    margin_x = 34
-    margin_y = 44
-    for frac, side, kind in specs:
-        idx = max(2, min(len(path) - 3, int((len(path) - 1) * frac)))
-        px, py = path[idx]
-        ax, ay = path[idx - 2]
-        bx, by = path[idx + 2]
-        tx = bx - ax
-        ty = by - ay
-        length = (tx * tx + ty * ty) ** 0.5 or 1
-        nx = -ty / length
-        ny = tx / length
-        choices = (side, -side)
-        placed = None
-        for sign in choices:
-            x = px + nx * offset * sign
-            y = py + ny * offset * sign
-            body = pygame.Rect(int(x - 28), int(y - 36), 56, 62)
-            if park.contains(body.inflate(margin_x - 28, margin_y - 31)):
-                placed = (x, y, kind)
-                break
-        if placed is None:
-            x = max(park.left + margin_x, min(park.right - margin_x, px + nx * offset * side))
-            y = max(park.top + margin_y, min(park.bottom - margin_y, py + ny * offset * side))
-            placed = (x, y, kind)
-        stands.append(placed)
-    return stands
+    w = park.w
+    h = park.h
+    outer_left = park.left + w * 0.12
+    outer_right = park.right - w * 0.12
+    outer_top = park.top + h * 0.12
+    outer_bottom = park.bottom - h * 0.12
+    offset = 48
+    return [
+        (outer_right - w * 0.18, outer_bottom + offset, "popcorn"),
+        (outer_right - w * 0.38, outer_bottom + offset, "pretzel"),
+        (outer_right - w * 0.58, outer_bottom + offset, "icecream"),
+        (outer_left - offset, outer_bottom - h * 0.24, "candy"),
+        (outer_left - offset, outer_bottom - h * 0.44, "soda"),
+        (outer_left - offset, outer_bottom - h * 0.64, "hotdog"),
+        (outer_left + w * 0.18, outer_top - offset, "pizza"),
+        (outer_left + w * 0.38, outer_top - offset, "burger"),
+        (outer_left + w * 0.58, outer_top - offset, "fries"),
+        (outer_right + offset, outer_top + h * 0.24, "coffee"),
+        (outer_right + offset, outer_top + h * 0.44, "balloons"),
+        (outer_right + offset, outer_top + h * 0.64, "souvenirs"),
+    ]
 
 
 def _road_axis_extents(axis, coord):

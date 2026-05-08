@@ -13,7 +13,7 @@ from game2d.config import (
 )
 from game2d.render.sprites import make_duck_sprite
 from game2d.state import current
-from game2d.world.geometry import amusement_path_points as _amusement_path_points
+from game2d.world.geometry import amusement_path_segments as _amusement_path_segments
 from game2d.world.geometry import road_connections_at
 from game2d.world.traffic import traffic_light_state
 
@@ -516,6 +516,168 @@ def _draw_roller_coaster(surf, rect, t):
             pygame.draw.circle(surf, (28, 30, 34), (wx, wy), 2)
 
 
+def _draw_new_roller_coaster(surf, area, t):
+    pygame.draw.rect(surf, (38, 92, 58), area.inflate(18, 18), border_radius=10)
+    pygame.draw.rect(surf, (42, 104, 64), area.inflate(10, 10), border_radius=8)
+    ground_y = area.bottom - 12
+    pygame.draw.rect(surf, (52, 124, 70), (area.left - 4, ground_y - 8, area.w + 8, 20), border_radius=5)
+    pygame.draw.line(surf, (92, 142, 74), (area.left - 2, ground_y - 8), (area.right + 2, ground_y - 8), 2)
+
+    station = pygame.Rect(area.left + 14, area.bottom - 70, 116, 52)
+    pygame.draw.rect(surf, (42, 30, 26), station.move(4, 5), border_radius=4)
+    pygame.draw.rect(surf, (178, 62, 70), station, border_radius=4)
+    pygame.draw.rect(surf, (100, 42, 48), station, 2, border_radius=4)
+    pygame.draw.polygon(surf, (238, 194, 70), [
+        (station.left - 8, station.top + 6),
+        (station.centerx, station.top - 24),
+        (station.right + 8, station.top + 6),
+    ])
+    pygame.draw.line(surf, (120, 74, 38), (station.left - 4, station.top + 6), (station.right + 4, station.top + 6), 2)
+    for sx in range(station.left + 12, station.right - 8, 17):
+        pygame.draw.line(surf, (230, 204, 118), (sx, station.top + 10), (sx, station.top + 23), 2)
+    entry_door = pygame.Rect(station.left + 12, station.bottom - 24, 30, 24)
+    exit_door = pygame.Rect(station.right - 42, station.bottom - 24, 30, 24)
+    for door, label in ((entry_door, "EIN"), (exit_door, "AUS")):
+        pygame.draw.rect(surf, (44, 34, 30), door, border_radius=2)
+        pygame.draw.rect(surf, (238, 206, 118), (door.left + 4, door.top + 4, door.w - 8, 8), border_radius=1)
+        _draw_centered_label(surf, label, (door.centerx, door.top + 8), 12, (82, 48, 32))
+    platform = pygame.Rect(station.left + 8, station.top + 25, station.w - 16, 7)
+    pygame.draw.rect(surf, (92, 48, 42), platform, border_radius=2)
+
+    def p(rx, ry):
+        return area.left + area.w * rx, area.top + area.h * ry
+
+    def bezier_points(a, b, c, d, count=34):
+        points = []
+        for i in range(count):
+            u = i / (count - 1)
+            inv = 1 - u
+            x = inv**3 * a[0] + 3 * inv**2 * u * b[0] + 3 * inv * u**2 * c[0] + u**3 * d[0]
+            y = inv**3 * a[1] + 3 * inv**2 * u * b[1] + 3 * inv * u**2 * c[1] + u**3 * d[1]
+            points.append((x, y))
+        return points
+
+    station_track_y = station.bottom - 6
+    station_entry = (entry_door.centerx, station_track_y)
+    station_exit = (exit_door.centerx, station_track_y)
+    start = station_exit
+    end = station_entry
+    lcx, lcy = p(0.63, 0.45)
+    loop_r = min(area.w * 0.086, area.h * 0.27)
+    loop_bottom = (lcx, lcy + loop_r)
+    loop_points = []
+    for i in range(73):
+        u = i / 72
+        ang = math.radians(90) - math.tau * u
+        loop_points.append((lcx + math.cos(ang) * loop_r, lcy + math.sin(ang) * loop_r))
+
+    samples = [station_entry]
+    curves = (
+        (start, p(0.23, 0.83), p(0.26, 0.77), p(0.29, 0.70)),
+        (p(0.29, 0.70), p(0.31, 0.39), p(0.34, 0.14), p(0.39, 0.16)),
+        (p(0.39, 0.16), p(0.46, 0.15), p(0.47, 0.76), p(0.53, 0.75)),
+        (p(0.53, 0.75), p(0.57, 0.76), p(0.59, 0.69), loop_bottom),
+    )
+    for curve_idx, curve in enumerate(curves):
+        pts = bezier_points(*curve, count=30)
+        if curve_idx:
+            pts = pts[1:]
+        samples.extend(pts)
+    samples.extend(loop_points[1:])
+    return_curves = (
+        (loop_points[-1], p(0.72, 0.76), p(0.76, 0.23), p(0.83, 0.27)),
+        (p(0.83, 0.27), p(0.92, 0.38), p(0.96, 0.70), p(0.90, 0.74)),
+        (p(0.90, 0.74), p(0.72, 0.86), p(0.50, 0.82), p(0.34, 0.76)),
+        (p(0.34, 0.76), p(0.24, 0.82), p(0.15, 0.86), end),
+    )
+    for curve in return_curves:
+        samples.extend(bezier_points(*curve, count=30)[1:])
+
+    pts_i = [(int(x), int(y)) for x, y in samples]
+    support_points = []
+    station_clear = station.inflate(18, 28)
+    for i in range(6, len(pts_i) - 6, 15):
+        x, y = pts_i[i]
+        if station_clear.collidepoint(x, y) or ground_y - y < 22:
+            continue
+        support_points.append((x, y, ground_y))
+    for x, y, base_y in support_points:
+        pygame.draw.line(surf, (62, 62, 68), (x, y + 4), (x, base_y), 3)
+        pygame.draw.line(surf, (142, 142, 150), (x + 1, y + 5), (x + 1, base_y - 2), 1)
+        pygame.draw.ellipse(surf, (54, 54, 58), (x - 10, base_y - 3, 20, 6))
+    for prev, cur in zip(support_points, support_points[1:]):
+        ax, ay, abase = prev
+        bx, by, bbase = cur
+        if abs(bx - ax) > 42:
+            continue
+        pygame.draw.line(surf, (86, 86, 94), (ax, abase - 8), (bx, by + 8), 1)
+        pygame.draw.line(surf, (86, 86, 94), (ax, ay + 8), (bx, bbase - 8), 1)
+
+    pygame.draw.lines(surf, (34, 52, 34), False, pts_i, 9)
+    pygame.draw.lines(surf, (82, 26, 32), False, pts_i, 7)
+    pygame.draw.lines(surf, (220, 58, 66), False, pts_i, 4)
+    pygame.draw.lines(surf, (252, 142, 132), False, pts_i, 1)
+    for i in range(0, len(pts_i), 8):
+        x, y = pts_i[i]
+        pygame.draw.circle(surf, (100, 36, 42), (x, y), 2)
+        pygame.draw.circle(surf, (248, 160, 144), (x, y - 1), 1)
+
+    travel_points = samples
+    if math.hypot(samples[-1][0] - samples[0][0], samples[-1][1] - samples[0][1]) > 0.01:
+        travel_points = samples + [samples[0]]
+    segment_lengths = []
+    total_len = 0.0
+    for a, b in zip(travel_points, travel_points[1:]):
+        seg_len = math.hypot(b[0] - a[0], b[1] - a[1])
+        segment_lengths.append(seg_len)
+        total_len += seg_len
+
+    def point_on_track(distance):
+        distance %= total_len
+        walked = 0.0
+        for i, seg_len in enumerate(segment_lengths):
+            if walked + seg_len >= distance:
+                a = travel_points[i]
+                b = travel_points[i + 1]
+                frac = 0.0 if seg_len <= 0 else (distance - walked) / seg_len
+                x = a[0] + (b[0] - a[0]) * frac
+                y = a[1] + (b[1] - a[1]) * frac
+                ang = math.atan2(b[1] - a[1], b[0] - a[0])
+                return x, y, ang
+            walked += seg_len
+        a = travel_points[-2]
+        b = travel_points[-1]
+        return b[0], b[1], math.atan2(b[1] - a[1], b[0] - a[0])
+
+    train_head = (t * 116) % total_len
+    station_hide = pygame.Rect(station.left - 8, station.top - 20, station.w + 18, station.h + 36)
+    car_cols = ((42, 92, 210), (58, 140, 226), (242, 186, 60), (220, 64, 78))
+    for car_no, gap in enumerate((0, 26, 52, 78)):
+        x, y, ang = point_on_track(train_head - gap)
+        if station_hide.collidepoint(x, y):
+            continue
+        ux, uy = math.cos(ang), math.sin(ang)
+        nx, ny = -uy, ux
+        if ny > 0:
+            nx, ny = -nx, -ny
+        x += nx * 7
+        y += ny * 7
+        body = []
+        for lx, ly in ((-12, -8), (13, -7), (14, 6), (-13, 7)):
+            body.append((int(x + ux * lx + nx * ly), int(y + uy * lx + ny * ly)))
+        pygame.draw.polygon(surf, (26, 24, 34), [(px + 2, py + 3) for px, py in body])
+        pygame.draw.polygon(surf, car_cols[car_no], body)
+        pygame.draw.lines(surf, (22, 24, 34), True, body, 1)
+        pygame.draw.line(surf, (238, 238, 230),
+                         (int(x + ux * -5 + nx * -4), int(y + uy * -5 + ny * -4)),
+                         (int(x + ux * 8 + nx * -4), int(y + uy * 8 + ny * -4)), 2)
+        for lx in (-8, 8):
+            wx = int(x + ux * lx - nx * 7)
+            wy = int(y + uy * lx - ny * 7)
+            pygame.draw.circle(surf, (24, 24, 28), (wx, wy), 3)
+            pygame.draw.circle(surf, (198, 198, 204), (wx, wy), 1)
+
+
 def _draw_food_icon(surf, kind, cx, cy):
     if kind == "popcorn":
         pygame.draw.rect(surf, (238, 238, 232), (cx - 8, cy - 6, 16, 18))
@@ -540,9 +702,37 @@ def _draw_food_icon(surf, kind, cx, cy):
         pygame.draw.rect(surf, (80, 160, 220), (cx - 7, cy - 10, 14, 22), border_radius=2)
         pygame.draw.rect(surf, (245, 245, 245), (cx - 5, cy - 4, 10, 6))
         pygame.draw.line(surf, (245, 245, 245), (cx + 3, cy - 10), (cx + 10, cy - 18), 2)
-    else:
+    elif kind == "hotdog":
         pygame.draw.rect(surf, (236, 180, 80), (cx - 11, cy - 3, 22, 7), border_radius=4)
         pygame.draw.rect(surf, (210, 70, 55), (cx - 8, cy - 6, 16, 4), border_radius=2)
+    elif kind == "pizza":
+        pygame.draw.polygon(surf, (238, 190, 72), [(cx - 10, cy - 8), (cx + 12, cy - 2), (cx - 6, cy + 16)])
+        pygame.draw.line(surf, (164, 92, 42), (cx - 10, cy - 8), (cx + 12, cy - 2), 3)
+        for ox, oy in ((-2, 1), (4, 4), (-5, 8)):
+            pygame.draw.circle(surf, (196, 50, 48), (cx + ox, cy + oy), 2)
+    elif kind == "burger":
+        pygame.draw.arc(surf, (226, 158, 70), (cx - 13, cy - 12, 26, 18), math.pi, math.tau, 5)
+        pygame.draw.rect(surf, (88, 52, 34), (cx - 12, cy - 1, 24, 5), border_radius=2)
+        pygame.draw.rect(surf, (80, 164, 74), (cx - 11, cy + 4, 22, 3), border_radius=1)
+        pygame.draw.rect(surf, (226, 158, 70), (cx - 12, cy + 7, 24, 5), border_radius=2)
+    elif kind == "fries":
+        for ox in (-7, -3, 1, 5):
+            pygame.draw.rect(surf, (248, 214, 72), (cx + ox, cy - 14, 3, 17))
+        pygame.draw.polygon(surf, (214, 54, 58), [(cx - 10, cy - 2), (cx + 10, cy - 2), (cx + 7, cy + 15), (cx - 7, cy + 15)])
+    elif kind == "coffee":
+        pygame.draw.rect(surf, (238, 238, 228), (cx - 8, cy - 4, 16, 16), border_radius=3)
+        pygame.draw.arc(surf, (238, 238, 228), (cx + 5, cy, 10, 8), -1.4, 1.4, 2)
+        pygame.draw.rect(surf, (90, 58, 38), (cx - 6, cy - 1, 12, 5), border_radius=2)
+        pygame.draw.line(surf, (222, 222, 216), (cx - 4, cy - 13), (cx - 7, cy - 20), 1)
+        pygame.draw.line(surf, (222, 222, 216), (cx + 3, cy - 12), (cx + 5, cy - 20), 1)
+    elif kind == "balloons":
+        for ox, oy, col in ((-7, -8, (230, 70, 86)), (1, -12, (72, 156, 230)), (8, -6, (238, 202, 68))):
+            pygame.draw.circle(surf, col, (cx + ox, cy + oy), 6)
+            pygame.draw.line(surf, (230, 230, 220), (cx + ox, cy + oy + 6), (cx, cy + 15), 1)
+    else:
+        pygame.draw.rect(surf, (120, 80, 54), (cx - 12, cy - 5, 24, 16), border_radius=3)
+        pygame.draw.rect(surf, (224, 188, 116), (cx - 8, cy - 12, 16, 9), border_radius=2)
+        pygame.draw.circle(surf, (228, 80, 92), (cx - 4, cy - 7), 2)
 
 
 def _draw_food_stand(surf, x, y, kind):
@@ -626,6 +816,108 @@ def _draw_ticket_booth(surf, x, y, w, h):
     pygame.draw.rect(surf, (240, 220, 130), (x + 6, y + h - 16, w - 12, 12), border_radius=2)
     for sx in range(x + 9, x + w - 5, 4):
         pygame.draw.line(surf, (190, 60, 60), (sx, y + h - 14), (sx, y + h - 6), 1)
+
+
+def _draw_centered_label(surf, text, center, size=22, color=(44, 32, 24)):
+    font = pygame.font.Font(None, size)
+    label = font.render(text, True, color)
+    surf.blit(label, label.get_rect(center=center))
+
+
+def _draw_park_gate(surf, x, y):
+    pygame.draw.rect(surf, (72, 42, 36), (x - 72, y - 74, 14, 98), border_radius=3)
+    pygame.draw.rect(surf, (72, 42, 36), (x + 58, y - 74, 14, 98), border_radius=3)
+    pygame.draw.rect(surf, (128, 58, 64), (x - 78, y - 82, 156, 24), border_radius=5)
+    pygame.draw.rect(surf, (238, 198, 76), (x - 84, y - 104, 168, 30), border_radius=4)
+    pygame.draw.rect(surf, (96, 48, 42), (x - 84, y - 104, 168, 30), 2, border_radius=4)
+    _draw_centered_label(surf, "Freizeit Park", (x, y - 88), 24, (74, 36, 32))
+    for ox in (-48, -16, 16, 48):
+        pygame.draw.circle(surf, (248, 220, 96), (x + ox, y - 59), 4)
+
+
+def _draw_ticket_building(surf, x, y):
+    body = pygame.Rect(int(x - 34), int(y - 24), 68, 48)
+    pygame.draw.rect(surf, (44, 34, 28), body.move(4, 5), border_radius=4)
+    pygame.draw.rect(surf, (228, 206, 164), body, border_radius=4)
+    pygame.draw.rect(surf, (118, 82, 58), body, 2, border_radius=4)
+    roof = pygame.Rect(body.left - 5, body.top - 10, body.w + 10, 15)
+    pygame.draw.rect(surf, (176, 56, 58), roof, border_radius=4)
+    pygame.draw.rect(surf, (92, 34, 34), roof, 2, border_radius=4)
+    win = pygame.Rect(body.left + 10, body.top + 10, body.w - 20, 18)
+    pygame.draw.rect(surf, (40, 62, 82), win, border_radius=2)
+    pygame.draw.rect(surf, (130, 190, 220), win.inflate(-3, -3), border_radius=2)
+    pygame.draw.rect(surf, (82, 48, 32), (win.left + 19, win.top + 11, 10, 5), border_radius=2)
+    _draw_centered_label(surf, "KASSE", (body.centerx, body.bottom - 8), 14, (72, 44, 30))
+
+
+def _draw_wc_building(surf, x, y):
+    body = pygame.Rect(int(x - 38), int(y - 25), 76, 50)
+    pygame.draw.rect(surf, (36, 34, 36), body.move(4, 5), border_radius=4)
+    pygame.draw.rect(surf, (206, 214, 214), body, border_radius=4)
+    pygame.draw.rect(surf, (82, 92, 96), body, 2, border_radius=4)
+    pygame.draw.rect(surf, (68, 92, 128), (body.left - 4, body.top - 10, body.w + 8, 15), border_radius=4)
+    _draw_centered_label(surf, "WC", (body.centerx, body.top - 2), 16, (238, 238, 232))
+    doors = (pygame.Rect(body.left + 10, body.top + 15, 22, 29), pygame.Rect(body.right - 32, body.top + 15, 22, 29))
+    for door in doors:
+        pygame.draw.rect(surf, (66, 70, 76), door, border_radius=2)
+    _draw_centered_label(surf, "M", doors[0].center, 18, (88, 158, 238))
+    _draw_centered_label(surf, "W", doors[1].center, 18, (238, 96, 170))
+
+
+def _draw_fountain(surf, cx, cy, t):
+    pygame.draw.ellipse(surf, (132, 118, 98), (cx - 118, cy - 72, 236, 144))
+    pygame.draw.ellipse(surf, (180, 150, 104), (cx - 108, cy - 62, 216, 124))
+    pygame.draw.ellipse(surf, (72, 142, 180), (cx - 68, cy - 32, 136, 64))
+    pygame.draw.ellipse(surf, (126, 198, 224), (cx - 52, cy - 23, 104, 42))
+    pygame.draw.rect(surf, (164, 156, 138), (cx - 13, cy - 42, 26, 44), border_radius=4)
+    pygame.draw.ellipse(surf, (200, 194, 176), (cx - 24, cy - 51, 48, 18))
+    spray_layers = (
+        (8, 22, 15, 16, 1.6, 0.0),
+        (10, 35, 26, 27, 1.25, 0.18),
+        (12, 52, 38, 39, 1.0, 0.08),
+    )
+    for count, reach, lift, fall, speed, phase in spray_layers:
+        for i in range(count):
+            ang = t * speed + phase + i * math.tau / count
+            side = math.cos(ang)
+            depth = math.sin(ang)
+            sx = cx + side * 6
+            sy = cy - 49 + depth * 3
+            mx = cx + side * reach * 0.55
+            my = cy - 50 - lift + depth * 8
+            ex = cx + side * reach
+            ey = cy - 48 + fall + depth * 13
+            pts = []
+            for step in range(7):
+                u = step / 6
+                inv = 1 - u
+                x = inv * inv * sx + 2 * inv * u * mx + u * u * ex
+                y = inv * inv * sy + 2 * inv * u * my + u * u * ey
+                pts.append((int(x), int(y)))
+            pygame.draw.lines(surf, (190, 234, 248), False, pts, 1 if reach < 30 else 2)
+    pygame.draw.circle(surf, (232, 248, 255), (cx, cy - 60 - int(math.sin(t * 3) * 3)), 4)
+
+
+def _amusement_new_layout(rect):
+    w = rect.w
+    h = rect.h
+    outer_left = rect.left + int(w * 0.12)
+    outer_right = rect.right - int(w * 0.12)
+    outer_bottom = rect.bottom - int(h * 0.12)
+    center_y = rect.top + int(h * 0.50)
+    return {
+        'carousel': (outer_left + int(w * 0.10), center_y + int(h * 0.11)),
+        'ferris': (outer_left + int(w * 0.22), outer_bottom - 120),
+        'swing': (outer_right - int(w * 0.16), outer_bottom - 135),
+        'bumper_arena': pygame.Rect(outer_right - 390, rect.top + int(h * 0.16), 310, 170),
+        'coaster_area': pygame.Rect(outer_left + 54, rect.top + int(h * 0.17), 500, 160),
+        'benches': (
+            (outer_left + 180, rect.top + int(h * 0.12) + 30, True),
+            (outer_right - 180, rect.top + int(h * 0.12) + 30, True),
+            (outer_left + 180, outer_bottom - 30, True),
+            (outer_right - 180, outer_bottom - 30, True),
+        ),
+    }
 
 
 def _draw_bumper_arena(surf, rect):
@@ -716,13 +1008,24 @@ def _draw_bumper_cars_dynamic(surf, rect, t):
         body = []
         for lx, ly in ((-9, -8), (10, -7), (12, 7), (-11, 8)):
             body.append((int(x + ux * lx + vx * ly), int(y + uy * lx + vy * ly)))
+        nose = (int(x + ux * 14), int(y + uy * 14))
+        mast_base = (int(x - ux * 7), int(y - uy * 7))
+        mast_top = (mast_base[0], mast_base[1] - 18)
         pygame.draw.polygon(surf, (28, 18, 14), [(p[0] + 2, p[1] + 3) for p in body])
         pygame.draw.polygon(surf, col, body)
-        pygame.draw.lines(surf, (24, 24, 28), True, body, 1)
+        pygame.draw.lines(surf, (24, 24, 28), True, body, 2)
+        pygame.draw.line(surf, (245, 226, 132), body[0], body[1], 2)
         pygame.draw.line(surf, (240, 240, 220),
                          (int(x + ux * -4 + vx * -3), int(y + uy * -4 + vy * -3)),
                          (int(x + ux * 6 + vx * -3), int(y + uy * 6 + vy * -3)), 2)
-        pygame.draw.circle(surf, (200, 200, 210), (int(x), int(y)), 2)
+        pygame.draw.circle(surf, (246, 214, 174), (int(x - ux * 1), int(y - uy * 1)), 4)
+        pygame.draw.circle(surf, (34, 34, 38), (int(x + ux * 5), int(y + uy * 5)), 3)
+        pygame.draw.line(surf, (34, 34, 38),
+                         (int(x + ux * 5 + vx * -4), int(y + uy * 5 + vy * -4)),
+                         (int(x + ux * 5 + vx * 4), int(y + uy * 5 + vy * 4)), 1)
+        pygame.draw.circle(surf, (250, 236, 124), nose, 2)
+        pygame.draw.line(surf, (188, 188, 196), mast_base, mast_top, 1)
+        pygame.draw.circle(surf, (245, 245, 235), mast_top, 2)
 
 
 def _amusement_decorations(rect):
@@ -768,46 +1071,36 @@ def _draw_amusement_static(surf, cam):
             continue
         pygame.draw.rect(surf, (52, 122, 78), rect)
         pygame.draw.rect(surf, (174, 78, 92), rect, 5)
-        gate = pygame.Rect(rect.left + 34, rect.bottom - 70, 76, 50)
-        pygame.draw.rect(surf, (112, 48, 66), gate, border_radius=4)
-        pygame.draw.polygon(surf, (236, 198, 78), [(gate.left - 8, gate.top), (gate.centerx, gate.top - 36), (gate.right + 8, gate.top)])
-        pygame.draw.rect(surf, (42, 36, 40), (gate.centerx - 12, gate.bottom - 28, 24, 28))
-        pygame.draw.circle(surf, (244, 214, 86), (gate.centerx, gate.top - 12), 9)
 
-        path = [(x - cam[0], y - cam[1]) for x, y in _amusement_path_points(park)]
-        _draw_flat_path(surf, path, (128, 86, 52), 42)
-        _draw_flat_path(surf, path, (214, 178, 118), 28)
-        for idx, (x, y) in enumerate(path[::10]):
-            pygame.draw.circle(surf, (246, 216, 92), (int(x), int(y)), 4)
-            pygame.draw.circle(surf, (78, 54, 42), (int(x), int(y + 7)), 2)
+        path_segments = [[(x - cam[0], y - cam[1]) for x, y in segment] for segment in _amusement_path_segments(park)]
+        for path in path_segments:
+            _draw_flat_path(surf, path, (128, 86, 52), 42)
+        for path in path_segments:
+            _draw_flat_path(surf, path, (214, 178, 118), 28)
+        for path in path_segments:
+            for idx, (x, y) in enumerate(path[::10]):
+                pygame.draw.circle(surf, (246, 216, 92), (int(x), int(y)), 4)
+                pygame.draw.circle(surf, (78, 54, 42), (int(x), int(y + 7)), 2)
 
         for x, y, kind in s.amusement_stands:
             if park.collidepoint(x, y):
                 _draw_food_stand(surf, x - cam[0], y - cam[1], kind)
 
-        deco = _amusement_decorations(rect)
-        _draw_bumper_arena(surf, deco['bumper_arena'])
-        _draw_swing_ride_base(surf, deco['swing_center'][0], deco['swing_center'][1])
-        for bx, by, bw, bh, accent in deco['booths']:
-            _draw_game_booth(surf, bx, by, bw, bh, accent)
-        tx, ty, tw, th = deco['ticket_booth']
-        _draw_ticket_booth(surf, tx, ty, tw, th)
-        for px_, py_, color in deco['planters']:
-            _draw_planter(surf, px_, py_, color)
-        for bx, by, vert in deco['benches']:
-            _draw_bench(surf, bx, by, vertical=vert)
-        for lx, ly in deco['lamps']:
-            _draw_lamppost(surf, lx, ly)
-
-        for i in range(20):
-            px = rect.left + 60 + (i * 97) % max(1, rect.w - 120)
-            py = rect.top + 64 + (i * 151) % max(1, rect.h - 128)
-            if i % 5 == 0:
-                pygame.draw.circle(surf, (238, 82, 92), (int(px), int(py)), 5)
-                pygame.draw.line(surf, (235, 235, 230), (int(px), int(py + 5)), (int(px), int(py + 21)), 1)
-            else:
-                pygame.draw.circle(surf, (46, 96, 58), (int(px), int(py)), 10)
-                pygame.draw.circle(surf, (84, 150, 82), (int(px - 4), int(py - 4)), 6)
+        outer_right = rect.right - int(rect.w * 0.12)
+        outer_bottom = rect.bottom - int(rect.h * 0.12)
+        outer_left = rect.left + int(rect.w * 0.12)
+        center_x = rect.centerx
+        center_y = rect.top + int(rect.h * 0.50)
+        _draw_park_gate(surf, outer_right, rect.bottom - 20)
+        _draw_ticket_building(surf, outer_right - int((outer_right - outer_left) * 0.25), outer_bottom - 42)
+        _draw_wc_building(surf, outer_right - int((outer_right - outer_left) * 0.50), outer_bottom - 42)
+        _draw_fountain(surf, center_x, center_y, current().traffic_time)
+        layout = _amusement_new_layout(rect)
+        pygame.draw.rect(surf, (42, 104, 64), layout['coaster_area'].inflate(16, 16), border_radius=10)
+        _draw_bumper_arena(surf, layout['bumper_arena'])
+        _draw_swing_ride_base(surf, layout['swing'][0], layout['swing'][1])
+        for bx, by, vertical in layout['benches']:
+            _draw_bench(surf, bx, by, vertical=vertical)
 
 
 def _draw_amusement_dynamic(surf, cam):
@@ -816,13 +1109,13 @@ def _draw_amusement_dynamic(surf, cam):
         rect = pygame.Rect(park.x - cam[0], park.y - cam[1], park.w, park.h)
         if rect.right < -120 or rect.left > W + 120 or rect.bottom < -120 or rect.top > H + 120:
             continue
+        layout = _amusement_new_layout(rect)
         t = s.traffic_time
-        _draw_roller_coaster(surf, rect, t)
-        _draw_ferris_wheel(surf, rect.right - 235, rect.top + 245, t)
-        _draw_carousel(surf, rect.left + 245, rect.top + 285, t)
-        deco = _amusement_decorations(rect)
-        _draw_bumper_cars_dynamic(surf, deco['bumper_arena'], t)
-        _draw_swing_ride_dynamic(surf, deco['swing_center'][0], deco['swing_center'][1], t)
+        _draw_new_roller_coaster(surf, layout['coaster_area'], t)
+        _draw_carousel(surf, layout['carousel'][0], layout['carousel'][1], t)
+        _draw_ferris_wheel(surf, layout['ferris'][0], layout['ferris'][1], t)
+        _draw_bumper_cars_dynamic(surf, layout['bumper_arena'], t)
+        _draw_swing_ride_dynamic(surf, layout['swing'][0], layout['swing'][1], t)
 
 
 def draw_park_street_closures(surf, cam):

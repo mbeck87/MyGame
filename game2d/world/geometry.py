@@ -233,39 +233,68 @@ def park_path_points(park):
 
 
 def amusement_path_points(park):
+    return [point for segment in amusement_path_segments(park) for point in segment]
+
+
+def _bezier_points(a, b, c, d, count=34):
+    points = []
+    for i in range(count):
+        t = i / (count - 1)
+        mt = 1 - t
+        x = mt**3 * a[0] + 3 * mt**2 * t * b[0] + 3 * mt * t**2 * c[0] + t**3 * d[0]
+        y = mt**3 * a[1] + 3 * mt**2 * t * b[1] + 3 * mt * t**2 * c[1] + t**3 * d[1]
+        points.append((x, y))
+    return points
+
+
+def amusement_path_segments(park):
     w = park.w
     h = park.h
-    points = []
-    curves = (
-        (
-            (park.left + 120, park.bottom),
-            (park.left + 120, park.bottom - h * 0.30),
-            (park.left + w * 0.24, park.top + h * 0.70),
-            (park.left + w * 0.40, park.top + h * 0.66),
-        ),
-        (
-            (park.left + w * 0.40, park.top + h * 0.66),
-            (park.left + w * 0.58, park.top + h * 0.62),
-            (park.left + w * 0.46, park.top + h * 0.28),
-            (park.left + w * 0.68, park.top + h * 0.34),
-        ),
-        (
-            (park.left + w * 0.68, park.top + h * 0.34),
-            (park.left + w * 0.92, park.top + h * 0.42),
-            (park.right - 120, park.bottom - h * 0.34),
-            (park.right - 120, park.bottom),
-        ),
-    )
-    for curve_idx, (a, b, c, d) in enumerate(curves):
-        for i in range(34):
-            if curve_idx and i == 0:
-                continue
-            t = i / 33
-            mt = 1 - t
-            x = mt**3 * a[0] + 3 * mt**2 * t * b[0] + 3 * mt * t**2 * c[0] + t**3 * d[0]
-            y = mt**3 * a[1] + 3 * mt**2 * t * b[1] + 3 * mt * t**2 * c[1] + t**3 * d[1]
-            points.append((x, y))
-    return points
+    outer_left = park.left + w * 0.12
+    outer_right = park.right - w * 0.12
+    outer_top = park.top + h * 0.12
+    outer_bottom = park.bottom - h * 0.12
+    outer_r = 120
+
+    inner_left = park.left + w * 0.31
+    inner_right = park.right - w * 0.31
+    inner_top = park.top + h * 0.31
+    inner_bottom = park.bottom - h * 0.31
+
+    center_x = park.centerx
+    center_y = (inner_top + inner_bottom) / 2
+    entrance_start = (outer_right, park.bottom + 18)
+    entrance_join = (outer_right, outer_bottom)
+
+    outer_loop = [
+        entrance_join,
+        (outer_left + outer_r, outer_bottom),
+        *_bezier_points((outer_left + outer_r, outer_bottom), (outer_left, outer_bottom), (outer_left, outer_bottom), (outer_left, outer_bottom - outer_r), 12)[1:],
+        (outer_left, outer_top + outer_r),
+        *_bezier_points((outer_left, outer_top + outer_r), (outer_left, outer_top), (outer_left, outer_top), (outer_left + outer_r, outer_top), 12)[1:],
+        (outer_right - outer_r, outer_top),
+        *_bezier_points((outer_right - outer_r, outer_top), (outer_right, outer_top), (outer_right, outer_top), (outer_right, outer_top + outer_r), 12)[1:],
+        (outer_right, outer_bottom - outer_r),
+        *_bezier_points((outer_right, outer_bottom - outer_r), (outer_right, outer_bottom), (outer_right, outer_bottom), entrance_join, 12)[1:],
+    ]
+    outer_loop.append(outer_loop[0])
+
+    inner_loop = [
+        (center_x, inner_bottom),
+        *_bezier_points((center_x, inner_bottom), (inner_left, inner_bottom), (inner_left, inner_bottom), (inner_left, center_y), 18)[1:],
+        *_bezier_points((inner_left, center_y), (inner_left, inner_top), (inner_left, inner_top), (center_x, inner_top), 18)[1:],
+        *_bezier_points((center_x, inner_top), (inner_right, inner_top), (inner_right, inner_top), (inner_right, center_y), 18)[1:],
+        *_bezier_points((inner_right, center_y), (inner_right, inner_bottom), (inner_right, inner_bottom), (center_x, inner_bottom), 18)[1:],
+    ]
+    inner_loop.append(inner_loop[0])
+
+    return [
+        [entrance_start, entrance_join],
+        outer_loop,
+        [(outer_left, center_y), (inner_left, center_y)],
+        [(inner_right, center_y), (outer_right, center_y)],
+        inner_loop,
+    ]
 
 
 def _dist_to_segment_sq(px, py, ax, ay, bx, by):
@@ -285,11 +314,11 @@ def point_on_amusement_path(x, y, radius=24):
     for park in s.amusement_parks:
         if not park.collidepoint(x, y):
             continue
-        points = amusement_path_points(park)
         limit = radius * radius
-        for a, b in zip(points, points[1:]):
-            if _dist_to_segment_sq(x, y, a[0], a[1], b[0], b[1]) <= limit:
-                return True
+        for points in amusement_path_segments(park):
+            for a, b in zip(points, points[1:]):
+                if _dist_to_segment_sq(x, y, a[0], a[1], b[0], b[1]) <= limit:
+                    return True
         return False
     return True
 
@@ -440,14 +469,16 @@ def rebuild_pedestrian_graph(state):
                     break
 
     for park in state.amusement_parks:
-        sampled = amusement_path_points(park)
-        sampled = sampled[::3] + ([sampled[-1]] if sampled[-1] != sampled[::3][-1] else [])
-        path_ids = [add_node(x, y, is_park=True) for x, y in sampled]
-        path_ids = [idx for idx in path_ids if idx is not None]
-        amusement_nodes.update(path_ids)
-        for a, b in zip(path_ids, path_ids[1:]):
-            connect(a, b, allow_park=True)
-        for endpoint in (path_ids[:1] + path_ids[-1:]):
+        endpoint_ids = []
+        for segment in amusement_path_segments(park):
+            sampled = segment[::3] + ([segment[-1]] if segment[-1] != segment[::3][-1] else [])
+            path_ids = [add_node(x, y, is_park=True) for x, y in sampled]
+            path_ids = [idx for idx in path_ids if idx is not None]
+            amusement_nodes.update(path_ids)
+            for a, b in zip(path_ids, path_ids[1:]):
+                connect(a, b, allow_park=True)
+            endpoint_ids.extend(path_ids[:1] + path_ids[-1:])
+        for endpoint in endpoint_ids:
             ex, ey = nodes[endpoint]
             candidates = sorted(
                 street_node_ids,

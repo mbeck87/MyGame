@@ -6,7 +6,7 @@ from game2d.config import (
     INNER_LO, INNER_HI_X, INNER_HI_Y,
 )
 from game2d.systems.services import garage_layout, shop_layout
-from game2d.world.geometry import amusement_path_points
+from game2d.world.geometry import amusement_path_segments
 
 
 def _map_point(x, y, rect):
@@ -103,9 +103,10 @@ def draw_minimap(screen, state, font):
     for park in state.amusement_parks:
         pr = _local_rect(park, rect)
         pygame.draw.rect(panel, (78, 150, 92), pr)
-        path = _local_polyline(amusement_path_points(park), rect)
-        if len(path) >= 2:
-            pygame.draw.lines(panel, (214, 178, 118), False, path, 2)
+        for segment in amusement_path_segments(park):
+            path = _local_polyline(segment, rect)
+            if len(path) >= 2:
+                pygame.draw.lines(panel, (214, 178, 118), False, path, 2)
         for x, y, _kind in state.amusement_stands:
             if park.collidepoint(x, y):
                 pygame.draw.circle(panel, (238, 204, 84), _local_point(x, y, rect), 1)
