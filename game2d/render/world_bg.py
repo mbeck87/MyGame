@@ -14,6 +14,7 @@ from game2d.config import (
 from game2d.render.sprites import make_duck_sprite
 from game2d.state import current
 from game2d.world.geometry import amusement_path_segments as _amusement_path_segments
+from game2d.world.geometry import amusement_stand_rect
 from game2d.world.geometry import road_connections_at
 from game2d.world.traffic import traffic_light_state
 
@@ -605,7 +606,11 @@ def _draw_food_icon(surf, kind, cx, cy):
         for ox, oy in ((-2, 1), (4, 4), (-5, 8)):
             pygame.draw.circle(surf, (196, 50, 48), (cx + ox, cy + oy), 2)
     elif kind == "burger":
-        pygame.draw.arc(surf, (226, 158, 70), (cx - 13, cy - 12, 26, 18), math.pi, math.tau, 5)
+        bun = pygame.Rect(cx - 13, cy - 12, 26, 14)
+        pygame.draw.ellipse(surf, (226, 158, 70), bun)
+        pygame.draw.rect(surf, (226, 158, 70), (cx - 13, cy - 5, 26, 7))
+        for ox, oy in ((-7, -7), (-1, -9), (6, -7)):
+            pygame.draw.circle(surf, (252, 224, 126), (cx + ox, cy + oy), 1)
         pygame.draw.rect(surf, (88, 52, 34), (cx - 12, cy - 1, 24, 5), border_radius=2)
         pygame.draw.rect(surf, (80, 164, 74), (cx - 11, cy + 4, 22, 3), border_radius=1)
         pygame.draw.rect(surf, (226, 158, 70), (cx - 12, cy + 7, 24, 5), border_radius=2)
@@ -630,7 +635,7 @@ def _draw_food_icon(surf, kind, cx, cy):
 
 
 def _draw_food_stand(surf, x, y, kind):
-    body = pygame.Rect(int(x - 24), int(y - 18), 48, 36)
+    body = amusement_stand_rect(x, y)
     pygame.draw.rect(surf, (54, 42, 44), body.move(3, 4), border_radius=4)
     pygame.draw.rect(surf, (236, 214, 156), body, border_radius=4)
     pygame.draw.rect(surf, (178, 54, 64), (body.x, body.y, body.w, 10), border_radius=4)

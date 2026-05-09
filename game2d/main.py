@@ -20,7 +20,7 @@ from game2d.render.sprites import make_ped_frames, make_swim_frames, get_pickup_
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
-from game2d.world.geometry import in_water, point_in_polygon
+from game2d.world.geometry import in_water, point_in_polygon, rect_hits_amusement_stand
 from game2d.world.spawning import (
     safe_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
@@ -392,6 +392,8 @@ def main():
                     def _blocked(rx, ry):
                         pr = pygame.Rect(rx-10, ry-10, 20, 20)
                         if any(pr.colliderect(b[0]) for b in state.buildings):
+                            return True
+                        if rect_hits_amusement_stand(pr):
                             return True
                         return any(pr.colliderect(c.rect()) for c in solid_cars)
                     nx = player.x + mvx

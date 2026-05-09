@@ -16,6 +16,22 @@ from game2d.state import current
 
 
 PEDESTRIAN_OFFSET = ROAD_W // 2 + SIDEWALK_W // 2
+AMUSEMENT_STAND_W = 48
+AMUSEMENT_STAND_H = 36
+
+
+def amusement_stand_rect(x, y):
+    return pygame.Rect(
+        int(x - AMUSEMENT_STAND_W // 2),
+        int(y - AMUSEMENT_STAND_H // 2),
+        AMUSEMENT_STAND_W,
+        AMUSEMENT_STAND_H,
+    )
+
+
+def rect_hits_amusement_stand(rect):
+    s = current()
+    return any(rect.colliderect(amusement_stand_rect(x, y)) for x, y, _kind in s.amusement_stands)
 
 
 @dataclass(frozen=True)
