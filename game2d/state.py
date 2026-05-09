@@ -31,6 +31,7 @@ class GameState:
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x
     road_segments: list = field(default_factory=list)    # befahrbare Straßensegmente
+    traffic_controls: dict = field(default_factory=dict) # {(ix, iy): {type, priority_axis}}
     AI_OBSTACLES: list = field(default_factory=list)     # Häuser + Wasser
     WATER_RECTS:  list = field(default_factory=list)
 

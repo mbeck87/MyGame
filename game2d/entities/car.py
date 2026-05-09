@@ -14,7 +14,7 @@ from game2d.world.geometry import (
     intersection_zone_at, point_in_polygon, rect_in_park_pond, rect_on_road,
     nearest_road_x, nearest_road_y,
 )
-from game2d.world.traffic import traffic_light_allows
+from game2d.world.traffic import intersection_has_sign_control, traffic_rule_allows
 from game2d.systems.effects import spawn_blood, make_corpse, trigger_game_over
 from game2d.systems.services import add_wanted_heat
 from game2d.systems import audio
@@ -361,6 +361,8 @@ class Car:
         self._vel_angle = None   # tatsächliche Bewegungsrichtung (für Drift)
         self._drifting = False
         self._skid_cd = 0.0
+        self._traffic_rule_key = None
+        self._traffic_stop_timer = 0.0
 
     def _local_from_world(self, wx, wy):
         rad = math.radians(self.angle)
@@ -815,6 +817,8 @@ class Car:
         if not zone:
             return False
         ix, iy, _ = zone
+        if intersection_has_sign_control(ix, iy):
+            return False
         my_dist = math.hypot(self.x - ix, self.y - iy)
         for other in current().cars:
             if other is self or other.dead or other.sunk:
@@ -1401,7 +1405,7 @@ class Car:
         self.turn_cd -= dt
         if self.turn_cd <= 0 and self.upcoming_intersection(150):
             self.plan_intersection_turn(allow_reverse=self.near_road_end())
-        if not traffic_light_allows(self) or self.yield_timer > 0 or self.should_yield_at_intersection() or self.car_ahead() or not self.reserve_intersection():
+        if not traffic_rule_allows(self, dt) or self.yield_timer > 0 or self.should_yield_at_intersection() or self.car_ahead() or not self.reserve_intersection():
             self.spd *= max(0.0, 1 - 2.6 * dt)
             return
         rad = math.radians(self.angle)

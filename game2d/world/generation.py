@@ -11,6 +11,7 @@ from game2d.config import (
 from game2d.render.sprites import make_building
 from game2d.world.airport import airport_building_rects, build_airport_rect
 from game2d.world.geometry import RoadSegment, rect_overlaps_street_space, rebuild_pedestrian_graph
+from game2d.world.traffic import build_traffic_controls
 
 
 COMMERCIAL_KINDS = {"bar", "restaurant", "disco", "supermarket", "fastfood"}
@@ -407,6 +408,7 @@ def build_world(state):
     state.amusement_parks[:] = [_build_amusement_park_rect()]
     state.airports[:] = [build_airport_rect()]
     state.road_segments[:] = _build_road_segments(state)
+    build_traffic_controls(state)
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
     state.park_trees[:] = []
     state.park_ducks[:] = []

@@ -17,7 +17,7 @@ from game2d.world.airport import airport_layout
 from game2d.world.geometry import amusement_path_segments as _amusement_path_segments
 from game2d.world.geometry import amusement_stand_rect
 from game2d.world.geometry import road_connections_at
-from game2d.world.traffic import traffic_light_state
+from game2d.world.traffic import CONTROL_LIGHT, CONTROL_PRIORITY, CONTROL_STOP, traffic_light_state
 
 
 def draw_signal_head(surf, x, y, active, vertical=True):
@@ -120,13 +120,89 @@ def draw_traffic_lights(surf, cam):
             has_north, has_south, has_west, has_east = road_connections_at(ix, iy, s)
             if not ((has_north or has_south) and (has_west or has_east)):
                 continue
+            control = s.traffic_controls.get((ix, iy))
+            if not control or control.get("type") != CONTROL_LIGHT:
+                continue
             axis, phase = traffic_light_state(ix, iy)
             ns_state = phase if axis == 'NS' else 'red'
             ew_state = phase if axis == 'EW' else 'red'
-            ns_pos = (int(sx - ROAD_W//2 - SIDEWALK_W//2), int(sy - ROAD_W//2 - SIDEWALK_W//2))
-            ew_pos = (int(sx + ROAD_W//2 + SIDEWALK_W//2), int(sy - ROAD_W//2 - SIDEWALK_W//2))
-            draw_signal_head(surf, ns_pos[0], ns_pos[1], ns_state, vertical=True)
-            draw_signal_head(surf, ew_pos[0], ew_pos[1], ew_state, vertical=False)
+            side = ROAD_W // 2 + SIDEWALK_W // 2
+            if has_north:
+                draw_signal_head(surf, int(sx - side), int(sy - side), ns_state, vertical=True)
+            if has_south:
+                draw_signal_head(surf, int(sx + side), int(sy + side), ns_state, vertical=True)
+            if has_west:
+                draw_signal_head(surf, int(sx - side), int(sy + side), ew_state, vertical=False)
+            if has_east:
+                draw_signal_head(surf, int(sx + side), int(sy - side), ew_state, vertical=False)
+
+
+def _draw_stop_sign(surf, x, y):
+    pts = []
+    r = 9
+    for i in range(8):
+        a = math.radians(22.5 + i * 45)
+        pts.append((x + math.cos(a) * r, y + math.sin(a) * r))
+    pygame.draw.line(surf, (70, 70, 70), (x, y + 9), (x, y + 23), 3)
+    pygame.draw.polygon(surf, (200, 34, 34), pts)
+    pygame.draw.polygon(surf, (248, 248, 238), pts, 2)
+    font = pygame.font.SysFont(None, 10, bold=True)
+    txt = font.render("STOP", True, (255, 255, 245))
+    surf.blit(txt, (x - txt.get_width() // 2, y - txt.get_height() // 2))
+
+
+def _draw_yield_sign(surf, x, y):
+    pygame.draw.line(surf, (70, 70, 70), (x, y + 9), (x, y + 23), 3)
+    pts = [(x - 11, y - 8), (x + 11, y - 8), (x, y + 12)]
+    pygame.draw.polygon(surf, (210, 38, 36), pts)
+    inner = [(x - 7, y - 5), (x + 7, y - 5), (x, y + 7)]
+    pygame.draw.polygon(surf, (248, 248, 238), inner)
+
+
+def _draw_priority_sign(surf, x, y):
+    pygame.draw.line(surf, (70, 70, 70), (x, y + 10), (x, y + 24), 3)
+    outer = [(x, y - 12), (x + 12, y), (x, y + 12), (x - 12, y)]
+    inner = [(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)]
+    pygame.draw.polygon(surf, (248, 248, 238), outer)
+    pygame.draw.polygon(surf, (42, 42, 42), outer, 1)
+    pygame.draw.polygon(surf, (236, 188, 44), inner)
+
+
+def draw_traffic_signs(surf, cam):
+    s = current()
+    side = ROAD_W // 2 + SIDEWALK_W // 2 + 2
+    sign_offset = ROAD_W // 2 + SIDEWALK_W // 2 + 8
+    for (ix, iy), control in s.traffic_controls.items():
+        control_type = control.get("type")
+        if control_type == CONTROL_LIGHT:
+            continue
+        sx = ix - cam[0]
+        sy = iy - cam[1]
+        if sx < -90 or sx > W + 90 or sy < -90 or sy > H + 90:
+            continue
+        has_north, has_south, has_west, has_east = road_connections_at(ix, iy, s)
+        priority_axis = control.get("priority_axis")
+
+        def draw_for_approach(direction, x, y):
+            if control_type == CONTROL_STOP:
+                _draw_stop_sign(surf, int(x), int(y))
+            elif control_type == CONTROL_PRIORITY:
+                approach_axis = "NS" if direction in ("north", "south") else "EW"
+                if approach_axis == priority_axis:
+                    _draw_priority_sign(surf, int(x), int(y))
+                elif control.get("side_rule") == CONTROL_STOP:
+                    _draw_stop_sign(surf, int(x), int(y))
+                else:
+                    _draw_yield_sign(surf, int(x), int(y))
+
+        if has_north:
+            draw_for_approach("north", sx - side, sy - sign_offset)
+        if has_south:
+            draw_for_approach("south", sx + side, sy + sign_offset)
+        if has_west:
+            draw_for_approach("west", sx - sign_offset, sy + side)
+        if has_east:
+            draw_for_approach("east", sx + sign_offset, sy - side)
 
 
 def draw_center_line_dashes(surf, cam, horizontal, center, start, end):
@@ -1516,6 +1592,7 @@ def draw_world_bg(surf, cam):
             surf.blit(tile, (tx - cam[0], ty - cam[1]))
             tx += _BG_TILE
         ty += _BG_TILE
+    draw_traffic_signs(surf, cam)
     draw_traffic_lights(surf, cam)
     _draw_amusement_dynamic(surf, cam)
     _draw_parks_dynamic(surf, cam)
