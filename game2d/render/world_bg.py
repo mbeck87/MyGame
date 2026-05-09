@@ -13,6 +13,7 @@ from game2d.config import (
 )
 from game2d.render.sprites import make_duck_sprite
 from game2d.state import current
+from game2d.world.airport import airport_layout
 from game2d.world.geometry import amusement_path_segments as _amusement_path_segments
 from game2d.world.geometry import amusement_stand_rect
 from game2d.world.geometry import road_connections_at
@@ -1268,6 +1269,121 @@ def _draw_parks_dynamic(surf, cam):
         _draw_ducks(surf, cam)
 
 
+def _screen_rect(rect, cam):
+    return pygame.Rect(int(rect.x - cam[0]), int(rect.y - cam[1]), rect.w, rect.h)
+
+
+def _draw_airplane_icon(surf, x, y, angle=0, body=(226, 232, 232), accent=(55, 95, 140)):
+    rad = math.radians(angle)
+    cs, sn = math.cos(rad), math.sin(rad)
+
+    def rot(px, py):
+        return int(x + px * cs - py * sn), int(y + px * sn + py * cs)
+
+    fuselage = [rot(0, -34), rot(7, -18), rot(6, 22), rot(0, 34), rot(-6, 22), rot(-7, -18)]
+    wings = [rot(-44, -4), rot(-8, -10), rot(8, -10), rot(44, -4), rot(10, 8), rot(-10, 8)]
+    tail = [rot(-22, 24), rot(-6, 14), rot(6, 14), rot(22, 24), rot(0, 30)]
+    pygame.draw.polygon(surf, (180, 188, 188), wings)
+    pygame.draw.polygon(surf, body, fuselage)
+    pygame.draw.polygon(surf, (170, 180, 178), tail)
+    pygame.draw.line(surf, accent, rot(0, -23), rot(0, 25), 3)
+    pygame.draw.circle(surf, (42, 52, 62), rot(0, -28), 3)
+
+
+def _draw_airport_fence(surf, airport, gate, cam):
+    sx, sy = airport.left - cam[0], airport.top - cam[1]
+    ex, ey = airport.right - cam[0], airport.bottom - cam[1]
+    gx0, gx1 = gate.left - cam[0], gate.right - cam[0]
+    col = (178, 184, 174)
+    pygame.draw.line(surf, col, (sx, sy), (ex, sy), 2)
+    pygame.draw.line(surf, col, (sx, sy), (sx, ey), 2)
+    pygame.draw.line(surf, col, (ex, sy), (ex, ey), 2)
+    pygame.draw.line(surf, col, (sx, ey), (gx0, ey), 2)
+    pygame.draw.line(surf, col, (gx1, ey), (ex, ey), 2)
+    for px in range(airport.left + 18, airport.right, 44):
+        if gate.left < px < gate.right and airport.bottom - 4 <= gate.centery <= airport.bottom + 30:
+            continue
+        for py in (airport.top, airport.bottom):
+            if py == airport.bottom and gate.left < px < gate.right:
+                continue
+            pygame.draw.circle(surf, col, (int(px - cam[0]), int(py - cam[1])), 2)
+    for py in range(airport.top + 18, airport.bottom, 44):
+        for px in (airport.left, airport.right):
+            pygame.draw.circle(surf, col, (int(px - cam[0]), int(py - cam[1])), 2)
+
+
+def _draw_airports_static(surf, cam):
+    s = current()
+    visible = pygame.Rect(int(cam[0]) - 80, int(cam[1]) - 80, surf.get_width() + 160, surf.get_height() + 160)
+    for airport in getattr(s, "airports", ()):
+        if not visible.colliderect(airport):
+            continue
+        layout = airport_layout(airport)
+        base = _screen_rect(airport, cam)
+        pygame.draw.rect(surf, (78, 88, 80), base)
+        pygame.draw.rect(surf, (63, 74, 68), base, 2)
+
+        apron = _screen_rect(layout["apron"], cam)
+        taxiway = _screen_rect(layout["taxiway"], cam)
+        runway = _screen_rect(layout["runway"], cam)
+        gate = layout["gate"]
+        pygame.draw.rect(surf, (96, 100, 102), apron)
+        pygame.draw.rect(surf, (62, 63, 66), taxiway)
+        pygame.draw.line(surf, (210, 178, 58), taxiway.midleft, taxiway.midright, 3)
+        for connector in (
+            pygame.Rect(layout["runway"].left + 150, layout["runway"].bottom, 66, layout["taxiway"].top - layout["runway"].bottom),
+            pygame.Rect(layout["runway"].centerx - 33, layout["runway"].bottom, 66, layout["taxiway"].top - layout["runway"].bottom),
+            pygame.Rect(layout["runway"].right - 216, layout["runway"].bottom, 66, layout["taxiway"].top - layout["runway"].bottom),
+        ):
+            pygame.draw.rect(surf, (62, 63, 66), _screen_rect(connector, cam))
+        pygame.draw.rect(surf, (39, 40, 44), runway)
+        pygame.draw.rect(surf, (21, 22, 25), runway, 2)
+
+        y = runway.centery
+        x = runway.left + 92
+        while x < runway.right - 92:
+            pygame.draw.rect(surf, (226, 226, 216), (x, y - 3, 42, 6))
+            x += 84
+        for edge_x in (runway.left + 22, runway.right - 58):
+            for i in range(6):
+                stripe_y = runway.top + 18 + i * 16
+                pygame.draw.rect(surf, (232, 232, 224), (edge_x, stripe_y, 36, 7))
+        for edge_y in (runway.top + 10, runway.bottom - 12):
+            for light_x in range(layout["runway"].left + 20, layout["runway"].right, 44):
+                pygame.draw.circle(surf, (202, 216, 190), (int(light_x - cam[0]), int(edge_y - cam[1])), 2)
+
+        terminal = _screen_rect(layout["terminal"], cam)
+        pygame.draw.rect(surf, (180, 188, 188), terminal)
+        pygame.draw.rect(surf, (95, 104, 112), terminal, 2)
+        pygame.draw.rect(surf, (72, 116, 142), (terminal.x + 18, terminal.y + 18, terminal.w - 36, 26))
+        for wx in range(terminal.x + 28, terminal.right - 28, 38):
+            pygame.draw.rect(surf, (185, 222, 232), (wx, terminal.y + 55, 20, 18))
+        pygame.draw.rect(surf, (52, 60, 66), (terminal.centerx - 28, terminal.bottom - 26, 56, 26))
+
+        for hangar in layout["hangars"]:
+            hr = _screen_rect(hangar, cam)
+            pygame.draw.rect(surf, (115, 122, 125), hr)
+            pygame.draw.rect(surf, (70, 76, 82), hr, 2)
+            door = pygame.Rect(hr.x + 18, hr.y + hr.h // 2, hr.w - 36, hr.h // 2 - 14)
+            pygame.draw.rect(surf, (52, 57, 62), door)
+            for stripe_x in range(door.x + 10, door.right - 4, 20):
+                pygame.draw.line(surf, (72, 78, 84), (stripe_x, door.y), (stripe_x, door.bottom), 1)
+
+        tower = _screen_rect(layout["tower"], cam)
+        pygame.draw.rect(surf, (118, 124, 126), tower)
+        pygame.draw.rect(surf, (62, 68, 74), tower, 2)
+        pygame.draw.rect(surf, (94, 146, 168), (tower.x + 8, tower.y + 10, tower.w - 16, 18))
+        pygame.draw.circle(surf, (52, 58, 64), tower.center, 8)
+
+        _draw_airplane_icon(surf, apron.x + 170, apron.y + 98, angle=90)
+        _draw_airplane_icon(surf, apron.right - 130, apron.bottom - 78, angle=270, body=(215, 222, 214), accent=(140, 90, 62))
+
+        gate_screen = _screen_rect(gate, cam)
+        pygame.draw.rect(surf, (86, 88, 88), gate_screen)
+        pygame.draw.line(surf, (210, 178, 58), gate_screen.midtop, gate_screen.midbottom, 2)
+        _draw_airport_fence(surf, airport, gate, cam)
+
+
 _BG_TILE = 600
 _bg_tiles = {}
 
@@ -1301,6 +1417,7 @@ def _draw_static_layers(surf, cam):
             sx, sy = i - cam[0], edge - cam[1]
             if -10 < sx < W and -10 < sy < H:
                 pygame.draw.circle(surf, (200, 180, 130), (int(sx), int(sy)), 2)
+    _draw_airports_static(surf, cam)
     sidewalk_total = ROAD_W + SIDEWALK_W * 2
     road_half = ROAD_W // 2
 

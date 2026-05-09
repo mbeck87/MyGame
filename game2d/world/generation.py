@@ -9,6 +9,7 @@ from game2d.config import (
     ROAD_W, SIDEWALK_W,
 )
 from game2d.render.sprites import make_building
+from game2d.world.airport import airport_building_rects, build_airport_rect
 from game2d.world.geometry import RoadSegment, rect_overlaps_street_space, rebuild_pedestrian_graph
 
 
@@ -354,7 +355,7 @@ def _subtract_ranges(start, end, cuts, min_len=ROAD_W):
 
 def _build_road_segments(state):
     road_half = ROAD_W // 2
-    blockers = list(state.parks) + list(state.amusement_parks)
+    blockers = list(state.parks) + list(state.amusement_parks) + list(state.airports)
     segments = []
     for y in state.roads_h:
         start, end = _road_axis_extents("h", y)
@@ -404,6 +405,7 @@ def build_world(state):
     state.buildings.clear()
     state.parks[:] = [_build_park_rect()]
     state.amusement_parks[:] = [_build_amusement_park_rect()]
+    state.airports[:] = [build_airport_rect()]
     state.road_segments[:] = _build_road_segments(state)
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
     state.park_trees[:] = []
@@ -441,7 +443,7 @@ def build_world(state):
                     if cur_x + bw > x1: break
                     if cur_y + bhp > y1: break
                     rect = pygame.Rect(cur_x, cur_y, bw - 4, bhp - 4)
-                    reserved = list(state.parks) + list(state.amusement_parks)
+                    reserved = list(state.parks) + list(state.amusement_parks) + list(state.airports)
                     if any(rect.colliderect(park) for park in reserved) or rect.colliderect(bank_rect.inflate(18, 18)):
                         cur_x += bw + random.randint(4, 14)
                         continue
@@ -459,10 +461,14 @@ def build_world(state):
                 cur_y += row_h * 32 + random.randint(8, 18)
 
     bank_surf = make_building(10, 6, 9001, "bank")
-    reserved = list(state.parks) + list(state.amusement_parks)
+    reserved = list(state.parks) + list(state.amusement_parks) + list(state.airports)
     if not rect_overlaps_street_space(bank_rect) and not any(bank_rect.colliderect(park) for park in reserved):
         state.buildings.append((bank_rect, bank_surf))
         state.central_bank_rect = bank_rect.copy()
+
+    for airport in state.airports:
+        for rect in airport_building_rects(airport):
+            state.buildings.append((rect, None))
 
     for park in state.parks:
         state.park_trees.extend(_build_park_trees(park))

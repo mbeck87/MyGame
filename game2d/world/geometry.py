@@ -134,6 +134,10 @@ def rect_in_park_pond(rect):
     return False
 
 
+def rect_in_airport(rect):
+    return any(rect.colliderect(airport) for airport in getattr(current(), "airports", ()))
+
+
 def rect_hits_road_edge(rect):
     return (rect.right < ROAD_LO or rect.left > ROAD_HI_X or
             rect.bottom < ROAD_LO or rect.top > ROAD_HI_Y)
@@ -360,6 +364,8 @@ def _ped_point_clear(x, y):
         return False
     if rect_in_park_pond(probe):
         return False
+    if rect_in_airport(probe):
+        return False
     return True
 
 
@@ -371,6 +377,8 @@ def _ped_segment_clear(a, b, allow_park=False):
     if any(probe.colliderect(w) for w in s.WATER_RECTS):
         return False
     if rect_in_park_pond(probe):
+        return False
+    if rect_in_airport(probe):
         return False
     park_rects = list(s.parks) + list(s.amusement_parks)
     if not allow_park and any(probe.colliderect(park) for park in park_rects):

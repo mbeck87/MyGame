@@ -6,6 +6,7 @@ from game2d.config import (
     INNER_LO, INNER_HI_X, INNER_HI_Y,
 )
 from game2d.systems.services import garage_layout, shop_layout
+from game2d.world.airport import airport_layout
 from game2d.world.geometry import amusement_path_segments
 
 
@@ -91,6 +92,18 @@ def draw_minimap(screen, state, font):
             if my1 - gap > my0 + gap:
                 pygame.draw.line(panel, line_col, (mx, my0 + gap), (mx, my1 - gap), 1)
 
+    for airport in getattr(state, "airports", ()):
+        ar = _local_rect(airport, rect)
+        layout = airport_layout(airport)
+        pygame.draw.rect(panel, (70, 82, 76), ar)
+        pygame.draw.rect(panel, (158, 166, 158), ar, 1)
+        pygame.draw.rect(panel, (42, 43, 46), _local_rect(layout["runway"], rect))
+        pygame.draw.rect(panel, (76, 78, 82), _local_rect(layout["taxiway"], rect))
+        pygame.draw.rect(panel, (100, 104, 106), _local_rect(layout["apron"], rect))
+        pygame.draw.rect(panel, (184, 190, 188), _local_rect(layout["terminal"], rect))
+        for hangar in layout["hangars"]:
+            pygame.draw.rect(panel, (116, 124, 126), _local_rect(hangar, rect))
+
     for i, park in enumerate(state.parks):
         pr = _local_rect(park, rect)
         pygame.draw.rect(panel, (42, 135, 56), pr)
@@ -113,6 +126,8 @@ def draw_minimap(screen, state, font):
         pygame.draw.rect(panel, (210, 88, 110), pr, 1)
 
     for building_rect, _ in state.buildings:
+        if any(building_rect.colliderect(airport) for airport in getattr(state, "airports", ())):
+            continue
         br = _local_rect(building_rect, rect)
         pygame.draw.rect(panel, (120, 100, 80), br)
         if br.w > 2 and br.h > 2:

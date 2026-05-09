@@ -82,9 +82,10 @@ def init_services(state):
     """Place service markers near reachable roads."""
     from game2d.world.geometry import rebuild_pedestrian_graph
 
+    airport_top = state.airports[0].top if getattr(state, "airports", None) else ROAD_HI_Y
     state.garages[:] = [
         (ROAD_LO + 230, ROAD_LO + 160),
-        (ROAD_HI_X - 230, ROAD_HI_Y - 160),
+        (ROAD_HI_X - 230, max(ROAD_LO + 160, airport_top - 300)),
     ]
     state.shops[:] = [
         (ROAD_LO + 220, ROAD_HI_Y - 220),
