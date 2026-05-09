@@ -378,6 +378,23 @@ def _ped_segment_clear(a, b, allow_park=False):
     return True
 
 
+def _ped_walkable_segment(a, b, allow_park=False):
+    if not _ped_segment_clear(a, b, allow_park=allow_park):
+        return False
+    if not allow_park:
+        return True
+
+    dist = math.hypot(b[0] - a[0], b[1] - a[1])
+    steps = max(2, int(dist / 8))
+    for i in range(steps + 1):
+        t = i / steps
+        x = a[0] + (b[0] - a[0]) * t
+        y = a[1] + (b[1] - a[1]) * t
+        if not pedestrian_step_clear(x, y, allow_park=True):
+            return False
+    return True
+
+
 def pedestrian_step_clear(x, y, allow_park=False):
     park_rects = list(current().parks) + list(current().amusement_parks)
     if not _ped_point_clear(x, y):
@@ -419,7 +436,7 @@ def rebuild_pedestrian_graph(state):
     def connect(a, b, allow_park=False):
         if a is None or b is None or a == b:
             return
-        if _ped_segment_clear(nodes[a], nodes[b], allow_park=allow_park):
+        if _ped_walkable_segment(nodes[a], nodes[b], allow_park=allow_park):
             edges[a].add(b)
             edges[b].add(a)
 
@@ -479,7 +496,7 @@ def rebuild_pedestrian_graph(state):
             for candidate in candidates[:10]:
                 if math.hypot(nodes[candidate][0] - ex, nodes[candidate][1] - ey) > 180:
                     continue
-                if _ped_segment_clear(nodes[endpoint], nodes[candidate], allow_park=True):
+                if _ped_walkable_segment(nodes[endpoint], nodes[candidate], allow_park=True):
                     edges[endpoint].add(candidate)
                     edges[candidate].add(endpoint)
                     break
@@ -503,7 +520,7 @@ def rebuild_pedestrian_graph(state):
             for candidate in candidates[:14]:
                 if math.hypot(nodes[candidate][0] - ex, nodes[candidate][1] - ey) > 230:
                     continue
-                if _ped_segment_clear(nodes[endpoint], nodes[candidate], allow_park=True):
+                if _ped_walkable_segment(nodes[endpoint], nodes[candidate], allow_park=True):
                     edges[endpoint].add(candidate)
                     edges[candidate].add(endpoint)
                     break

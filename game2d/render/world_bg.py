@@ -763,6 +763,137 @@ def _draw_lottery_stand(surf, x, y, w, h):
     pygame.draw.line(surf, (70, 44, 34), (drum_cx - 14, drum_cy + 15), (drum_cx + 14, drum_cy + 15), 2)
 
 
+def _draw_claw_machine_base(surf, x, y, w, h):
+    body = pygame.Rect(int(x), int(y), int(w), int(h))
+    pygame.draw.rect(surf, (34, 28, 38), body.move(4, 5), border_radius=5)
+    pygame.draw.rect(surf, (78, 138, 206), body, border_radius=5)
+    pygame.draw.rect(surf, (32, 48, 72), body, 2, border_radius=5)
+
+    top = pygame.Rect(body.left - 3, body.top - 14, body.w + 6, 18)
+    pygame.draw.rect(surf, (226, 76, 92), top, border_radius=4)
+    pygame.draw.rect(surf, (90, 42, 56), top, 2, border_radius=4)
+    _draw_centered_label(surf, "GREIF", top.center, 14, (252, 238, 156))
+
+    glass = pygame.Rect(body.left + 7, body.top + 10, body.w - 14, body.h - 34)
+    pygame.draw.rect(surf, (28, 58, 84), glass, border_radius=3)
+    pygame.draw.rect(surf, (134, 202, 230), glass.inflate(-3, -3), border_radius=2)
+    pygame.draw.line(surf, (230, 248, 250), (glass.left + 7, glass.top + 5), (glass.left + 20, glass.top + 18), 2)
+    toy_cols = ((240, 194, 72), (230, 92, 128), (98, 184, 106), (132, 106, 218), (238, 128, 64), (86, 168, 222))
+    for i, col in enumerate(toy_cols):
+        tx = glass.left + 7 + i * 7
+        ty = glass.bottom - 8 + (i % 2)
+        pygame.draw.circle(surf, (42, 44, 52), (tx + 1, ty + 2), 3)
+        pygame.draw.circle(surf, col, (tx, ty), 3)
+        pygame.draw.circle(surf, (248, 232, 190), (tx - 1, ty - 1), 1)
+
+    panel = pygame.Rect(body.left + 8, body.bottom - 20, body.w - 16, 14)
+    pygame.draw.rect(surf, (242, 212, 82), panel, border_radius=3)
+    pygame.draw.rect(surf, (76, 50, 42), panel, 1, border_radius=3)
+    pygame.draw.circle(surf, (220, 54, 64), (panel.left + 11, panel.centery), 4)
+    pygame.draw.rect(surf, (38, 42, 48), (panel.right - 17, panel.centery - 4, 10, 8), border_radius=1)
+
+
+def _draw_claw_machine_dynamic(surf, x, y, w, h, t):
+    body = pygame.Rect(int(x), int(y), int(w), int(h))
+    glass = pygame.Rect(body.left + 7, body.top + 10, body.w - 14, body.h - 34)
+    claw_x = glass.left + 13 + (math.sin(t * 0.9) + 1) * 0.5 * max(1, glass.w - 26)
+    claw_y = glass.top + 18 + math.sin(t * 1.3) * 4
+    rail_y = glass.top + 8
+    pygame.draw.line(surf, (62, 68, 76), (glass.left + 6, rail_y), (glass.right - 6, rail_y), 2)
+    pygame.draw.line(surf, (42, 46, 52), (int(claw_x), rail_y), (int(claw_x), int(claw_y)), 1)
+    pygame.draw.rect(surf, (84, 84, 92), (int(claw_x - 4), int(claw_y - 3), 8, 6), border_radius=2)
+    for side in (-1, 1):
+        end_x = int(claw_x + side * 7)
+        end_y = int(claw_y + 11)
+        pygame.draw.line(surf, (58, 58, 66), (int(claw_x), int(claw_y + 3)), (end_x, end_y), 2)
+        pygame.draw.line(surf, (58, 58, 66), (end_x, end_y), (end_x + side * 3, end_y - 3), 1)
+
+
+def _draw_strongman_base(surf, cx, cy):
+    pygame.draw.ellipse(surf, (34, 28, 24), (cx - 48, cy + 34, 96, 18))
+    pygame.draw.rect(surf, (126, 70, 42), (cx - 44, cy + 26, 88, 17), border_radius=4)
+    pygame.draw.rect(surf, (80, 44, 30), (cx - 44, cy + 26, 88, 17), 2, border_radius=4)
+    _draw_centered_label(surf, "HAU", (cx - 20, cy + 35), 14, (246, 218, 122))
+    _draw_centered_label(surf, "LUKAS", (cx + 19, cy + 35), 13, (246, 218, 122))
+
+    tower = pygame.Rect(cx - 9, cy - 90, 18, 118)
+    pygame.draw.rect(surf, (48, 38, 34), tower.move(3, 3), border_radius=4)
+    pygame.draw.rect(surf, (226, 198, 118), tower, border_radius=4)
+    pygame.draw.rect(surf, (90, 54, 42), tower, 2, border_radius=4)
+    for i, col in enumerate(((84, 180, 96), (242, 204, 72), (232, 112, 62), (210, 54, 62))):
+        seg = pygame.Rect(tower.left + 4, tower.bottom - 24 - i * 24, tower.w - 8, 18)
+        pygame.draw.rect(surf, col, seg, border_radius=2)
+    pygame.draw.circle(surf, (96, 48, 38), (cx, tower.top - 11), 12)
+    pygame.draw.circle(surf, (248, 218, 76), (cx, tower.top - 11), 9)
+    pygame.draw.circle(surf, (255, 246, 156), (cx - 3, tower.top - 14), 3)
+    pygame.draw.line(surf, (82, 48, 36), (cx - 31, cy + 25), (cx - 7, cy + 12), 5)
+    pygame.draw.circle(surf, (60, 46, 42), (cx - 35, cy + 27), 9)
+
+
+def _draw_strongman_dynamic(surf, cx, cy, t):
+    tower_top = cy - 90
+    tower_bottom = cy + 28
+    strike = max(0.0, math.sin(t * 1.15))
+    puck_y = tower_bottom - 12 - strike * 82
+    pygame.draw.circle(surf, (64, 44, 36), (cx, int(puck_y) + 2), 6)
+    pygame.draw.circle(surf, (234, 72, 70), (cx, int(puck_y)), 5)
+    if strike > 0.94:
+        pygame.draw.circle(surf, (252, 230, 96), (cx, tower_top - 11), 15, 2)
+        for ox, oy in ((-15, -18), (15, -18), (-20, -5), (20, -5)):
+            pygame.draw.line(surf, (252, 230, 96), (cx, tower_top - 11), (cx + ox, tower_top + oy), 1)
+
+
+def _draw_pirate_ship_base(surf, cx, cy):
+    pygame.draw.ellipse(surf, (34, 26, 22), (cx - 80, cy + 30, 160, 22))
+    pygame.draw.rect(surf, (92, 58, 38), (cx - 70, cy + 24, 140, 13), border_radius=4)
+    pivot = (cx, cy - 78)
+    left_foot = (cx - 70, cy + 32)
+    right_foot = (cx + 70, cy + 32)
+    for foot in (left_foot, right_foot):
+        pygame.draw.line(surf, (92, 88, 94), foot, pivot, 5)
+        pygame.draw.line(surf, (170, 170, 176), (foot[0] + 1, foot[1] - 2), (pivot[0] + 1, pivot[1] + 2), 1)
+    pygame.draw.arc(surf, (126, 94, 72), (cx - 72, cy - 80, 144, 120), 3.7, 5.7, 2)
+    pygame.draw.line(surf, (70, 68, 74), (cx - 24, cy - 78), (cx + 24, cy - 78), 5)
+    pygame.draw.circle(surf, (58, 58, 64), pivot, 8)
+    pygame.draw.circle(surf, (236, 198, 76), pivot, 4)
+
+
+def _draw_pirate_ship_dynamic(surf, cx, cy, t):
+    pivot = (cx, cy - 78)
+    ang = math.sin(t * 1.05) * 0.46
+    arm_len = 76
+    ship_cx = pivot[0] + math.sin(ang) * arm_len
+    ship_cy = pivot[1] + math.cos(ang) * arm_len
+    body_ang = -ang
+    cos_a = math.cos(body_ang)
+    sin_a = math.sin(body_ang)
+
+    def rot(lx, ly):
+        return int(ship_cx + cos_a * lx - sin_a * ly), int(ship_cy + sin_a * lx + cos_a * ly)
+
+    left_hook = rot(-50, -7)
+    right_hook = rot(50, -7)
+    pygame.draw.line(surf, (62, 62, 68), pivot, left_hook, 2)
+    pygame.draw.line(surf, (62, 62, 68), pivot, right_hook, 2)
+    hull = [
+        rot(-66, -10), rot(-46, -22), rot(46, -22), rot(66, -10),
+        rot(53, 13), rot(30, 27), rot(-30, 27), rot(-53, 13),
+    ]
+    pygame.draw.polygon(surf, (36, 28, 26), [(x + 3, y + 4) for x, y in hull])
+    pygame.draw.polygon(surf, (172, 88, 48), hull)
+    pygame.draw.lines(surf, (74, 42, 30), True, hull, 2)
+    pygame.draw.line(surf, (236, 182, 82), rot(-52, -8), rot(52, -8), 4)
+    pygame.draw.line(surf, (110, 58, 36), rot(-38, 7), rot(38, 7), 3)
+    for lx in (-42, -24, -6, 12, 30, 48):
+        seat = [rot(lx - 5, -15), rot(lx + 5, -15), rot(lx + 4, -7), rot(lx - 4, -7)]
+        pygame.draw.polygon(surf, (232, 198, 86), seat)
+        px, py = rot(lx, -20)
+        pygame.draw.circle(surf, (244, 204, 164), (px, py), 3)
+    flag = [rot(0, -43), rot(26, -31), rot(0, -24)]
+    pygame.draw.line(surf, (84, 48, 32), rot(0, -24), rot(0, -45), 2)
+    pygame.draw.polygon(surf, (218, 54, 68), flag)
+
+
 def _draw_centered_label(surf, text, center, size=22, color=(44, 32, 24)):
     font = pygame.font.Font(None, size)
     label = font.render(text, True, color)
@@ -849,15 +980,23 @@ def _amusement_new_layout(rect):
     outer_left = rect.left + int(w * 0.12)
     outer_right = rect.right - int(w * 0.12)
     outer_bottom = rect.bottom - int(h * 0.12)
+    inner_left = rect.left + int(w * 0.31)
     center_x = rect.centerx
     center_y = rect.top + int(h * 0.50)
+    coaster_area = pygame.Rect(outer_left + 54, rect.top + int(h * 0.17), 500, 160)
+    lottery_stand = (outer_right - 148, center_y + int(h * 0.15), 118, 68)
+    ferris = (outer_left + int(w * 0.22), outer_bottom - 120)
+    chain_carousel = (outer_right - int(w * 0.16), outer_bottom - 135)
     return {
         'carousel': (outer_left + int(w * 0.10), center_y + int(h * 0.11)),
-        'ferris': (outer_left + int(w * 0.22), outer_bottom - 120),
-        'swing': (outer_right - int(w * 0.16), outer_bottom - 135),
+        'ferris': ferris,
+        'swing': chain_carousel,
         'bumper_arena': pygame.Rect(outer_right - 390, rect.top + int(h * 0.16), 310, 170),
-        'coaster_area': pygame.Rect(outer_left + 54, rect.top + int(h * 0.17), 500, 160),
-        'lottery_stand': (outer_right - 148, center_y + int(h * 0.15), 118, 68),
+        'coaster_area': coaster_area,
+        'lottery_stand': lottery_stand,
+        'claw_machine': (lottery_stand[0] - 76, center_y + int(h * 0.03), 58, 78),
+        'strongman': ((outer_left + inner_left) // 2, center_y - 86),
+        'pirate_ship': ((ferris[0] + chain_carousel[0]) // 2, outer_bottom - 176),
         'planters': (
             (center_x - 150, center_y - 88, (86, 172, 230), "box", "tulip"),
             (center_x, center_y - 118, (96, 194, 112), "box", "grass"),
@@ -1018,6 +1157,9 @@ def _draw_amusement_static(surf, cam):
         layout = _amusement_new_layout(rect)
         pygame.draw.rect(surf, (42, 104, 64), layout['coaster_area'].inflate(16, 16), border_radius=10)
         _draw_lottery_stand(surf, *layout['lottery_stand'])
+        _draw_claw_machine_base(surf, *layout['claw_machine'])
+        _draw_strongman_base(surf, layout['strongman'][0], layout['strongman'][1])
+        _draw_pirate_ship_base(surf, layout['pirate_ship'][0], layout['pirate_ship'][1])
         _draw_bumper_arena(surf, layout['bumper_arena'])
         _draw_swing_ride_base(surf, layout['swing'][0], layout['swing'][1])
         for px, py, color, style, flower in layout['planters']:
@@ -1035,10 +1177,14 @@ def _draw_amusement_dynamic(surf, cam):
         layout = _amusement_new_layout(rect)
         t = s.traffic_time
         _draw_new_roller_coaster(surf, layout['coaster_area'], t)
+        _draw_strongman_dynamic(surf, layout['strongman'][0], layout['strongman'][1], t)
         _draw_carousel(surf, layout['carousel'][0], layout['carousel'][1], t)
         _draw_ferris_wheel(surf, layout['ferris'][0], layout['ferris'][1], t)
+        _draw_pirate_ship_dynamic(surf, layout['pirate_ship'][0], layout['pirate_ship'][1], t)
         _draw_bumper_cars_dynamic(surf, layout['bumper_arena'], t)
         _draw_swing_ride_dynamic(surf, layout['swing'][0], layout['swing'][1], t)
+        claw_x, claw_y, claw_w, claw_h = layout['claw_machine']
+        _draw_claw_machine_dynamic(surf, claw_x, claw_y, claw_w, claw_h, t)
 
 
 def draw_park_street_closures(surf, cam):
