@@ -90,7 +90,7 @@ def fire():
         return
     s.ammo[weapon] -= 1
     s.fire_cd = WPN_RATE[weapon]
-    if s.in_car:
+    if s.in_car and s.in_car.kind != "motorcycle":
         ax, ay = s.in_car.x, s.in_car.y
         ang = s.in_car.angle
     else:

@@ -177,6 +177,17 @@ def _spawn_traffic_and_player(state):
 
 
 def reset_game(state):
+    for car in state.cops:
+        if getattr(car, '_siren_channel', None) is not None:
+            audio.stop_loop(car._siren_channel)
+            car._siren_channel = None
+    for car in state.cars:
+        if getattr(car, '_engine_channel', None) is not None:
+            audio.stop_loop(car._engine_channel)
+            car._engine_channel = None
+    for r in state.rockets:
+        if len(r) > 5 and r[5] is not None:
+            audio.stop_loop(r[5])
     state.cars.clear()
     state.peds.clear()
     state.cops.clear()
@@ -219,6 +230,7 @@ def main():
     audio.MASTER_VOL = settings['sfx_volume']
     screen = pygame.display.set_mode((W, H))
     pygame.display.set_caption("Mini GTA 2D")
+    pygame.mouse.set_visible(False)
     clock = pygame.time.Clock()
     FONT = pygame.font.SysFont("arial", 20, bold=True)
     BIG  = pygame.font.SysFont("arial", 64, bold=True)
@@ -358,7 +370,10 @@ def main():
                             audio.play('robbery', pos=(p.x, p.y))
                             break
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over and not state.paused and not state.menu:
-                if state.fire_cd <= 0 and not WPN_AUTO[state.weapon]:
+                on_motorcycle = state.in_car and state.in_car.kind == "motorcycle"
+                if state.fire_cd <= 0 and not WPN_AUTO[state.weapon] and (not state.in_car or on_motorcycle):
+                    if on_motorcycle:
+                        player.aim_angle = aim_to_mouse()
                     fire()
 
         if not state.game_over and not state.menu:
@@ -378,6 +393,11 @@ def main():
                     audio.set_engine(False)
                 if state.in_car and in_water(state.in_car.x, state.in_car.y):
                     state.in_car.explode()
+                if state.in_car and state.in_car.kind == "motorcycle":
+                    player.aim_angle = aim_to_mouse()
+                    if keys[pygame.K_SPACE] or (pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]):
+                        if state.fire_cd <= 0:
+                            fire()
             else:
                 audio.set_engine(False)
                 sp = 220
@@ -819,7 +839,7 @@ def main():
             label = "BRENNT!" if state.in_car.burning else f"{car_label} {int(state.in_car.hp)}/{state.in_car.max_hp}"
             screen.blit(FONT.render(label, 1, (255,255,255)), (W-225, 274))
         draw_hint(screen, state, service, FONT)
-        if not state.in_car:
+        if not state.in_car or (state.in_car and state.in_car.kind == "motorcycle"):
             mx, my = pygame.mouse.get_pos()
             pygame.draw.circle(screen, (255,255,255), (mx,my), 8, 1)
             pygame.draw.line(screen, (255,255,255), (mx-12,my), (mx+12,my), 1)

@@ -37,6 +37,10 @@ def trigger_game_over():
         return
     state.game_over = True
     audio.set_engine(False)
+    for car in state.cops:
+        if getattr(car, '_siren_channel', None) is not None:
+            audio.stop_loop(car._siren_channel)
+            car._siren_channel = None
     audio.play('game_over')
     if not state.score_saved:
         state.score_saved = True

@@ -796,8 +796,12 @@ class Car:
         rad = math.radians(self.angle)
         cs, sn = math.cos(rad), math.sin(rad)
         pts = []
-        for dx_, dy_ in ((-self.w*0.38, -self.h*0.28), (self.w*0.38, -self.h*0.28),
-                         (-self.w*0.38, self.h*0.28), (self.w*0.38, self.h*0.28)):
+        if self.kind == "motorcycle":
+            offsets = ((0, -self.h*0.28), (0, self.h*0.28))
+        else:
+            offsets = ((-self.w*0.38, -self.h*0.28), (self.w*0.38, -self.h*0.28),
+                       (-self.w*0.38, self.h*0.28), (self.w*0.38, self.h*0.28))
+        for dx_, dy_ in offsets:
             wx = self.x + dx_ * cs - dy_ * sn
             wy = self.y + dx_ * sn + dy_ * cs
             pts.append((wx, wy))
