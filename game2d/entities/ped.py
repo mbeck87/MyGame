@@ -84,6 +84,11 @@ class Ped:
         self.hair_style = "short"
         self.hair_color = (60, 40, 30)
         self.skin = SKIN_TONES[0]
+        
+        # Rotated Sprite Cache für bessere Performance
+        self._rotated_sprite_cache = {}
+        self._last_rotated_angle = None
+        self._last_rotated_sprite = None
         if is_cop:
             profile = COP_KIND_PROFILES[self.cop_kind]
             shirt = profile["shirt"]
@@ -145,12 +150,34 @@ class Ped:
         return pygame.Rect(self.x-10, self.y-10, 20, 20)
 
     def try_move(self, nx, ny):
-        obstacles = current().AI_OBSTACLES
+        """Optimiert: Nutzt räumliche Nähe für schnellere Obstacle-Checks."""
+        s = current()
+        obstacles = s.AI_OBSTACLES
+        
+        # X-Move check - nur nahe Gebäude prüfen
         rx = pygame.Rect(nx-10, self.y-10, 20, 20)
-        if not any(rx.colliderect(b[0]) for b in obstacles):
+        rx_center_x, rx_center_y = rx.centerx, rx.centery
+        x_blocked = False
+        for b_rect, b_surf in obstacles:
+            if abs(b_rect.centerx - rx_center_x) > 60 or abs(b_rect.centery - rx_center_y) > 60:
+                continue
+            if rx.colliderect(b_rect):
+                x_blocked = True
+                break
+        if not x_blocked:
             self.x = nx
+        
+        # Y-Move check - nur nahe Gebäude prüfen
         ry = pygame.Rect(self.x-10, ny-10, 20, 20)
-        if not any(ry.colliderect(b[0]) for b in obstacles):
+        ry_center_x, ry_center_y = ry.centerx, ry.centery
+        y_blocked = False
+        for b_rect, b_surf in obstacles:
+            if abs(b_rect.centerx - ry_center_x) > 60 or abs(b_rect.centery - ry_center_y) > 60:
+                continue
+            if ry.colliderect(b_rect):
+                y_blocked = True
+                break
+        if not y_blocked:
             self.y = ny
 
     def try_follow_route(self, nx, ny, allow_park=False):
@@ -239,7 +266,37 @@ class Ped:
                         self.route_replan = 0.25
         return False
 
+    def get_rotated_sprite(self, angle):
+        """Holt oder generiert ein rotiertes Sprite aus dem Cache."""
+        norm_angle = round(angle / 5) * 5  # Auf 5°-Schritte runden für besseren Cache
+        
+        if norm_angle == self._last_rotated_angle:
+            return self._last_rotated_sprite
+        
+        if norm_angle in self._rotated_sprite_cache:
+            self._last_rotated_angle = norm_angle
+            self._last_rotated_sprite = self._rotated_sprite_cache[norm_angle]
+            return self._last_rotated_sprite
+        
+        rotated = pygame.transform.rotate(self.sprite, -norm_angle)
+        self._rotated_sprite_cache[norm_angle] = rotated
+        self._last_rotated_angle = norm_angle
+        self._last_rotated_sprite = rotated
+        
+        # Cache-Größe begrenzen
+        if len(self._rotated_sprite_cache) > 18:  # Max 18 verschiedene Winkel
+            oldest_key = next(iter(self._rotated_sprite_cache))
+            del self._rotated_sprite_cache[oldest_key]
+        
+        return rotated
+
     def draw(self, surf, cam):
-        rot = pygame.transform.rotate(self.sprite, -self.angle)
+        rot = self.get_rotated_sprite(self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
+
+    def clear_rotation_cache(self):
+        """Cache für rotierte Sprites löschen."""
+        self._rotated_sprite_cache.clear()
+        self._last_rotated_angle = None
+        self._last_rotated_sprite = None

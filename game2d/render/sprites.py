@@ -10,8 +10,37 @@ from game2d.config import (
 )
 
 
+# =============================================================================
+# SPRITE CACHES - Verhindert duplicate Generierung identischer Sprites
+# =============================================================================
+
+# Cache für Ped-Frames: (shirt, skin, hair, is_cop, cop_kind, gender, hair_style, back) -> [4 frames]
+_ped_frames_cache: dict = {}
+
+# Cache für Swim-Frames: (shirt, skin, hair, is_cop, cop_kind, gender, hair_style) -> [4 frames]
+_swim_frames_cache: dict = {}
+
+# Cache für Car-Sprites: (body_col, w, h, kind) -> Surface
+_car_sprite_cache: dict = {}
+
+# Cache für Cop-Car-Sprites: (kind, w, h) -> Surface
+_cop_car_sprite_cache: dict = {}
+
+# Cache für Gebäude: (w_cells, h_cells, seed, kind) -> Surface
+_building_cache: dict = {}
+
+
 def _shade(col, delta):
     return tuple(max(0, min(255, c + delta)) for c in col)
+
+
+def clear_sprite_caches():
+    """Clears all sprite caches. Call on game reset or resolution change."""
+    _ped_frames_cache.clear()
+    _swim_frames_cache.clear()
+    _car_sprite_cache.clear()
+    _cop_car_sprite_cache.clear()
+    _building_cache.clear()
 
 
 def _draw_car_shadow(surf, w, h, inset_x=6, inset_y=9):
@@ -286,6 +315,7 @@ def _draw_bus_sprite(body_col, w, h):
 
 
 def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
+    """Generiert oder holt aus Cache ein Car-Sprite."""
     if kind == "lamborgini":
         kind = "lamborghini"
     kind = kind if kind in ("sedan", "limo", "sport", "lamborghini", "mini", "semi", "bus", "motorcycle") else "sedan"
@@ -302,21 +332,31 @@ def make_car_sprite(body_col, w=None, h=None, kind="sedan"):
     default_w, default_h = default_sizes[kind]
     w = default_w if w is None else w
     h = default_h if h is None else h
+    
+    # Cache-Key: body_col kann ein Tuple sein, also direkt verwenden
+    key = (body_col, w, h, kind)
+    if key in _car_sprite_cache:
+        return _car_sprite_cache[key]
+    
     if kind == "limo":
-        return _draw_limo_sprite(body_col, w, h)
-    if kind == "sport":
-        return _draw_sport_sprite(body_col, w, h)
-    if kind == "lamborghini":
-        return _draw_lamborghini_sprite(body_col, w, h)
-    if kind == "mini":
-        return _draw_mini_sprite(body_col, w, h)
-    if kind == "semi":
-        return _draw_semi_sprite(body_col, w, h)
-    if kind == "bus":
-        return _draw_bus_sprite(body_col, w, h)
-    if kind == "motorcycle":
-        return _draw_motorcycle_sprite(body_col, w, h)
-    return _draw_sedan_sprite(body_col, w, h)
+        surf = _draw_limo_sprite(body_col, w, h)
+    elif kind == "sport":
+        surf = _draw_sport_sprite(body_col, w, h)
+    elif kind == "lamborghini":
+        surf = _draw_lamborghini_sprite(body_col, w, h)
+    elif kind == "mini":
+        surf = _draw_mini_sprite(body_col, w, h)
+    elif kind == "semi":
+        surf = _draw_semi_sprite(body_col, w, h)
+    elif kind == "bus":
+        surf = _draw_bus_sprite(body_col, w, h)
+    elif kind == "motorcycle":
+        surf = _draw_motorcycle_sprite(body_col, w, h)
+    else:
+        surf = _draw_sedan_sprite(body_col, w, h)
+    
+    _car_sprite_cache[key] = surf
+    return surf
 
 
 def _draw_motorcycle_sprite(body_col, w, h):
@@ -456,31 +496,40 @@ def _draw_military_truck_sprite(body_col, w, h):
 
 
 def make_cop_car_sprite(kind="cop", w=None, h=None):
+    """Generiert oder holt aus Cache ein Cop-Car-Sprite."""
     kind = kind if kind in ("cop", "fbi", "swat", "military") else "cop"
+    
+    # Cache-Key
+    key = (kind, w, h)
+    if key in _cop_car_sprite_cache:
+        return _cop_car_sprite_cache[key]
+    
     if kind == "swat":
-        return _draw_swat_bus_sprite((18, 26, 42), 58 if w is None else w, 104 if h is None else h)
-    if kind == "military":
-        return _draw_military_truck_sprite((78, 96, 56), 60 if w is None else w, 102 if h is None else h)
-
-    if kind == "fbi":
+        surf = _draw_swat_bus_sprite((18, 26, 42), 58 if w is None else w, 104 if h is None else h)
+    elif kind == "military":
+        surf = _draw_military_truck_sprite((78, 96, 56), 60 if w is None else w, 102 if h is None else h)
+    elif kind == "fbi":
         s = make_car_sprite((24, 24, 28), 48 if w is None else w, 80 if h is None else h)
-        w, h = s.get_size()
-        pygame.draw.rect(s, (230, 230, 220), (5, h // 2 - 13, w - 10, 26), border_radius=3)
-        pygame.draw.rect(s, (24, 24, 28), (8, h // 2 - 9, w - 16, 18), border_radius=2)
-        _draw_block_text(s, "FBI", w // 2 - 12, h // 2 - 5, (245, 245, 235), scale=2)
-        pygame.draw.rect(s, (40, 40, 45), (10, 33, w - 20, 6), border_radius=2)
-        pygame.draw.rect(s, (210, 35, 35), (12, 34, (w - 24) // 2, 4), border_radius=2)
-        pygame.draw.rect(s, (40, 85, 220), (12 + (w - 24) // 2, 34, (w - 24) // 2, 4), border_radius=2)
-        return s
-
-    s = make_car_sprite((245, 245, 250), 46 if w is None else w, 78 if h is None else h)
-    w, h = s.get_size()
-    pygame.draw.rect(s, (20,20,25), (2, h//2 - 14, w-4, 28))
-    pygame.draw.rect(s, (245,245,250), (2, h//2 - 4, w-4, 8))
-    pygame.draw.rect(s, (40,40,45), (10, 32, w-20, 6))
-    pygame.draw.rect(s, (220,40,40), (12, 33, (w-24)//2, 4))
-    pygame.draw.rect(s, (40,80,220), (12+(w-24)//2, 33, (w-24)//2, 4))
-    return s
+        w_out, h_out = s.get_size()
+        pygame.draw.rect(s, (230, 230, 220), (5, h_out // 2 - 13, w_out - 10, 26), border_radius=3)
+        pygame.draw.rect(s, (24, 24, 28), (8, h_out // 2 - 9, w_out - 16, 18), border_radius=2)
+        _draw_block_text(s, "FBI", w_out // 2 - 12, h_out // 2 - 5, (245, 245, 235), scale=2)
+        pygame.draw.rect(s, (40, 40, 45), (10, 33, w_out - 20, 6), border_radius=2)
+        pygame.draw.rect(s, (210, 35, 35), (12, 34, (w_out - 24) // 2, 4), border_radius=2)
+        pygame.draw.rect(s, (40, 85, 220), (12 + (w_out - 24) // 2, 34, (w_out - 24) // 2, 4), border_radius=2)
+        surf = s
+    else:
+        s = make_car_sprite((245, 245, 250), 46 if w is None else w, 78 if h is None else h)
+        w_out, h_out = s.get_size()
+        pygame.draw.rect(s, (20,20,25), (2, h_out//2 - 14, w_out-4, 28))
+        pygame.draw.rect(s, (245,245,250), (2, h_out//2 - 4, w_out-4, 8))
+        pygame.draw.rect(s, (40,40,45), (10, 32, w_out-20, 6))
+        pygame.draw.rect(s, (220,40,40), (12, 33, (w_out-24)//2, 4))
+        pygame.draw.rect(s, (40,80,220), (12+(w_out-24)//2, 33, (w_out-24)//2, 4))
+        surf = s
+    
+    _cop_car_sprite_cache[key] = surf
+    return surf
 
 
 def _draw_hair(surf, cx, head_y, hair, hair_style="short", swim=False):
@@ -590,12 +639,24 @@ def _draw_ped_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop", 
 
 
 def make_ped_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop", gender="m", hair_style="short", back=False):
-    return [
+    """Generiert oder holt aus Cache 4 Ped-Animationsframes.
+    
+    Caching reduziert Startzeit und GC-Pressure deutlich.
+    """
+    # Erstelle hashbaren Cache-Key
+    key = (shirt_col, skin, hair, is_cop, cop_kind, gender, hair_style, back)
+    
+    if key in _ped_frames_cache:
+        return _ped_frames_cache[key]
+    
+    frames = [
         _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style, back),
         _draw_ped_frame(shirt_col, skin, hair, 1, is_cop, cop_kind, gender, hair_style, back),
         _draw_ped_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style, back),
         _draw_ped_frame(shirt_col, skin, hair, -1, is_cop, cop_kind, gender, hair_style, back),
     ]
+    _ped_frames_cache[key] = frames
+    return frames
 
 
 def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop", gender="m", hair_style="short"):
@@ -635,12 +696,20 @@ def _draw_swim_frame(shirt_col, skin, hair, phase, is_cop=False, cop_kind="cop",
 
 
 def make_swim_frames(shirt_col, skin=SKIN, hair=(60,40,30), is_cop=False, cop_kind="cop", gender="m", hair_style="short"):
-    return [
+    """Generiert oder holt aus Cache 4 Swim-Animationsframes."""
+    key = (shirt_col, skin, hair, is_cop, cop_kind, gender, hair_style)
+    
+    if key in _swim_frames_cache:
+        return _swim_frames_cache[key]
+    
+    frames = [
         _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style),
         _draw_swim_frame(shirt_col, skin, hair, 1, is_cop, cop_kind, gender, hair_style),
         _draw_swim_frame(shirt_col, skin, hair, 0, is_cop, cop_kind, gender, hair_style),
         _draw_swim_frame(shirt_col, skin, hair, -1, is_cop, cop_kind, gender, hair_style),
     ]
+    _swim_frames_cache[key] = frames
+    return frames
 
 
 def make_ped_sprite(shirt_col, skin=SKIN, hair=(60,40,30)):
@@ -1235,12 +1304,20 @@ def _draw_business_front(surf, rng, roof, rise_x, rise_y, kind, door_rect):
 
 
 def make_building(w_cells, h_cells, seed, kind=None):
+    """Generiert oder holt aus Cache ein Gebäude-Sprite."""
+    # Cache-Key
+    key = (w_cells, h_cells, seed, kind)
+    if key in _building_cache:
+        return _building_cache[key]
+    
     rng = random.Random(seed)
     cell = 32
     w, h = w_cells * cell, h_cells * cell
     s = pygame.Surface((w, h), pygame.SRCALPHA)
     if kind == "bank":
-        return _make_bank_building(w, h, seed)
+        result = _make_bank_building(w, h, seed)
+        _building_cache[key] = result
+        return result
 
     palettes = [
         ((172, 86, 72), (118, 55, 52), (74, 76, 78), (132, 128, 118)),
@@ -1343,6 +1420,7 @@ def make_building(w_cells, h_cells, seed, kind=None):
     else:
         _draw_business_front(s, rng, roof, rise_x, rise_y, kind, door_rect)
 
+    _building_cache[key] = s
     return s
 
 

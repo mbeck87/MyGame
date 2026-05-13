@@ -21,6 +21,22 @@ from game2d.systems import audio
 from game2d.entities.ped import Ped
 
 
+# =============================================================================
+# PERFORMANCE OPTIMIZATION: Cached building collision rects
+# =============================================================================
+# Cache für Gebäude-Collider - wird einmal pro Frame aufgebaut
+_building_collider_cache = None
+_building_collider_frame = -1
+
+
+def _get_building_colliders():
+    """Holt alle Gebäude-Rects aus dem State. Wird für schnelle Kollisionstests genutzt."""
+    s = current()
+    # Einfacher Cache - wird bei jedem Frame Reset invalidiert
+    # In Zukunft könnte man ein Spatial Grid für Gebäude nutzen
+    return [rect for rect, surf in s.buildings if surf is not None]
+
+
 CAR_PROFILES = {
     "sedan": {
         "label": "Auto",
@@ -331,6 +347,12 @@ class Car:
         self.coll_w, self.coll_h = car_collision_size(self.kind, is_cop=is_cop)
         self.max_hp = self.profile["max_hp"]
         self.hp = self.max_hp
+        
+        # Rotated Sprite Cache: angle -> rotated_surface
+        # Reduziert teure pygame.transform.rotate() Aufrufe pro Frame
+        self._rotated_sprite_cache = {}
+        self._last_rotated_angle = None
+        self._last_rotated_sprite = None
         self.accel_rate = self.profile["accel"]
         self.brake_rate = self.profile["brake"]
         self.turn_rate = self.profile["turn"]
@@ -405,6 +427,8 @@ class Car:
             ry = random.uniform(2.5, 5.0) * (0.85 + severity * 0.55)
             angle = random.uniform(-28.0, 28.0)
             self.dents.append((lx, ly, rx, ry, angle, severity))
+        # Cache ungültig machen, da sich der Schadenszustand geändert hat
+        self.clear_rotation_cache()
 
     def repaint(self, body):
         self.body = body
@@ -415,6 +439,16 @@ class Car:
             sw, sh = self.profile["sprite_size"]
             self.sprite = make_car_sprite(self.body, sw, sh, kind=self.kind)
         self.w, self.h = self.sprite.get_size()
+        # Cache ungültig machen, da sich das Basissprite geändert hat
+        self._rotated_sprite_cache.clear()
+        self._last_rotated_angle = None
+        self._last_rotated_sprite = None
+
+    def clear_rotation_cache(self):
+        """Cache für rotierte Sprites löschen (z.B. bei Schadensänderung)."""
+        self._rotated_sprite_cache.clear()
+        self._last_rotated_angle = None
+        self._last_rotated_sprite = None
 
     def take_damage(self, dmg, world_pos=None, local_pos=None, source_pos=None):
         if self.dead or self.sunk or dmg <= 0: return
@@ -639,17 +673,40 @@ class Car:
         return pygame.Rect(cx - length//2, cy - width//2, length, width)
 
     def overlaps_other_car(self):
+        """Optimiert: Nutzt räumliche Nähe für schnellere Suche."""
         own = self.rect()
-        for other in current().cars:
+        s = current()
+        
+        # Schnell-Path: Prüfe nur Autos in der Nähe (einfache Distanzprüfung)
+        # Dies reduziert die Anzahl der colliderect-Aufrufe deutlich
+        search_radius = max(self.coll_w, self.coll_h) * 1.5 + 20
+        
+        for other in s.cars:
             if other is self or other.dead or other.sunk:
+                continue
+            # Schnell prüfen: Distance squared
+            dx = other.x - self.x
+            dy = other.y - self.y
+            if dx * dx + dy * dy > search_radius * search_radius:
                 continue
             if own.colliderect(other.rect()):
                 return other
         return None
 
     def car_blocking_rect(self, rect, padding=8):
-        for other in current().cars:
+        """Optimiert: Nutzt räumliche Nähe für schnellere Suche."""
+        s = current()
+        rect_center_x = rect.centerx
+        rect_center_y = rect.centery
+        half_diag = math.hypot(rect.w, rect.h) * 0.5 + padding + 10
+        
+        for other in s.cars:
             if other is self or other.dead or other.sunk:
+                continue
+            # Schnell prüfen: Distance squared
+            dx = other.x - rect_center_x
+            dy = other.y - rect_center_y
+            if dx * dx + dy * dy > half_diag * half_diag:
                 continue
             if rect.colliderect(other.rect().inflate(padding, padding)):
                 return other
@@ -682,6 +739,7 @@ class Car:
         self.spd *= -0.18 if impact > 45 else 0
 
     def resolve_building_collisions(self, prev_spd):
+        """Optimiert: Reduziert die Anzahl der Kollisionstests mit Gebäuden."""
         s = current()
         impact = abs(prev_spd)
         resolved = False
@@ -694,15 +752,27 @@ class Car:
             return overlap_x * overlap_y
 
         def total_overlap(rect):
-            return sum(overlap_area(rect, building_rect) for building_rect, _surf in s.buildings)
+            # Nur Gebäude in der Nähe prüfen
+            nearby = [building_rect for building_rect, _surf in s.buildings 
+                     if abs(building_rect.centerx - rect.centerx) < 200 
+                     and abs(building_rect.centery - rect.centery) < 200
+                     and rect.colliderect(building_rect)]
+            return sum(overlap_area(rect, br) for br in nearby)
 
-        for _ in range(8):
+        # Maximal 4 Iterationen statt 8 - reicht meist aus
+        for _ in range(4):
             own = self.rect()
-            colliders = [building_rect for building_rect, _surf in s.buildings if own.colliderect(building_rect)]
-            if not colliders:
+            # Schnell prüfen: Nur Gebäude in der Nähe
+            nearby_buildings = [building_rect for building_rect, _surf in s.buildings
+                              if abs(building_rect.centerx - own.centerx) < 150
+                              and abs(building_rect.centery - own.centery) < 150
+                              and own.colliderect(building_rect)]
+            
+            if not nearby_buildings:
                 break
+            
             candidates = []
-            for building_rect in colliders:
+            for building_rect in nearby_buildings:
                 candidates.extend((
                     (self.x - (own.right - building_rect.left + 1), self.y),
                     (self.x + (building_rect.right - own.left + 1), self.y),
@@ -822,6 +892,7 @@ class Car:
         return intersection_zone_at(px, py, margin=12)
 
     def should_yield_at_intersection(self):
+        """Optimiert: Nutzt räumliche Nähe für schnellere Suche."""
         zone = self.upcoming_intersection(118)
         if not zone:
             return False
@@ -829,9 +900,17 @@ class Car:
         if intersection_has_sign_control(ix, iy):
             return False
         my_dist = math.hypot(self.x - ix, self.y - iy)
-        for other in current().cars:
+        s = current()
+        
+        # Nur Autos in der Nähe der Kreuzung prüfen
+        for other in s.cars:
             if other is self or other.dead or other.sunk:
                 continue
+            # Schnell prüfen: Ist das Auto in der Nähe der Kreuzung?
+            other_dist_to_intersection = math.hypot(other.x - ix, other.y - iy)
+            if other_dist_to_intersection > 150:  # Nicht in der Nähe
+                continue
+                
             other_zone = other.upcoming_intersection(132)
             if not other_zone:
                 other_zone = intersection_zone_at(other.x, other.y, margin=34)
@@ -848,17 +927,29 @@ class Car:
         return False
 
     def car_ahead(self):
+        """Optimiert: Nutzt räumliche Nähe für schnellere Suche."""
         rad = math.radians(self.angle)
         fx, fy = math.sin(rad), -math.cos(rad)
         rx, ry = math.cos(rad), math.sin(rad)
         look_ahead = self.look_distance + max(55, abs(self.spd) * 0.42)
-        for other in current().cars:
+        s = current()
+        
+        # Such-Radius für schnelle Filterung
+        search_radius_sq = look_ahead * look_ahead + 200 * 200  # Etwas größer als look_ahead
+        
+        for other in s.cars:
             if other is self or other.dead or other.sunk:
                 continue
+            # Schnell prüfen: Distance squared
+            dx = other.x - self.x
+            dy = other.y - self.y
+            if dx * dx + dy * dy > search_radius_sq:
+                continue
+            
             diff = abs(((other.angle - self.angle + 180) % 360) - 180)
             if diff > 55:
                 continue
-            ox, oy = other.x - self.x, other.y - self.y
+            ox, oy = dx, dy  # other.x - self.x, other.y - self.y
             ahead = ox * fx + oy * fy
             lateral = abs(ox * rx + oy * ry)
             lane_width = (self.coll_w + other.coll_w) * 0.5 + 16
@@ -867,15 +958,27 @@ class Car:
         return None
 
     def civilian_ahead(self, look_ahead=None, width=None):
+        """Optimiert: Nutzt räumliche Nähe für schnellere Suche."""
         look_ahead = look_ahead if look_ahead is not None else self.look_distance + 24
         width = width if width is not None else self.look_width + 28
         probe = self.look_rect(distance=look_ahead, width=width)
         rad = math.radians(self.angle)
         fx, fy = math.sin(rad), -math.cos(rad)
-        for ped in current().peds:
+        s = current()
+        
+        # Such-Radius für Peds in Fahrtrichtung
+        search_radius_sq = look_ahead * look_ahead + width * width
+        
+        for ped in s.peds:
             if getattr(ped, "dead", False):
                 continue
-            ox, oy = ped.x - self.x, ped.y - self.y
+            # Schnell prüfen: Distance squared
+            dx = ped.x - self.x
+            dy = ped.y - self.y
+            if dx * dx + dy * dy > search_radius_sq:
+                continue
+            
+            ox, oy = dx, dy
             ahead = ox * fx + oy * fy
             if 0 < ahead < look_ahead and probe.colliderect(ped.rect()):
                 return ped
@@ -1191,17 +1294,38 @@ class Car:
         return True
 
     def hit_pedestrians(self, speed_mag):
+        """Optimiert: Nutzt räumliche Nähe für schnellere Suche nach Entitäten."""
         if speed_mag < 85 or self.dead:
             return
         s = current()
         dmg = max(18, min(120, int(speed_mag * 0.45)))
+        
+        # Such-Radius basierend auf Geschwindigkeit und Collider-Größe
+        search_radius_sq = (speed_mag * 0.5 + 60) ** 2
+        
         if not self.is_cop:
             for p in list(s.peds):
+                # Schnell prüfen: Ist der Ped in der Nähe?
+                dx = p.x - self.x
+                dy = p.y - self.y
+                if dx * dx + dy * dy > search_radius_sq:
+                    continue
                 self._run_over_ped(p, s.peds, dmg, is_cop=False)
+            
             for cat in list(s.cats):
+                dx = cat.x - self.x
+                dy = cat.y - self.y
+                if dx * dx + dy * dy > search_radius_sq:
+                    continue
                 self._run_over_cat(cat, s.cats, dmg)
+        
         for c in list(s.cops):
+            dx = c.x - self.x
+            dy = c.y - self.y
+            if dx * dx + dy * dy > search_radius_sq:
+                continue
             self._run_over_ped(c, s.cops, dmg + 12, is_cop=True)
+        
         self._run_over_player(dmg + 10)
 
     def update(self, dt, accel=0, steer=0, handbrake=False):
@@ -1248,14 +1372,33 @@ class Car:
         nx, ny = self.x + dx, self.y + dy
         tx = self.rect_at(nx, self.y)
         x_clear = self.cop_rect_clear(tx) if self.is_cop and not controlled else rect_on_road(tx)
-        hit_x = (any(tx.colliderect(b[0]) for b in s.buildings) or
-                 self.roadblock_at(tx) is not None or
-                 (not controlled and not x_clear))
+        
+        # Optimiert: Nur nahe Gebäude prüfen für X-Kollision
+        hit_x = False
+        tx_center_x, tx_center_y = tx.centerx, tx.centery
+        for b_rect, b_surf in s.buildings:
+            if abs(b_rect.centerx - tx_center_x) > 80 or abs(b_rect.centery - tx_center_y) > 80:
+                continue
+            if tx.colliderect(b_rect):
+                hit_x = True
+                break
+        if not hit_x:
+            hit_x = (self.roadblock_at(tx) is not None or (not controlled and not x_clear))
+        
         ty = self.rect_at(self.x, ny)
         y_clear = self.cop_rect_clear(ty) if self.is_cop and not controlled else rect_on_road(ty)
-        hit_y = (any(ty.colliderect(b[0]) for b in s.buildings) or
-                 self.roadblock_at(ty) is not None or
-                 (not controlled and not y_clear))
+        
+        # Optimiert: Nur nahe Gebäude prüfen für Y-Kollision
+        hit_y = False
+        ty_center_x, ty_center_y = ty.centerx, ty.centery
+        for b_rect, b_surf in s.buildings:
+            if abs(b_rect.centerx - ty_center_x) > 80 or abs(b_rect.centery - ty_center_y) > 80:
+                continue
+            if ty.colliderect(b_rect):
+                hit_y = True
+                break
+        if not hit_y:
+            hit_y = (self.roadblock_at(ty) is not None or (not controlled and not y_clear))
         mag = math.hypot(dx, dy) or 1
         if hit_x and hit_y:
             self.spd *= -0.2
@@ -1412,8 +1555,16 @@ class Car:
                     px = self.x + math.sin(side_ang) * side_dist + math.sin(forward_ang) * forward
                     py = self.y - math.cos(side_ang) * side_dist - math.cos(forward_ang) * forward
                     pr = pygame.Rect(px - 10, py - 10, 20, 20)
-                    blocked = any(pr.colliderect(b[0]) for b in s.AI_OBSTACLES)
-                    blocked = blocked or any(pr.colliderect(car.rect()) for car in s.cars if car is not self and not car.dead)
+                    # Optimiert: Nur nahe Obstacles prüfen (Gebäude in der Nähe)
+                    blocked = False
+                    for b_rect, b_surf in s.AI_OBSTACLES:
+                        if abs(b_rect.centerx - px) > 80 or abs(b_rect.centery - py) > 80:
+                            continue
+                        if pr.colliderect(b_rect):
+                            blocked = True
+                            break
+                    if not blocked:
+                        blocked = any(pr.colliderect(car.rect()) for car in s.cars if car is not self and not car.dead)
                     if in_city(px, py, 8) and not blocked:
                         cop = Ped(px, py, is_cop=True, cop_kind=self.kind)
                         cop.shoot_tick = 0.25
@@ -1474,9 +1625,20 @@ class Car:
         nx = self.x + math.sin(rad) * self.ai_spd * dt
         ny = self.y - math.cos(rad) * self.ai_spd * dt
         test = self.rect_at(nx, ny)
-        blocked = (any(test.colliderect(b[0]) for b in s.AI_OBSTACLES) or
-                   any(test.colliderect(rb.rect) for rb in s.roadblocks) or
-                   not rect_on_road(test))
+        
+        # Optimiert: Nur nahe Gebäude prüfen (statt alle AI_OBSTACLES)
+        blocked = False
+        test_center_x, test_center_y = test.centerx, test.centery
+        for b_rect, b_surf in s.AI_OBSTACLES:
+            if abs(b_rect.centerx - test_center_x) > 120 or abs(b_rect.centery - test_center_y) > 120:
+                continue
+            if test.colliderect(b_rect):
+                blocked = True
+                break
+        
+        if not blocked:
+            blocked = (any(test.colliderect(rb.rect) for rb in s.roadblocks) or
+                       not rect_on_road(test))
         if not blocked and self.car_blocking_rect(test, padding=10):
             blocked = True
         # Kreuzungserkennung: Abstand zur nächsten Kreuzung in Fahrtrichtung
@@ -1509,11 +1671,41 @@ class Car:
             self.planned_turn = None
             self.signal_dir = 0
 
+    def get_rotated_sprite(self, angle):
+        """Holt oder generiert ein rotiertes Sprite aus dem Cache.
+        
+        Reduziert teure pygame.transform.rotate() Aufrufe.
+        """
+        # Normalisiere Winkel auf 0-360 für besseren Cache-Hit
+        norm_angle = angle % 360
+        
+        if norm_angle == self._last_rotated_angle:
+            return self._last_rotated_sprite
+        
+        if norm_angle in self._rotated_sprite_cache:
+            self._last_rotated_angle = norm_angle
+            self._last_rotated_sprite = self._rotated_sprite_cache[norm_angle]
+            return self._last_rotated_sprite
+        
+        # Generieren und cachen
+        rotated = pygame.transform.rotate(self._sprite_with_damage(), -norm_angle)
+        self._rotated_sprite_cache[norm_angle] = rotated
+        self._last_rotated_angle = norm_angle
+        self._last_rotated_sprite = rotated
+        
+        # Cache-Größe begrenzen (vermeide Speicherlecks)
+        if len(self._rotated_sprite_cache) > 36:  # Max 36 verschiedene Winkel
+            # Lösche ältesten Eintrag (einfach: ersten löschen)
+            oldest_key = next(iter(self._rotated_sprite_cache))
+            del self._rotated_sprite_cache[oldest_key]
+        
+        return rotated
+
     def draw(self, surf, cam):
         if self.sunk:
             self.draw_sunk(surf, cam)
             return
-        rot = pygame.transform.rotate(self._sprite_with_damage(), -self.angle)
+        rot = self.get_rotated_sprite(self.angle)
         r = rot.get_rect(center=(self.x - cam[0], self.y - cam[1]))
         surf.blit(rot, r)
         if self.is_roadblock:

@@ -119,7 +119,13 @@ def _update_duck_easter(state, dt, moved):
 
 
 def _spawn_traffic_and_player(state):
-    for _ in range(50):
+    # Reduzierte Start-Anzahl für bessere Performance
+    # Original: 50 Autos, 60 Peds, 38 Amusement-Peds
+    NUM_START_CARS = 30  # Reduziert von 50
+    NUM_START_PEDS = 40  # Reduziert von 60
+    NUM_AMUSEMENT_PEDS = 20  # Reduziert von 38
+    
+    for _ in range(NUM_START_CARS):
         kind = random_car_kind()
         x, y, angle = road_spawn(kind)
         car = Car(x, y, random_car_color(kind), kind=kind)
@@ -127,7 +133,7 @@ def _spawn_traffic_and_player(state):
         car.driver = True
         state.cars.append(car)
 
-    for _ in range(60):
+    for _ in range(NUM_START_PEDS):
         x, y = pedestrian_spawn()
         state.peds.append(Ped(x, y))
     
@@ -136,7 +142,7 @@ def _spawn_traffic_and_player(state):
     cx, cy = pedestrian_spawn()   # sicherer Fallback
     if park:
         margin = 60
-        for _ in range(60):
+        for _ in range(40):  # Reduziert von 60
             px = random.randint(park.left + margin, park.right - margin)
             py = random.randint(park.top + margin, park.bottom - margin)
             if in_city(px, py, 20):
@@ -184,7 +190,7 @@ def _spawn_traffic_and_player(state):
         state.pickups.append([px, py, kind, 0.0])
 
     amusement_nodes = list(state.amusement_park_nodes)
-    for _ in range(38):
+    for _ in range(NUM_AMUSEMENT_PEDS):
         if not amusement_nodes:
             break
         x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
@@ -589,15 +595,30 @@ def main():
                 if b[4] <= 0:
                     state.bullets.remove(b); continue
                 br = pygame.Rect(b[0]-3, b[1]-3, 6, 6)
-                if any(br.colliderect(bd[0]) for bd in state.buildings):
-                    state.bullets.remove(b); continue
-                if b[5]:
-                    if state.in_car and br.colliderect(state.in_car.rect()):
-                        state.in_car.take_damage(b[6] * 0.6, world_pos=(b[0], b[1]))
-                        audio.play('hit_metal', volume=0.6, pos=(b[0], b[1]))
-                        state.bullets.remove(b)
+                bx, by = b[0], b[1]
+                
+                # Optimiert: Nur nahe Gebäude prüfen (Bullets bewegen sich schnell, also kleiner Radius)
+                bullet_hit_building = False
+                for bd_rect, bd_surf in state.buildings:
+                    if abs(bd_rect.centerx - bx) > 50 or abs(bd_rect.centery - by) > 50:
                         continue
-                    if br.colliderect(player.rect()):
+                    if br.colliderect(bd_rect):
+                        bullet_hit_building = True
+                        break
+                if bullet_hit_building:
+                    state.bullets.remove(b); continue
+                
+                if b[5]:
+                    # Cop-Bullets: Player und in_car prüfen
+                    if state.in_car:
+                        car_rect = state.in_car.rect()
+                        if abs(car_rect.centerx - bx) < 30 and abs(car_rect.centery - by) < 30 and br.colliderect(car_rect):
+                            state.in_car.take_damage(b[6] * 0.6, world_pos=(b[0], b[1]))
+                            audio.play('hit_metal', volume=0.6, pos=(b[0], b[1]))
+                            state.bullets.remove(b)
+                            continue
+                    player_rect = player.rect()
+                    if abs(player_rect.centerx - bx) < 30 and abs(player_rect.centery - by) < 30 and br.colliderect(player_rect):
                         damage = b[6]
                         if player.armor > 0:
                             armor_dmg = min(player.armor, damage)
@@ -614,14 +635,18 @@ def main():
                         continue
                 else:
                     hit_any = False
+                    # Nur Autos in der Nähe prüfen
                     for c in state.cars:
                         if c is state.in_car or c.dead: continue
+                        if abs(c.x - bx) > 40 or abs(c.y - by) > 40: continue
                         if br.colliderect(c.rect()):
                             c.take_damage(b[6] * 0.5, world_pos=(b[0], b[1]))
                             audio.play('hit_metal', volume=0.55, pos=(b[0], b[1]))
                             state.bullets.remove(b); hit_any = True; break
                     if hit_any: continue
+                    # Nur Peds in der Nähe prüfen
                     for p in list(state.peds):
+                        if abs(p.x - bx) > 30 or abs(p.y - by) > 30: continue
                         if br.colliderect(p.rect()):
                             p.hp -= b[6]; p.state = 'flee'
                             spawn_blood(p.x, p.y, 4)
@@ -635,7 +660,9 @@ def main():
                                 add_wanted_heat(state, "kill_ped")
                             state.bullets.remove(b); hit_any=True; break
                     if hit_any: continue
+                    # Nur Cats in der Nähe prüfen
                     for cat in list(state.cats):
+                        if abs(cat.x - bx) > 30 or abs(cat.y - by) > 30: continue
                         if br.colliderect(cat.rect()):
                             cat.hp -= b[6]
                             spawn_blood(cat.x, cat.y, 3)
@@ -652,7 +679,9 @@ def main():
                                 add_money(player, random.randint(50, 100))
                             state.bullets.remove(b); hit_any=True; break
                     if hit_any: continue
+                    # Nur Cops in der Nähe prüfen
                     for c in list(state.cops):
+                        if abs(c.x - bx) > 30 or abs(c.y - by) > 30: continue
                         if br.colliderect(c.rect()):
                             c.hp -= b[6]
                             spawn_blood(c.x, c.y, 5)
@@ -753,28 +782,44 @@ def main():
         # ── Rendern ──────────────────────────────────────────
         icam = (int(state.cam[0]), int(state.cam[1]))
         draw_world_bg(screen, icam)
-        view = pygame.Rect(icam[0]-20, icam[1]-20, W+40, H+40)
+        
+        # Viewport für Culling - etwas größer als Screen für Objekte am Rand
+        view = pygame.Rect(icam[0]-40, icam[1]-40, W+80, H+80)
+        
+        # Blood splats (bereits optimiert mit Koordinaten-Check)
         for bs in state.blood_splats:
             sx, sy = int(bs[0]-icam[0]), int(bs[1]-icam[1])
             if -20 < sx < W+20 and -20 < sy < H+20:
                 pygame.draw.circle(screen, bs[3], (sx, sy), bs[2])
+        
+        # Pickups (mit Viewport Culling)
         for pk in state.pickups:
             if pk[3] > 0:
+                continue
+            # Schnell prüfen ob im Viewport
+            if not view.collidepoint(pk[0], pk[1]):
                 continue
             sx, sy = int(pk[0] - icam[0]), int(pk[1] - icam[1])
             if -40 < sx < W+40 and -40 < sy < H+40:
                 icon = get_pickup_icon(pk[2])
                 screen.blit(icon, (sx - 18, sy - 18))
+        
+        # Corpses (mit Viewport Culling)
         for cs, cx, cy, ca in state.corpses:
             if view.collidepoint(cx, cy):
                 rot = pygame.transform.rotate(cs, -ca)
                 r = rot.get_rect(center=(cx - icam[0], cy - icam[1]))
                 screen.blit(rot, r)
+        
+        # Buildings (bereits mit view.colliderect optimiert)
         for rect, surf in state.buildings:
             if surf is None: continue
             if view.colliderect(rect):
                 screen.blit(surf, (rect.x - icam[0], rect.y - icam[1]))
+        
         draw_service_markers(screen, state, icam, FONT)
+        
+        # Wrecks (mit Viewport Culling)
         for ws, wx, wy, wa, wd in state.wrecks:
             if view.collidepoint(wx, wy):
                 rot = pygame.transform.rotate(ws, -wa)
@@ -790,68 +835,143 @@ def main():
                     wyr = dx_ * sn_ + dy_ * cs_
                     pygame.draw.circle(screen, (10,10,12),
                                        (int(wx + wxr - icam[0]), int(wy + wyr - icam[1])), dr_)
-        for c in state.cars: c.draw(screen, icam)
-        for roadblock in state.roadblocks: roadblock.draw(screen, icam)
-        for p in state.peds: p.draw(screen, icam)
-        for cat in state.cats: cat.draw(screen, icam)
-        for c in state.cops: c.draw(screen, icam)
+        
+        # Entities mit Viewport Culling - nur zeichnen wenn in Viewport
+        # Autos
+        for c in state.cars:
+            if view.collidepoint(c.x, c.y):
+                c.draw(screen, icam)
+        
+        # Roadblocks
+        for roadblock in state.roadblocks:
+            if hasattr(roadblock, 'x') and hasattr(roadblock, 'y'):
+                if view.collidepoint(roadblock.x, roadblock.y):
+                    roadblock.draw(screen, icam)
+            else:
+                roadblock.draw(screen, icam)
+        
+        # Peds
+        for p in state.peds:
+            if view.collidepoint(p.x, p.y):
+                p.draw(screen, icam)
+        
+        # Cats
+        for cat in state.cats:
+            if view.collidepoint(cat.x, cat.y):
+                cat.draw(screen, icam)
+        
+        # Cops
+        for c in state.cops:
+            if view.collidepoint(c.x, c.y):
+                c.draw(screen, icam)
+        # Player (immer zeichnen wenn nicht in Car)
         if not state.in_car:
             player.draw(screen, icam)
+        
+        # Lightsaber swings (immer am Player-Position, also prüfen)
         for sw in state.lightsaber_swings:
             sx, sy = int(player.x - icam[0]), int(player.y - icam[1])
-            t = max(0.0, min(1.0, sw[1] / sw[2]))
-            center = sw[0]
-            blade_ang = math.radians(center - 42 + 84 * t)
-            base_x = sx + math.sin(math.radians(center)) * 16
-            base_y = sy - math.cos(math.radians(center)) * 16
-            tip_x = sx + math.sin(blade_ang) * 58
-            tip_y = sy - math.cos(blade_ang) * 58
-            start_ang = center - 42 + 84 * max(0.0, t - 0.42)
-            end_ang = center - 42 + 84 * t
-            outer = []
-            inner = []
-            for i in range(10):
-                a = math.radians(start_ang + (end_ang - start_ang) * (i / 9))
-                outer.append((int(sx + math.sin(a) * 58), int(sy - math.cos(a) * 58)))
-                inner.append((int(sx + math.sin(a) * 18), int(sy - math.cos(a) * 18)))
-            trail = outer + list(reversed(inner))
-            pygame.draw.polygon(screen, (30, 205, 255), trail)
-            pygame.draw.lines(screen, (140, 245, 255), False, outer, 3)
-            pygame.draw.line(screen, (120, 245, 255), (base_x, base_y), (tip_x, tip_y), 5)
-            pygame.draw.line(screen, (250, 255, 255), (base_x, base_y), (tip_x, tip_y), 2)
+            # Nur zeichnen wenn Player im Viewport
+            if -50 < sx < W+50 and -50 < sy < H+50:
+                t = max(0.0, min(1.0, sw[1] / sw[2]))
+                center = sw[0]
+                blade_ang = math.radians(center - 42 + 84 * t)
+                base_x = sx + math.sin(math.radians(center)) * 16
+                base_y = sy - math.cos(math.radians(center)) * 16
+                tip_x = sx + math.sin(blade_ang) * 58
+                tip_y = sy - math.cos(blade_ang) * 58
+                start_ang = center - 42 + 84 * max(0.0, t - 0.42)
+                end_ang = center - 42 + 84 * t
+                outer = []
+                inner = []
+                for i in range(10):
+                    a = math.radians(start_ang + (end_ang - start_ang) * (i / 9))
+                    outer.append((int(sx + math.sin(a) * 58), int(sy - math.cos(a) * 58)))
+                    inner.append((int(sx + math.sin(a) * 18), int(sy - math.cos(a) * 18)))
+                trail = outer + list(reversed(inner))
+                pygame.draw.polygon(screen, (30, 205, 255), trail)
+                pygame.draw.lines(screen, (140, 245, 255), False, outer, 3)
+                pygame.draw.line(screen, (120, 245, 255), (base_x, base_y), (tip_x, tip_y), 5)
+                pygame.draw.line(screen, (250, 255, 255), (base_x, base_y), (tip_x, tip_y), 2)
+        
+        # Blood particles (mit Viewport Culling)
         for bp in state.blood_particles:
-            pygame.draw.circle(screen, (180, 0, 0),
-                               (int(bp[0]-icam[0]), int(bp[1]-icam[1])), bp[5])
+            sx = int(bp[0] - icam[0])
+            sy = int(bp[1] - icam[1])
+            if -10 < sx < W+10 and -10 < sy < H+10:
+                pygame.draw.circle(screen, (180, 0, 0), (sx, sy), bp[5])
+        
+        # Bullets (mit Viewport Culling)
         for b in state.bullets:
-            pygame.draw.circle(screen, (255,230,80), (int(b[0]-icam[0]), int(b[1]-icam[1])), 3)
+            sx = int(b[0] - icam[0])
+            sy = int(b[1] - icam[1])
+            if -10 < sx < W+10 and -10 < sy < H+10:
+                pygame.draw.circle(screen, (255,230,80), (sx, sy), 3)
+        
+        # Rockets (mit Viewport Culling)
         for r in state.rockets:
-            ang_r = math.degrees(math.atan2(r[2], -r[3]))
-            rsurf = pygame.Surface((18, 8), pygame.SRCALPHA)
-            pygame.draw.ellipse(rsurf, (255,140,30), (0,0,18,8))
-            pygame.draw.ellipse(rsurf, (255,240,100), (0,1,10,6))
-            rot = pygame.transform.rotate(rsurf, -ang_r)
-            screen.blit(rot, rot.get_rect(center=(int(r[0]-icam[0]), int(r[1]-icam[1]))))
-        for fp in state.fire_particles:
-            t = max(0.0, fp[4] / fp[5])
-            col = (255, int(80 + 175 * t), int(40 * t))
-            r = max(1, int(fp[6] * (0.5 + 0.5*t)))
-            pygame.draw.circle(screen, col, (int(fp[0]-icam[0]), int(fp[1]-icam[1])), r)
-        for sp_ in state.smoke_particles:
-            t = max(0.0, sp_[4] / sp_[5])
-            gv = int(60 + 110 * (1 - t))
-            alpha = int(200 * t)
-            r = max(1, int(sp_[6] * (1.4 - 0.4*t)))
-            srf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
-            pygame.draw.circle(srf, (gv, gv, gv, alpha), (r, r), r)
-            screen.blit(srf, (int(sp_[0]-icam[0]-r), int(sp_[1]-icam[1]-r)))
-        for ex in state.explosions:
-            t = ex[2] / ex[3]
-            r = int(ex[4] * (0.3 + 0.7*t))
-            a = int(220 * (1 - t))
-            srf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
-            pygame.draw.circle(srf, (255, 200, 80, a), (r, r), r)
-            pygame.draw.circle(srf, (255, 240, 180, min(255, a+30)), (r, r), int(r*0.6))
-            screen.blit(srf, (int(ex[0]-icam[0]-r), int(ex[1]-icam[1]-r)))
+            sx = int(r[0] - icam[0])
+            sy = int(r[1] - icam[1])
+            if -20 < sx < W+20 and -20 < sy < H+20:
+                ang_r = math.degrees(math.atan2(r[2], -r[3]))
+                rsurf = pygame.Surface((18, 8), pygame.SRCALPHA)
+                pygame.draw.ellipse(rsurf, (255,140,30), (0,0,18,8))
+                pygame.draw.ellipse(rsurf, (255,240,100), (0,1,10,6))
+                rot = pygame.transform.rotate(rsurf, -ang_r)
+                screen.blit(rot, rot.get_rect(center=(sx, sy)))
+        # =========================================================================
+        # PARTIKEL BATCHING: Alle Partikel in eine Surface rendern,
+        # dann 1x blitten statt viele einzelne Draw-Calls
+        # =========================================================================
+        
+        # Fire + Smoke + Explosions in eine Batch-Surface
+        # Nur wenn Partikel im Viewport sind
+        has_particles = (len(state.fire_particles) + len(state.smoke_particles) + len(state.explosions)) > 0
+        if has_particles:
+            particle_batch = pygame.Surface((W, H), pygame.SRCALPHA)
+            
+            # Fire particles
+            for fp in state.fire_particles:
+                sx = int(fp[0] - icam[0])
+                sy = int(fp[1] - icam[1])
+                if -20 < sx < W+20 and -20 < sy < H+20:
+                    t = max(0.0, fp[4] / fp[5])
+                    col = (255, int(80 + 175 * t), int(40 * t))
+                    r = max(1, int(fp[6] * (0.5 + 0.5*t)))
+                    pygame.draw.circle(particle_batch, col, (sx, sy), r)
+            
+            # Smoke particles
+            for sp_ in state.smoke_particles:
+                sx = int(sp_[0] - icam[0])
+                sy = int(sp_[1] - icam[1])
+                r_part = max(1, int(sp_[6] * (1.4 - 0.4 * (sp_[4] / sp_[5]))))
+                if -30 - r_part < sx < W+30 + r_part and -30 - r_part < sy < H+30 + r_part:
+                    t = max(0.0, sp_[4] / sp_[5])
+                    gv = int(60 + 110 * (1 - t))
+                    alpha = int(200 * t)
+                    r = max(1, int(sp_[6] * (1.4 - 0.4*t)))
+                    # Smoke in Batch-Surface
+                    if r > 0:
+                        smoke_srf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+                        pygame.draw.circle(smoke_srf, (gv, gv, gv, alpha), (r, r), r)
+                        particle_batch.blit(smoke_srf, (sx - r, sy - r))
+            
+            # Explosions
+            for ex in state.explosions:
+                sx = int(ex[0] - icam[0])
+                sy = int(ex[1] - icam[1])
+                r = int(ex[4] * (0.3 + 0.7 * (ex[2] / ex[3])))
+                if -50 - r < sx < W+50 + r and -50 - r < sy < H+50 + r:
+                    t = ex[2] / ex[3]
+                    r = int(ex[4] * (0.3 + 0.7*t))
+                    a = int(220 * (1 - t))
+                    exp_srf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+                    pygame.draw.circle(exp_srf, (255, 200, 80, a), (r, r), r)
+                    pygame.draw.circle(exp_srf, (255, 240, 180, min(255, a+30)), (r, r), int(r*0.6))
+                    particle_batch.blit(exp_srf, (sx - r, sy - r))
+            
+            # Batch-Surface auf Screen blitten (1 Draw-Call statt viele)
+            screen.blit(particle_batch, (0, 0))
 
         # HUD
         service = nearby_service(state)
