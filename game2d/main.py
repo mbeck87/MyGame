@@ -302,17 +302,19 @@ def main():
                     state.running = False
                 continue
 
-            if state.menu in ("shop", "garage", "barber"):
-                if e.type == pygame.KEYDOWN and state.menu == "barber" and e.key == pygame.K_h:
+            if state.menu in ("shop", "garage", "barber", "bank"):
+                if e.type == pygame.KEYDOWN and state.menu == "barber" and e.key == pygame.K_f:
                     state.barber_step = "style"
                     continue
-                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g, pygame.K_h):
+                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_f):
                     state.menu = None
                     continue
                 if state.menu == "shop":
                     max_key = max(SHOP_ITEMS)
                 elif state.menu == "garage":
                     max_key = max(GARAGE_ITEMS)
+                elif state.menu == "bank":
+                    max_key = 1
                 else:
                     max_key = len(BARBER_COLORS if state.barber_step == "color" else BARBER_STYLES)
                 if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key < pygame.K_1 + max_key:
@@ -320,6 +322,12 @@ def main():
                         buy_shop_item(state, e.key - pygame.K_0)
                     elif state.menu == "garage":
                         use_garage_item(state, e.key - pygame.K_0)
+                    elif state.menu == "bank":
+                        if state.bank_robbery_cooldown <= 0:
+                            add_money(state.player, 5000)
+                            add_wanted_heat(state, heat=350, timer=60)
+                            state.bank_robbery_cooldown = 300.0  # 5 Minuten Sperre
+                        state.menu = None
                     else:
                         use_barber_item(state, e.key - pygame.K_0)
                     continue
@@ -340,16 +348,21 @@ def main():
                 if state.game_over and e.key == pygame.K_SPACE:
                     reset_game(state)
                     continue
-                if e.key == pygame.K_b and nearby_service(state) == "shop" and not state.game_over:
-                    state.menu = "shop"
-                    continue
-                if e.key == pygame.K_g and nearby_service(state) == "garage" and not state.game_over:
-                    state.menu = "garage"
-                    continue
-                if e.key == pygame.K_h and nearby_service(state) == "barber" and not state.game_over:
-                    state.menu = "barber"
-                    state.barber_step = "style"
-                    continue
+                if e.key == pygame.K_f and not state.game_over:
+                    _svc = nearby_service(state)
+                    if _svc == "shop":
+                        state.menu = "shop"
+                        continue
+                    if _svc == "garage":
+                        state.menu = "garage"
+                        continue
+                    if _svc == "barber":
+                        state.menu = "barber"
+                        state.barber_step = "style"
+                        continue
+                    if _svc == "bank":
+                        state.menu = "bank"
+                        continue
                 if pygame.K_1 <= e.key < pygame.K_1 + len(WPN_NAMES):
                     w = e.key - pygame.K_1
                     if w in state.unlocked_weapons:
@@ -372,7 +385,6 @@ def main():
                                     ejected = Ped(ex, ey)
                                     ejected.state = 'flee'
                                     state.peds.append(ejected)
-                                    add_wanted_heat(state, "carjack", timer=20)
                                 state.in_car = c
                                 c.driver = player
                                 c.signal_dir = 0
@@ -396,6 +408,7 @@ def main():
         if not state.game_over and not state.menu:
             keys = pygame.key.get_pressed()
             state.fire_cd = max(0, state.fire_cd - dt)
+            state.bank_robbery_cooldown = max(0.0, state.bank_robbery_cooldown - dt)
 
             if state.in_car:
                 accel = (1 if keys[pygame.K_w] else 0) - (1 if keys[pygame.K_s] else 0)
@@ -412,7 +425,7 @@ def main():
                     state.in_car.explode()
                 if state.in_car and state.in_car.kind == "motorcycle":
                     player.aim_angle = aim_to_mouse()
-                    if keys[pygame.K_SPACE] or (pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]):
+                    if pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]:
                         if state.fire_cd <= 0:
                             fire()
             else:
@@ -447,7 +460,7 @@ def main():
                 else:
                     player.step_cd = 0.0
                 player.aim_angle = aim_to_mouse()
-                if keys[pygame.K_SPACE] or (pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]):
+                if pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]:
                     if state.fire_cd <= 0:
                         fire()
                 if in_water(player.x, player.y):
@@ -842,22 +855,41 @@ def main():
 
         # HUD
         service = nearby_service(state)
-        hud_panel = pygame.Surface((238, 226), pygame.SRCALPHA)
-        hud_panel.fill((0, 0, 0, 175))
-        pygame.draw.rect(hud_panel, (255, 255, 255, 55), hud_panel.get_rect(), 1)
+        hud_panel = pygame.Surface((246, 236), pygame.SRCALPHA)
+        hud_panel.fill((0, 0, 0, 185))
+        pygame.draw.rect(hud_panel, (255, 255, 255, 45), hud_panel.get_rect(), 1, border_radius=4)
         screen.blit(hud_panel, (6, 6))
-        pygame.draw.rect(screen, (0,0,0), (10, 10, 220, 30))
-        pygame.draw.rect(screen, (200,40,40), (12, 12, 216*max(0,player.hp)/100, 26))
-        draw_hud_text(f"HP {int(player.hp)}", (16, 14), (255,255,255))
+
+        bar_x, bar_w = 10, 226
+        # HP bar
+        hp_y = 11
+        pygame.draw.rect(screen, (26, 10, 10), (bar_x, hp_y, bar_w, 22), border_radius=4)
+        fill_w = int(bar_w * max(0.0, player.hp) / 100)
+        if fill_w > 0:
+            hp_col = (210, 36, 36) if player.hp > 30 else (255, 75, 20)
+            pygame.draw.rect(screen, hp_col, (bar_x, hp_y, fill_w, 22), border_radius=4)
+        pygame.draw.rect(screen, (100, 100, 100), (bar_x, hp_y, bar_w, 22), 1, border_radius=4)
+        draw_hud_text("HP", (bar_x + 6, hp_y + 2), (255, 255, 255))
+        hp_surf = FONT.render(str(int(player.hp)), 1, (255, 255, 255))
+        screen.blit(hp_surf, (bar_x + bar_w - hp_surf.get_width() - 6, hp_y + 2))
+
         # Armor bar
-        pygame.draw.rect(screen, (0,0,0), (10, 40, 220, 14))
-        armor_width = 216 * max(0, player.armor) / 200
-        if armor_width > 0:
-            pygame.draw.rect(screen, (180,180,220), (12, 42, armor_width, 10))
-        draw_hud_text(f"ARMOR {int(player.armor)}", (16, 42), (255,255,255))
-        draw_hud_text(f"${player.money}", (10, 56), (90,255,115))
+        arm_y = hp_y + 28
+        pygame.draw.rect(screen, (14, 14, 30), (bar_x, arm_y, bar_w, 22), border_radius=4)
+        arm_fill = int(bar_w * max(0.0, player.armor) / 200)
+        if arm_fill > 0:
+            pygame.draw.rect(screen, (130, 155, 215), (bar_x, arm_y, arm_fill, 22), border_radius=4)
+        pygame.draw.rect(screen, (90, 95, 115), (bar_x, arm_y, bar_w, 22), 1, border_radius=4)
+        draw_hud_text("ARMOR", (bar_x + 6, arm_y + 2), (195, 210, 255))
+        arm_surf = FONT.render(str(int(player.armor)), 1, (195, 210, 255))
+        screen.blit(arm_surf, (bar_x + bar_w - arm_surf.get_width() - 6, arm_y + 2))
+
+        # Geld
+        money_y = arm_y + 25
+        draw_hud_text(f"$ {player.money:,}", (bar_x + 6, money_y), (68, 228, 105))
+
         for wi, wname in enumerate(WPN_NAMES):
-            wy = 75 + wi * 22
+            wy = 88 + wi * 22
             selected = wi == state.weapon
             unlocked = wi in state.unlocked_weapons
             if not unlocked:
@@ -878,7 +910,7 @@ def main():
             draw_hud_text(label, (10, wy), col)
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | H Friseur | P Pause | 1-6 Waffe",
+        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F Aktion/Shop/Garage | SPACE Handbremse | P Pause | 1-6 Waffe",
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
         fps_val = int(clock.get_fps())

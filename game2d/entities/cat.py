@@ -15,258 +15,182 @@ from game2d.world.geometry import (
 )
 
 
-CAT_COLORS = [
-    (210, 160, 100),   # Tabby-Orange
-    ( 65,  65,  65),   # Dunkelgrau
-    (230, 225, 215),   # Crème-weiß
-    (150, 110,  70),   # Braun-Tabby
-    ( 90,  90, 115),   # Blaugrau
-    (190,  80,  28),   # Ingwer
-]
+CAT_COLORS = [(230, 225, 215)]   # immer weiß (Pixel-Art-Stil)
 
 
 def _shade(col, delta):
     return tuple(max(0, min(255, c + delta)) for c in col)
 
 
-def make_cat_sprites(color=(150, 110, 70)):
-    """Vier Frames: [laufen_a, laufen_b, sitzen, pinkeln]."""
-    dark    = _shade(color, -50)
-    darker  = _shade(color, -85)
-    light   = _shade(color,  60)
-    lighter = _shade(color,  95)
-    stripe  = _shade(color, -70)
-    pink    = (255, 150, 160)
-    pink_d  = (200,  95, 110)
-    amber   = (255, 178,   0)
-    black   = (  0,   0,   0)
-    white   = (255, 255, 255)
-    wh_col  = (240, 240, 240) if sum(color) < 430 else (50, 50, 60)
+def make_cat_sprites(color=None):
+    """Pixel-Art-Katze (weiß, 8-Bit-Stil). Vier Frames: [walk_a, walk_b, sitzen, pinkeln]."""
+    # ── Pixel-Art-Farbpalette ────────────────────────────────────────────────
+    K  = (18,  12,  10)      # Kontur (fast Schwarz)
+    W  = (248, 248, 248)     # Weiß
+    B  = (192, 168, 142)     # Beige (Ohren, Rücken, Schwanz)
+    Bd = (148, 122,  96)     # Dunkles Beige
+    Pi = (255, 155, 165)     # Rosa Innenohr
+    Ey = ( 72, 148, 228)     # Blaues Auge
+    Pu = ( 20,  20,  80)     # Pupille
+    No = (224,  85, 105)     # Nase
+    Wh = (255, 255, 255)     # Schnurrhaare
 
     frames = []
 
-    # ── Lauf-Frames (0 = Schritt-A, 1 = Schritt-B) ──────────────────────────
+    # Hilfsfunktion: zeichnet einen logischen Pixel als PX×PX Rect
+    PX = 3
+
+    def px(s, col, gx, gy, gw=1, gh=1):
+        pygame.draw.rect(s, col, (gx * PX, gy * PX, gw * PX, gh * PX))
+
+    # ── Pixel-Kopf-Helper (gemeinsam für alle Frames) ────────────────────────
+    def draw_head(s, ox, oy):
+        """Zeichnet Pixel-Art-Kopf mit Ursprung (ox, oy) in logischen Pixeln."""
+        # Ohren
+        px(s, K,  ox+1, oy,   1, 2); px(s, B,  ox+2, oy,   1, 1)
+        px(s, Pi, ox+2, oy+1, 1, 1); px(s, K,  ox+3, oy,   1, 1)
+        px(s, K,  ox+5, oy,   1, 1); px(s, B,  ox+5, oy+1, 1, 1)
+        px(s, Pi, ox+6, oy+1, 1, 1); px(s, K,  ox+6, oy,   1, 1)
+        px(s, K,  ox+7, oy,   1, 2)
+        # Kopfkontur oben
+        px(s, K,  ox,   oy+2, 1, 5); px(s, K,  ox+8, oy+2, 1, 5)
+        px(s, K,  ox+1, oy+7, 7, 1); px(s, K,  ox+1, oy+1, 7, 1)
+        # Kopffüllung weiß
+        px(s, W,  ox+1, oy+2, 7, 5)
+        # Wangen (leicht rosa)
+        px(s, Pi, ox+1, oy+5, 1, 1); px(s, Pi, ox+7, oy+5, 1, 1)
+        # Augen (blau 2×2, Pupille 1×1 rechts oben, Glanzpunkt)
+        px(s, Ey, ox+2, oy+3, 2, 2); px(s, Pu, ox+3, oy+3, 1, 1)
+        px(s, W,  ox+2, oy+3, 1, 1)   # Glanzpunkt
+        px(s, Ey, ox+5, oy+3, 2, 2); px(s, Pu, ox+6, oy+3, 1, 1)
+        px(s, W,  ox+5, oy+3, 1, 1)   # Glanzpunkt
+        # Nase
+        px(s, No, ox+3, oy+5, 2, 1)
+        # Maul (kleines W)
+        px(s, K,  ox+3, oy+6, 1, 1); px(s, K,  ox+5, oy+6, 1, 1)
+
+    def draw_whiskers(s, ox, oy):
+        """Schnurrhaare (logische Pixel, 1px Linie)."""
+        # links
+        for i, (wx, wy) in enumerate([(-3, oy+5+0*PX), (-2, oy+5+1*PX)]):
+            pygame.draw.line(s, Wh,
+                             (ox*PX, (oy+5)*PX + i*PX),
+                             ((ox-3)*PX, (oy+5)*PX + i*PX - i), 1)
+        # rechts
+        pygame.draw.line(s, Wh,
+                         ((ox+8)*PX, (oy+5)*PX),
+                         ((ox+11)*PX, (oy+5)*PX - 1), 1)
+        pygame.draw.line(s, Wh,
+                         ((ox+8)*PX, (oy+6)*PX),
+                         ((ox+11)*PX, (oy+6)*PX + 1), 1)
+
+    # ── WALK-Frames A & B (Seitenansicht, 18×12 Logik-Pixel = 54×36 px) ─────
     for leg_phase in (0, 1):
-        W, H = 52, 36
-        s = pygame.Surface((W, H), pygame.SRCALPHA)
-        la = 3 if leg_phase else 0
+        s = pygame.Surface((18 * PX, 12 * PX), pygame.SRCALPHA)
+        lp = leg_phase  # 0 oder 1
 
-        # Schwanz (zuerst, hinter Körper) — S-Kurve mit fluffiger Spitze
-        tail = [(44, 26), (48, 19), (49, 12), (46, 7), (43, 6)]
-        pygame.draw.lines(s, darker, False, tail, 6)
-        pygame.draw.lines(s, dark,   False, tail, 4)
-        pygame.draw.lines(s, color,  False, tail, 2)
-        pygame.draw.circle(s, dark,  (43, 6), 4)
-        pygame.draw.circle(s, light, (42, 5), 2)
-        pygame.draw.circle(s, white, (41, 4), 1)
+        # Schwanz (rechts, S-Form nach oben)
+        for ty in range(5):
+            tx = 17 - (ty % 2)
+            px(s, K,  tx,   ty,  1, 1)
+            px(s, B,  tx-1, ty,  1, 1)
+        px(s, Bd, 15, 0, 1, 1)  # Schwanzspitze
 
-        # Körper — mehrschichtig für Tiefenwirkung
-        pygame.draw.ellipse(s, darker, (14, 17, 32, 17))   # Schatten
-        pygame.draw.ellipse(s, color,  (14, 15, 32, 17))   # Hauptkörper
-        pygame.draw.ellipse(s, light,  (19, 19, 20, 10))   # Bauch
-        pygame.draw.ellipse(s, lighter,(22, 20, 12,  7))   # Bauch-Highlight
-        for ox in range(17, 44, 5):
-            pygame.draw.line(s, stripe, (ox, 15), (ox + 2, 26), 1)
+        # Körper-Rücken (beige Streifen oben)
+        px(s, K,  4, 2, 10, 1)
+        px(s, B,  5, 3, 9,  1)
+        px(s, K,  4, 3, 1,  5); px(s, K, 14, 3, 1, 5)
+        px(s, W,  5, 4, 9,  4)  # weißer Rumpf
+        px(s, B,  5, 7, 9,  1)  # Bauchstreifen
+        px(s, K,  4, 8, 10, 1)  # untere Kontur
 
-        # Hintere Beine (dunkler, dahinter)
-        pygame.draw.line(s, darker, (37, 29), (35 - la, 35), 4)
-        pygame.draw.line(s, darker, (41, 29), (43 + la, 35), 4)
-        pygame.draw.ellipse(s, darker, (27 - la, 33, 11, 4))
-        pygame.draw.ellipse(s, dark,   (28 - la, 32,  8, 3))
-        pygame.draw.ellipse(s, darker, (39 + la, 33, 11, 4))
-        pygame.draw.ellipse(s, dark,   (40 + la, 32,  8, 3))
+        # Hintere Beine (Pixel-Art, alternierend)
+        for li, lx in enumerate((11, 13)):
+            off = lp if li == 0 else 1 - lp
+            px(s, Bd, lx, 9,     2, 1)   # Oberschenkel
+            px(s, B,  lx, 9+off, 2, 1)   # Unterschenkel
+            px(s, K,  lx-1, 10+off, 4, 1); px(s, W, lx, 10+off, 2, 1)  # Pfote
 
-        # Vordere Beine (vorne, Körperfarbe)
-        pygame.draw.line(s, color, (21, 29), (19 + la, 35), 4)
-        pygame.draw.line(s, color, (25, 29), (27 - la, 35), 4)
-        pygame.draw.ellipse(s, dark,  (11 + la, 33, 11, 4))
-        pygame.draw.ellipse(s, color, (12 + la, 32,  8, 3))
-        pygame.draw.ellipse(s, dark,  (21 - la, 33, 11, 4))
-        pygame.draw.ellipse(s, color, (22 - la, 32,  8, 3))
+        # Vordere Beine
+        for li, lx in enumerate((5, 7)):
+            off = 1 - lp if li == 0 else lp
+            px(s, W,  lx, 9,     2, 1)
+            px(s, W,  lx, 9+off, 2, 1)
+            px(s, K,  lx-1, 10+off, 4, 1); px(s, W, lx, 10+off, 2, 1)  # Pfote
 
-        # Hals
-        pygame.draw.polygon(s, color, [(9, 22), (9, 29), (19, 31), (20, 26)])
-        pygame.draw.polygon(s, light, [(10, 23), (10, 27), (18, 29), (18, 26)])
+        # Kopf (links, logische Pos (0,0))
+        draw_head(s, 0, 0)
+        draw_whiskers(s, 0, 0)
 
-        # Kopf
-        hx, hy, hr = 10, 13, 11
-        pygame.draw.circle(s, darker, (hx,     hy + 1), hr)
-        pygame.draw.circle(s, color,  (hx,     hy),     hr)
-        pygame.draw.circle(s, light,  (hx - 2, hy - 1), hr - 3)
-        pygame.draw.circle(s, lighter,(hx - 3, hy - 2), hr - 6)
-
-        # Ohren (Kontur + Farbe + Innenohr)
-        pygame.draw.polygon(s, dark,  [( 2, 6), ( 4, -2), (10,  5)])
-        pygame.draw.polygon(s, color, [( 3, 6), ( 4, -1), ( 9,  5)])
-        pygame.draw.polygon(s, pink,  [( 3, 5), ( 4,  0), ( 8,  5)])
-        pygame.draw.polygon(s, dark,  [( 9, 4), (12, -2), (17,  4)])
-        pygame.draw.polygon(s, color, [(10, 4), (12, -1), (16,  4)])
-        pygame.draw.polygon(s, pink,  [(10, 4), (12,  0), (15,  4)])
-
-        # Auge — große Iris (amber), vertikaler Schlitz-Pupille, zwei Glanzpunkte
-        pygame.draw.circle(s, amber, (15, 12), 5)
-        pygame.draw.ellipse(s, black, (14,  9, 3, 7))
-        pygame.draw.circle(s, white, (17, 10), 1)
-        pygame.draw.circle(s, white, (14, 14), 1)
-        pygame.draw.arc(s, darker, (10, 7, 10, 9), 0, math.pi, 1)
-
-        # Nase (herzförmig) + Maul
-        pygame.draw.polygon(s, pink,  [(4, 16), (7, 18), (9, 16)])
-        pygame.draw.polygon(s, pink_d,[(5, 17), (7, 18), (8, 17)])
-        pygame.draw.line(s, darker, (7, 18), (5, 21), 1)
-        pygame.draw.line(s, darker, (7, 18), (9, 21), 1)
-
-        # Schnurrhaare — 3 Stück, varierende Länge
-        for i, dy in enumerate((-2, 0, 2)):
-            length = 12 - abs(dy) * 2
-            pygame.draw.line(s, wh_col, (4, 18 + dy), (4 - length, 17 + dy // 2), 1)
+        # Hals-Verbindung
+        px(s, W, 4, 4, 1, 3)
 
         frames.append(s)
 
-    # ── Sitzen-Frame (2) ─────────────────────────────────────────────────────
-    W, H = 52, 36
-    s = pygame.Surface((W, H), pygame.SRCALPHA)
+    # ── SITTING-Frame (Pixel-Art, wie Referenz, 15×18 Logik-Px = 45×54) ─────
+    s = pygame.Surface((15 * PX, 18 * PX), pygame.SRCALPHA)
 
-    # Schwanz eingerollt vor dem Körper
-    tail_s = [(18, 29), (12, 31), (9, 35), (17, 36), (26, 35), (32, 31)]
-    pygame.draw.lines(s, darker, False, tail_s, 5)
-    pygame.draw.lines(s, dark,   False, tail_s, 3)
-    pygame.draw.lines(s, color,  False, tail_s, 1)
+    # Schwanz (rechts am Körper hinunter, dann vor den Pfoten)
+    for ty in range(6, 14):
+        px(s, K,  14, ty,  1, 1)
+        px(s, B,  13, ty,  1, 1)
+    for tx in range(6, 14):
+        px(s, B,  tx, 14,  1, 1)
+        px(s, K,  tx, 15,  1, 1)
+    px(s, Bd, 6, 13, 1, 1)  # Ecke
 
-    # Flanke/Hinterteil (groß, rund)
-    pygame.draw.ellipse(s, darker, (22, 14, 28, 22))
-    pygame.draw.ellipse(s, color,  (22, 12, 28, 22))
-    pygame.draw.ellipse(s, light,  (26, 16, 18, 14))
-    for ox in (25, 30, 35, 40):
-        pygame.draw.line(s, stripe, (ox, 12), (ox + 2, 24), 1)
+    # Körper (breites Rechteck)
+    px(s, K,  3,  7, 10, 1)   # oben
+    px(s, B,  4,  8, 9,  1)   # beige Rückenstreifen
+    px(s, K,  3,  8, 1,  6); px(s, K, 13, 8, 1, 6)   # Seiten
+    px(s, W,  4,  9, 9,  5)   # weißer Körper
+    px(s, K,  3, 14, 10, 1)   # unten
 
-    # Brust/Vorderkörper
-    pygame.draw.ellipse(s, darker, ( 9, 18, 20, 16))
-    pygame.draw.ellipse(s, color,  ( 9, 16, 20, 16))
-    pygame.draw.ellipse(s, light,  (11, 19, 14, 11))
-    pygame.draw.ellipse(s, lighter,(13, 21,  9,  7))
+    # Vorderpfoten (unten, zwei Paare)
+    px(s, K,  4, 15, 3, 1); px(s, W, 5, 15, 2, 1)
+    px(s, K,  4, 16, 3, 1); px(s, W, 5, 16, 2, 1)
+    px(s, K,  8, 15, 3, 1); px(s, W, 9, 15, 2, 1)
+    px(s, K,  8, 16, 3, 1); px(s, W, 9, 16, 2, 1)
 
-    # Eingeknickte Vorderpfoten mit Zehen
-    pygame.draw.ellipse(s, darker, ( 9, 30, 13, 5))
-    pygame.draw.ellipse(s, color,  (10, 29, 10, 4))
-    pygame.draw.ellipse(s, darker, (20, 30, 13, 5))
-    pygame.draw.ellipse(s, color,  (21, 29, 10, 4))
-    for tx in (11, 13, 15):
-        pygame.draw.line(s, dark, (tx, 32), (tx, 34), 1)
-    for tx in (22, 24, 26):
-        pygame.draw.line(s, dark, (tx, 32), (tx, 34), 1)
+    # Kopf (oben, zentriert)
+    draw_head(s, 3, 0)
+    draw_whiskers(s, 3, 0)
 
     # Hals
-    pygame.draw.polygon(s, color, [(8, 22), (8, 28), (17, 29), (18, 24)])
-    pygame.draw.polygon(s, light, [(9, 23), (9, 27), (16, 28), (16, 24)])
-
-    # Kopf (aufrecht, aufmerksam)
-    hx, hy, hr = 9, 12, 11
-    pygame.draw.circle(s, darker, (hx,     hy + 1), hr)
-    pygame.draw.circle(s, color,  (hx,     hy),     hr)
-    pygame.draw.circle(s, light,  (hx - 2, hy - 1), hr - 3)
-    pygame.draw.circle(s, lighter,(hx - 3, hy - 2), hr - 6)
-
-    # Ohren besonders steil (wach/aufmerksam)
-    pygame.draw.polygon(s, dark,  [(1, 5), ( 3, -3), ( 9,  4)])
-    pygame.draw.polygon(s, color, [(2, 5), ( 3, -2), ( 8,  4)])
-    pygame.draw.polygon(s, pink,  [(2, 5), ( 3, -1), ( 7,  4)])
-    pygame.draw.polygon(s, dark,  [(9, 4), (12, -3), (17,  4)])
-    pygame.draw.polygon(s, color, [(10, 4), (12, -2), (16, 4)])
-    pygame.draw.polygon(s, pink,  [(10, 4), (12, -1), (15, 4)])
-
-    # Auge weit geöffnet (neugierig)
-    pygame.draw.circle(s, amber, (15, 12), 5)
-    pygame.draw.ellipse(s, black, (14,  9, 3, 7))
-    pygame.draw.circle(s, white, (17, 10), 1)
-    pygame.draw.circle(s, white, (14, 14), 1)
-    pygame.draw.arc(s, darker, (10, 7, 10, 9), 0, math.pi, 1)
-
-    # Nase + Maul
-    pygame.draw.polygon(s, pink,  [(3, 16), (6, 18), (8, 16)])
-    pygame.draw.polygon(s, pink_d,[(4, 17), (6, 18), (7, 17)])
-    pygame.draw.line(s, darker, (6, 18), (4, 21), 1)
-    pygame.draw.line(s, darker, (6, 18), (8, 21), 1)
-
-    # Schnurrhaare
-    for i, dy in enumerate((-2, 0, 2)):
-        length = 11 - abs(dy) * 2
-        pygame.draw.line(s, wh_col, (3, 18 + dy), (3 - length, 17 + dy // 2), 1)
+    px(s, W, 6, 7, 3, 1)
 
     frames.append(s)
 
-    # ── Pinkeln-Frame (3) ────────────────────────────────────────────────────
-    W, H = 52, 38
-    s = pygame.Surface((W, H), pygame.SRCALPHA)
+    # ── PEE-Frame (Schwanz hoch, geduckt, 16×14 Logik-Px = 48×42) ──────────
+    s = pygame.Surface((16 * PX, 14 * PX), pygame.SRCALPHA)
 
-    # Schwanz steil nach oben
-    tail_p = [(30, 22), (32, 14), (30, 7), (26, 4)]
-    pygame.draw.lines(s, darker, False, tail_p, 6)
-    pygame.draw.lines(s, dark,   False, tail_p, 4)
-    pygame.draw.lines(s, color,  False, tail_p, 2)
-    pygame.draw.circle(s, dark,  (26, 4), 4)
-    pygame.draw.circle(s, light, (25, 3), 2)
+    # Schwanz steil nach oben (rechts)
+    for ty in range(7):
+        tx = 15 - (ty > 3)
+        px(s, K,  tx,   ty, 1, 1)
+        px(s, B,  tx-1, ty, 1, 1)
+    px(s, Bd, 14, 0, 1, 1)
 
-    # Körper geduckt
-    pygame.draw.ellipse(s, darker, (10, 19, 30, 17))
-    pygame.draw.ellipse(s, color,  (10, 17, 30, 17))
-    pygame.draw.ellipse(s, light,  (14, 21, 20, 11))
-    pygame.draw.ellipse(s, lighter,(17, 22, 12,  7))
-    for ox in range(13, 38, 5):
-        pygame.draw.line(s, stripe, (ox, 17), (ox + 2, 28), 1)
+    # Körper geduckt (niedrig, breit)
+    px(s, K,  3, 5, 9, 1)
+    px(s, B,  4, 6, 8, 1)
+    px(s, K,  3, 6, 1, 4); px(s, K, 12, 6, 1, 4)
+    px(s, W,  4, 7, 8, 3)
+    px(s, K,  3, 10, 9, 1)
 
-    # Hintere Beine (geduckt)
-    pygame.draw.line(s, darker, (32, 30), (30, 37), 4)
-    pygame.draw.line(s, darker, (36, 30), (38, 37), 4)
-    pygame.draw.ellipse(s, darker, (23, 35, 11, 4))
-    pygame.draw.ellipse(s, dark,   (24, 34,  8, 3))
-    pygame.draw.ellipse(s, darker, (34, 35, 11, 4))
-    pygame.draw.ellipse(s, dark,   (35, 34,  8, 3))
+    # Beine geduckt (kurz, nach hinten)
+    for lx in (4, 6, 9, 11):
+        px(s, W,  lx, 11, 2, 1)
+        px(s, K,  lx-1, 12, 4, 1); px(s, W, lx, 12, 2, 1)
 
-    # Vordere Beine (geduckt)
-    pygame.draw.line(s, color, (18, 30), (16, 37), 4)
-    pygame.draw.line(s, color, (22, 30), (24, 37), 4)
-    pygame.draw.ellipse(s, dark,  (10, 35, 11, 4))
-    pygame.draw.ellipse(s, color, (11, 34,  8, 3))
-    pygame.draw.ellipse(s, dark,  (20, 35, 11, 4))
-    pygame.draw.ellipse(s, color, (21, 34,  8, 3))
+    # Kopf
+    draw_head(s, 0, 0)
+    draw_whiskers(s, 0, 0)
+    px(s, W, 3, 5, 1, 2)  # Hals
 
-    # Hals + Kopf (leicht gesenkt, konzentriert)
-    pygame.draw.rect(s, color, (7, 22, 10, 8), border_radius=3)
-    pygame.draw.rect(s, light, (8, 23,  7, 6), border_radius=2)
-    hx, hy, hr = 9, 14, 10
-    pygame.draw.circle(s, darker, (hx,     hy + 1), hr)
-    pygame.draw.circle(s, color,  (hx,     hy),     hr)
-    pygame.draw.circle(s, light,  (hx - 2, hy - 1), hr - 3)
-
-    # Ohren
-    pygame.draw.polygon(s, dark,  [(2,  7), ( 3,  0), ( 9,  6)])
-    pygame.draw.polygon(s, color, [(3,  7), ( 3,  1), ( 8,  6)])
-    pygame.draw.polygon(s, pink,  [(3,  6), ( 3,  1), ( 7,  6)])
-    pygame.draw.polygon(s, dark,  [(9,  5), (12,  0), (16,  5)])
-    pygame.draw.polygon(s, color, [(10, 5), (12,  1), (15,  5)])
-    pygame.draw.polygon(s, pink,  [(10, 5), (12,  1), (14,  5)])
-
-    # Auge halb geschlossen (konzentriert)
-    pygame.draw.circle(s, amber,  (14, 13), 4)
-    pygame.draw.ellipse(s, black, (13, 10,  2,  5))
-    pygame.draw.ellipse(s, darker,(10,  9,  8,  5))   # schweres Augenlid
-    pygame.draw.circle(s, white,  (16, 12), 1)
-
-    # Nase + Maul
-    pygame.draw.polygon(s, pink,  [(4, 17), (7, 19), (9, 17)])
-    pygame.draw.polygon(s, pink_d,[(5, 18), (7, 19), (8, 18)])
-    pygame.draw.line(s, darker, (7, 19), (5, 22), 1)
-    pygame.draw.line(s, darker, (7, 19), (9, 22), 1)
-
-    # Schnurrhaare
-    for i, dy in enumerate((-2, 0, 2)):
-        length = 11 - abs(dy) * 2
-        pygame.draw.line(s, wh_col, (4, 19 + dy), (4 - length, 18 + dy // 2), 1)
-
-    # Pfütze (halbtransparent, zwei Schichten)
-    pygame.draw.ellipse(s, (235, 215, 60, 130), (22, 34, 14, 5))
-    pygame.draw.ellipse(s, (245, 228, 80, 180), (24, 35, 10, 3))
+    # Pfütze
+    pygame.draw.ellipse(s, (235, 215, 60, 140), (9*PX, 12*PX, 5*PX, 2*PX))
+    pygame.draw.ellipse(s, (245, 230, 80, 200), (10*PX, 12*PX+1, 3*PX, PX))
 
     frames.append(s)
 

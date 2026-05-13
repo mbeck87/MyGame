@@ -83,6 +83,9 @@ def draw_crosswalks(surf, cam):
             sy = iy - cam[1]
             if sy < -120 or sy > H + 120:
                 continue
+            # Randstraßen: kein Zebrastreifen, Gehsteig soll durchgezogen bleiben
+            if ix in (ROAD_LO, ROAD_HI_X) or iy in (ROAD_LO, ROAD_HI_Y):
+                continue
             has_north, has_south, has_west, has_east = road_connections_at(ix, iy, s)
             if not ((has_north or has_south) and (has_west or has_east)):
                 continue
@@ -1356,14 +1359,50 @@ def _draw_airplane_icon(surf, x, y, angle=0, body=(226, 232, 232), accent=(55, 9
     def rot(px, py):
         return int(x + px * cs - py * sn), int(y + px * sn + py * cs)
 
-    fuselage = [rot(0, -34), rot(7, -18), rot(6, 22), rot(0, 34), rot(-6, 22), rot(-7, -18)]
-    wings = [rot(-44, -4), rot(-8, -10), rot(8, -10), rot(44, -4), rot(10, 8), rot(-10, 8)]
-    tail = [rot(-22, 24), rot(-6, 14), rot(6, 14), rot(22, 24), rot(0, 30)]
-    pygame.draw.polygon(surf, (180, 188, 188), wings)
+    # Shadow
+    shadow = [rot(px + 3, py + 3) for px, py in [
+        (-6, -30), (6, -30), (8, -14), (10, 0), (6, 26), (0, 34), (-6, 26), (-10, 0), (-8, -14)
+    ]]
+    pygame.draw.polygon(surf, (60, 65, 70), shadow)
+
+    # Main wings (swept)
+    wings = [rot(-48, 2), rot(-9, -12), rot(9, -12), rot(48, 2), rot(12, 14), rot(-12, 14)]
+    pygame.draw.polygon(surf, (195, 202, 202), wings)
+    pygame.draw.polygon(surf, (150, 158, 160), wings, 1)
+
+    # Wing engine pods
+    for wx in (-28, 28):
+        eng = [rot(wx - 5, -4), rot(wx + 5, -4), rot(wx + 6, 6), rot(wx - 6, 6)]
+        pygame.draw.polygon(surf, (90, 95, 100), eng)
+        pygame.draw.polygon(surf, (60, 65, 70), eng, 1)
+
+    # Fuselage
+    fuselage = [
+        rot(0, -34), rot(5, -28), rot(7, -16), rot(8, -2),
+        rot(7, 18), rot(5, 28), rot(0, 34),
+        rot(-5, 28), rot(-7, 18), rot(-8, -2),
+        rot(-7, -16), rot(-5, -28),
+    ]
     pygame.draw.polygon(surf, body, fuselage)
-    pygame.draw.polygon(surf, (170, 180, 178), tail)
-    pygame.draw.line(surf, accent, rot(0, -23), rot(0, 25), 3)
-    pygame.draw.circle(surf, (42, 52, 62), rot(0, -28), 3)
+    pygame.draw.polygon(surf, (160, 168, 170), fuselage, 1)
+
+    # Airline stripe along fuselage
+    pygame.draw.line(surf, accent, rot(0, -22), rot(0, 24), 4)
+    # Cockpit windows
+    pygame.draw.ellipse(surf, (210, 230, 245),
+        (rot(-4, -28)[0], rot(-4, -28)[1], 8, 10))
+
+    # Tail fin (vertical stabilizer)
+    tail_fin = [rot(0, 18), rot(0, 30), rot(6, 30), rot(5, 18)]
+    pygame.draw.polygon(surf, (200, 208, 208), tail_fin)
+    # Horizontal stabilizer
+    h_stab = [rot(-18, 22), rot(-5, 18), rot(5, 18), rot(18, 22), rot(10, 28), rot(-10, 28)]
+    pygame.draw.polygon(surf, (190, 198, 200), h_stab)
+    pygame.draw.polygon(surf, (150, 158, 160), h_stab, 1)
+
+    # Nose cone
+    pygame.draw.circle(surf, (210, 218, 220), rot(0, -33), 5)
+    pygame.draw.circle(surf, (80, 88, 92), rot(0, -34), 2)
 
 
 def _draw_airport_fence(surf, airport, gate, cam):
@@ -1395,68 +1434,201 @@ def _draw_airports_static(surf, cam):
         if not visible.colliderect(airport):
             continue
         layout = airport_layout(airport)
-        base = _screen_rect(airport, cam)
-        pygame.draw.rect(surf, (78, 88, 80), base)
-        pygame.draw.rect(surf, (63, 74, 68), base, 2)
-
-        apron = _screen_rect(layout["apron"], cam)
-        taxiway = _screen_rect(layout["taxiway"], cam)
-        runway = _screen_rect(layout["runway"], cam)
         gate = layout["gate"]
-        pygame.draw.rect(surf, (96, 100, 102), apron)
-        pygame.draw.rect(surf, (62, 63, 66), taxiway)
-        pygame.draw.line(surf, (210, 178, 58), taxiway.midleft, taxiway.midright, 3)
-        for connector in (
+
+        # ── Basis ────────────────────────────────────────────────────
+        base = _screen_rect(airport, cam)
+        pygame.draw.rect(surf, (86, 92, 88), base)           # Betongrau
+        # Perimeter-Fahrbahn (innerer Rand)
+        pygame.draw.rect(surf, (68, 72, 70), base, 14)
+
+        # ── Rollbahn-Verbindungen ─────────────────────────────────────
+        conn_rects = [
             pygame.Rect(layout["runway"].left + 150, layout["runway"].bottom, 66, layout["taxiway"].top - layout["runway"].bottom),
             pygame.Rect(layout["runway"].centerx - 33, layout["runway"].bottom, 66, layout["taxiway"].top - layout["runway"].bottom),
             pygame.Rect(layout["runway"].right - 216, layout["runway"].bottom, 66, layout["taxiway"].top - layout["runway"].bottom),
-        ):
-            pygame.draw.rect(surf, (62, 63, 66), _screen_rect(connector, cam))
-        pygame.draw.rect(surf, (39, 40, 44), runway)
-        pygame.draw.rect(surf, (21, 22, 25), runway, 2)
+        ]
+        for cr in conn_rects:
+            pygame.draw.rect(surf, (52, 54, 58), _screen_rect(cr, cam))
+            # gelbe Mittellinie
+            scr = _screen_rect(cr, cam)
+            pygame.draw.line(surf, (214, 182, 50), scr.midtop, scr.midbottom, 2)
 
-        y = runway.centery
-        x = runway.left + 92
-        while x < runway.right - 92:
-            pygame.draw.rect(surf, (226, 226, 216), (x, y - 3, 42, 6))
-            x += 84
-        for edge_x in (runway.left + 22, runway.right - 58):
-            for i in range(6):
-                stripe_y = runway.top + 18 + i * 16
-                pygame.draw.rect(surf, (232, 232, 224), (edge_x, stripe_y, 36, 7))
-        for edge_y in (runway.top + 10, runway.bottom - 12):
-            for light_x in range(layout["runway"].left + 20, layout["runway"].right, 44):
-                pygame.draw.circle(surf, (202, 216, 190), (int(light_x - cam[0]), int(edge_y - cam[1])), 2)
+        # ── Rollweg (Taxiway) ─────────────────────────────────────────
+        taxiway = _screen_rect(layout["taxiway"], cam)
+        pygame.draw.rect(surf, (52, 54, 58), taxiway)
+        pygame.draw.line(surf, (214, 182, 50), taxiway.midleft, taxiway.midright, 2)
+        # blaue Randlichter
+        for lx in range(taxiway.x + 14, taxiway.right, 36):
+            for ly in (taxiway.y + 4, taxiway.bottom - 5):
+                pygame.draw.circle(surf, (88, 132, 210), (lx, ly), 2)
+        # Hold-Short-Linien an jedem Verbinder
+        for cr in conn_rects:
+            scr = _screen_rect(cr, cam)
+            hx = scr.centerx
+            for dy in (-4, -8):
+                pygame.draw.line(surf, (214, 182, 50), (hx - 24, taxiway.y + dy), (hx + 24, taxiway.y + dy), 1)
 
+        # ── Vorfeld (Apron) ───────────────────────────────────────────
+        apron = _screen_rect(layout["apron"], cam)
+        pygame.draw.rect(surf, (100, 105, 108), apron)
+        # Taxilane durch Vorfeld
+        pygame.draw.line(surf, (214, 182, 50), (apron.x + 48, apron.y), (apron.x + 48, apron.bottom), 2)
+        # Parkpositionen (gelbe T-Linien für Flugzeuge)
+        for pi, px in enumerate((apron.x + 130, apron.x + 240, apron.right - 170, apron.right - 80)):
+            py = apron.y + 60
+            pygame.draw.line(surf, (200, 170, 44), (px, apron.y + 10), (px, py), 2)
+            pygame.draw.line(surf, (200, 170, 44), (px - 30, py), (px + 30, py), 2)
+            # Parkpositionsnummer-Feld
+            pygame.draw.rect(surf, (55, 58, 62), (px - 10, apron.y + 12, 20, 12), border_radius=2)
+
+        # ── Piste (Runway) ────────────────────────────────────────────
+        runway = _screen_rect(layout["runway"], cam)
+        pygame.draw.rect(surf, (36, 38, 42), runway)          # dunkler Asphalt
+        pygame.draw.rect(surf, (18, 20, 24), runway, 2)
+
+        # Pistenkanten-Linien (solid weiß, beidseitig)
+        pygame.draw.line(surf, (210, 210, 205), (runway.left + 6, runway.top + 4), (runway.left + 6, runway.bottom - 4), 1)
+        pygame.draw.line(surf, (210, 210, 205), (runway.right - 6, runway.top + 4), (runway.right - 6, runway.bottom - 4), 1)
+
+        # Schwellenmakierungen — je 8 Balken an beiden Enden
+        for ex in (runway.left, runway.right - 44):
+            offx = 8 if ex == runway.left else 0
+            for bi in range(4):
+                bx = ex + offx + bi * 10
+                pygame.draw.rect(surf, (228, 228, 220), (bx, runway.top + 8, 6, runway.h - 16))
+
+        # Zielpunktmarkierungen (aiming point) ~180px vom Rand
+        for side in (runway.left + 180, runway.right - 216):
+            pygame.draw.rect(surf, (224, 224, 216), (side, runway.top + 10, 36, 26))
+            pygame.draw.rect(surf, (224, 224, 216), (side, runway.bottom - 36, 36, 26))
+
+        # Aufsetzzonen-Streifen (3 Paare)
+        for pair in range(1, 4):
+            px1 = runway.left + 60 + pair * 54
+            pygame.draw.rect(surf, (200, 200, 192), (px1, runway.top + 14, 18, 16))
+            pygame.draw.rect(surf, (200, 200, 192), (px1, runway.bottom - 30, 18, 16))
+            px2 = runway.right - 60 - pair * 54
+            pygame.draw.rect(surf, (200, 200, 192), (px2, runway.top + 14, 18, 16))
+            pygame.draw.rect(surf, (200, 200, 192), (px2, runway.bottom - 30, 18, 16))
+
+        # Mittellinien-Striche
+        cx = runway.left + 78
+        while cx < runway.right - 78:
+            pygame.draw.rect(surf, (228, 228, 220), (cx, runway.centery - 3, 38, 6))
+            cx += 76
+
+        # Pistenrandlichter (grün am Anfang, weiß entlang)
+        for lx in range(layout["runway"].left + 16, layout["runway"].right, 42):
+            col_l = (80, 210, 80) if lx - layout["runway"].left < 60 else (220, 218, 200)
+            col_r = (80, 210, 80) if layout["runway"].right - lx < 60 else (220, 218, 200)
+            pygame.draw.circle(surf, col_l, (int(lx - cam[0]), int(layout["runway"].top + 6 - cam[1])), 2)
+            pygame.draw.circle(surf, col_r, (int(lx - cam[0]), int(layout["runway"].bottom - 7 - cam[1])), 2)
+
+        # PAPI-Lichter (4 Punkte) rechts neben dem linken Schwellenende
+        papi_x = runway.left + 50
+        papi_y = runway.bottom + 12
+        for pi in range(4):
+            pcol = (210, 36, 36) if pi < 2 else (245, 245, 245)
+            pygame.draw.circle(surf, pcol, (papi_x + pi * 10, papi_y), 4)
+
+        # ── Terminal ─────────────────────────────────────────────────
         terminal = _screen_rect(layout["terminal"], cam)
-        pygame.draw.rect(surf, (180, 188, 188), terminal)
-        pygame.draw.rect(surf, (95, 104, 112), terminal, 2)
-        pygame.draw.rect(surf, (72, 116, 142), (terminal.x + 18, terminal.y + 18, terminal.w - 36, 26))
-        for wx in range(terminal.x + 28, terminal.right - 28, 38):
-            pygame.draw.rect(surf, (185, 222, 232), (wx, terminal.y + 55, 20, 18))
-        pygame.draw.rect(surf, (52, 60, 66), (terminal.centerx - 28, terminal.bottom - 26, 56, 26))
+        # Schatten
+        pygame.draw.rect(surf, (52, 55, 58), terminal.move(4, 4), border_radius=4)
+        # Hauptgebäude
+        pygame.draw.rect(surf, (192, 196, 198), terminal, border_radius=4)
+        # Dachkante
+        pygame.draw.rect(surf, (162, 168, 172), (terminal.x + 6, terminal.y + 6, terminal.w - 12, 12), border_radius=2)
+        # Glasfassade (blaue Fensterfront oben)
+        pygame.draw.rect(surf, (60, 110, 148), (terminal.x + 14, terminal.y + 18, terminal.w - 28, 22), border_radius=2)
+        # Einzelne Fensterstreifen
+        for wx in range(terminal.x + 22, terminal.right - 20, 32):
+            pygame.draw.rect(surf, (165, 215, 235), (wx, terminal.y + 20, 18, 18), border_radius=1)
+        # Abfertigungsgate-Finger (4 Röhren Richtung Vorfeld)
+        for fi, fx in enumerate(range(terminal.x + 40, terminal.right - 30, (terminal.w - 70) // 4)):
+            pygame.draw.rect(surf, (148, 154, 158), (fx, terminal.y - 28, 18, 30))
+            pygame.draw.rect(surf, (120, 126, 130), (fx, terminal.y - 28, 18, 30), 1)
+            pygame.draw.circle(surf, (88, 118, 148), (fx + 9, terminal.y - 28), 8)  # Gate-Dockring
+        # Eingangsbereich (Mitte unten)
+        pygame.draw.rect(surf, (58, 64, 70), (terminal.centerx - 34, terminal.bottom - 22, 68, 22), border_radius=2)
+        pygame.draw.rect(surf, (88, 148, 175), (terminal.centerx - 28, terminal.bottom - 20, 56, 16), border_radius=1)
+        # Klimaanlagen auf dem Dach (kleine Boxen)
+        for ax in range(terminal.x + 30, terminal.right - 20, 50):
+            pygame.draw.rect(surf, (140, 146, 150), (ax, terminal.y + 4, 14, 10), border_radius=1)
+        # Rahmen
+        pygame.draw.rect(surf, (92, 100, 108), terminal, 2, border_radius=4)
 
+        # ── Hangars ───────────────────────────────────────────────────
         for hangar in layout["hangars"]:
             hr = _screen_rect(hangar, cam)
-            pygame.draw.rect(surf, (115, 122, 125), hr)
-            pygame.draw.rect(surf, (70, 76, 82), hr, 2)
-            door = pygame.Rect(hr.x + 18, hr.y + hr.h // 2, hr.w - 36, hr.h // 2 - 14)
-            pygame.draw.rect(surf, (52, 57, 62), door)
-            for stripe_x in range(door.x + 10, door.right - 4, 20):
-                pygame.draw.line(surf, (72, 78, 84), (stripe_x, door.y), (stripe_x, door.bottom), 1)
+            pygame.draw.rect(surf, (62, 65, 68), hr.move(3, 3), border_radius=3)   # Schatten
+            pygame.draw.rect(surf, (128, 134, 138), hr, border_radius=3)
+            # Dach-Paneele (parallele Linien → gewölbtes Dach andeuten)
+            for li in range(hr.x + 8, hr.right - 6, 10):
+                shade = max(88, 128 - abs(li - hr.centerx) // 2)
+                pygame.draw.line(surf, (shade, shade + 4, shade + 6), (li, hr.y + 4), (li, hr.bottom - 4), 1)
+            # Seitenstreifen (gelb/rot Warnung)
+            pygame.draw.rect(surf, (210, 175, 40), (hr.x, hr.y, hr.w, 6), border_radius=3)
+            pygame.draw.rect(surf, (210, 60, 40), (hr.x, hr.y + 6, hr.w, 4))
+            # Tür (untere Hälfte)
+            door = pygame.Rect(hr.x + 14, hr.centery, hr.w - 28, hr.h // 2 - 10)
+            pygame.draw.rect(surf, (44, 47, 52), door)
+            # Tür-Paneele
+            for dpx in range(door.x + 8, door.right - 4, 18):
+                pygame.draw.line(surf, (62, 66, 72), (dpx, door.y), (dpx, door.bottom), 1)
+            pygame.draw.line(surf, (90, 94, 98), (door.x, door.centery), (door.right, door.centery), 1)
+            # Seitenfenster oben
+            for wxi in range(hr.x + 18, hr.right - 12, 24):
+                pygame.draw.rect(surf, (88, 148, 175), (wxi, hr.y + 14, 14, 10), border_radius=1)
+            # Außenrahmen
+            pygame.draw.rect(surf, (74, 80, 86), hr, 2, border_radius=3)
 
+        # ── Kontrollturm ─────────────────────────────────────────────
         tower = _screen_rect(layout["tower"], cam)
-        pygame.draw.rect(surf, (118, 124, 126), tower)
-        pygame.draw.rect(surf, (62, 68, 74), tower, 2)
-        pygame.draw.rect(surf, (94, 146, 168), (tower.x + 8, tower.y + 10, tower.w - 16, 18))
-        pygame.draw.circle(surf, (52, 58, 64), tower.center, 8)
+        tw, th = tower.w, tower.h
+        # Schatten
+        pygame.draw.rect(surf, (44, 48, 52), tower.move(4, 4), border_radius=4)
+        # Turmschaft (Beton)
+        shaft = pygame.Rect(tower.x + tw // 4, tower.y + 10, tw // 2, th - 22)
+        pygame.draw.rect(surf, (175, 180, 182), shaft)
+        pygame.draw.rect(surf, (130, 136, 140), shaft, 1)
+        # Kabine (volle Breite, oben)
+        cab = pygame.Rect(tower.x + 4, tower.y + 4, tw - 8, 20)
+        pygame.draw.rect(surf, (145, 155, 160), cab, border_radius=3)
+        pygame.draw.rect(surf, (58, 110, 148), (cab.x + 4, cab.y + 3, cab.w - 8, 14), border_radius=2)  # Verglasung
+        pygame.draw.rect(surf, (85, 112, 130), cab, 2, border_radius=3)
+        # Radarschüssel (Kreis mit Kreuz)
+        cx_, cy_ = tower.centerx, tower.bottom - 8
+        pygame.draw.circle(surf, (80, 88, 94), (cx_, cy_), 9)
+        pygame.draw.circle(surf, (105, 114, 120), (cx_, cy_), 7)
+        pygame.draw.line(surf, (48, 54, 60), (cx_ - 7, cy_), (cx_ + 7, cy_), 1)
+        pygame.draw.line(surf, (48, 54, 60), (cx_, cy_ - 7), (cx_, cy_ + 7), 1)
+        # Außenrahmen Turm
+        pygame.draw.rect(surf, (90, 96, 102), tower, 1, border_radius=4)
 
-        _draw_airplane_icon(surf, apron.x + 170, apron.y + 98, angle=90)
-        _draw_airplane_icon(surf, apron.right - 130, apron.bottom - 78, angle=270, body=(215, 222, 214), accent=(140, 90, 62))
+        # ── Flugzeuge auf Vorfeld ─────────────────────────────────────
+        plane_data = [
+            (0,   (226, 232, 232), (55, 95, 140)),
+            (0,   (230, 228, 222), (38, 80, 160)),
+            (180, (215, 222, 214), (140, 90, 62)),
+            (180, (226, 230, 218), (58, 102, 58)),
+        ]
+        for (wx, wy), (pangle, pbody, paccent) in zip(layout["plane_positions"], plane_data):
+            sx, sy = wx - cam[0], wy - cam[1]
+            _draw_airplane_icon(surf, sx, sy, angle=pangle, body=pbody, accent=paccent)
 
+        # ── Windsack ─────────────────────────────────────────────────
+        wx_ = int(layout["runway"].left + 32 - cam[0])
+        wy_ = int(layout["runway"].top - 28 - cam[1])
+        pygame.draw.line(surf, (120, 120, 115), (wx_, wy_), (wx_, wy_ + 18), 2)
+        pygame.draw.polygon(surf, (210, 110, 30), [(wx_, wy_), (wx_ + 20, wy_ + 4), (wx_ + 12, wy_ + 10), (wx_, wy_ + 8)])
+
+        # ── Gate / Einfahrt ──────────────────────────────────────────
         gate_screen = _screen_rect(gate, cam)
-        pygame.draw.rect(surf, (86, 88, 88), gate_screen)
-        pygame.draw.line(surf, (210, 178, 58), gate_screen.midtop, gate_screen.midbottom, 2)
+        pygame.draw.rect(surf, (72, 76, 78), gate_screen)
+        pygame.draw.line(surf, (210, 178, 58), gate_screen.midtop, gate_screen.midbottom, 3)
+        pygame.draw.rect(surf, (90, 95, 98), gate_screen, 1)
         _draw_airport_fence(surf, airport, gate, cam)
 
 

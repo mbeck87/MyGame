@@ -1168,6 +1168,19 @@ class Car:
         s = current()
         if s.in_car is self or not self.rect().colliderect(s.player.rect()):
             return False
+        # Spieler aus dem Auto-Rect herausschieben (kein Durchgleiten)
+        cr = self.rect()
+        dx = s.player.x - self.x
+        dy = s.player.y - self.y
+        dist = math.hypot(dx, dy) or 1
+        nx, ny = dx / dist, dy / dist
+        overlap_x = (cr.w / 2 + 12) - abs(dx)
+        overlap_y = (cr.h / 2 + 12) - abs(dy)
+        if overlap_x > 0 and overlap_y > 0:
+            if overlap_x < overlap_y:
+                s.player.x += nx * overlap_x * 1.2
+            else:
+                s.player.y += ny * overlap_y * 1.2
         s.player.hp -= damage
         self.blood_trail = max(self.blood_trail, 4.0)
         spawn_blood(s.player.x, s.player.y, 6)
@@ -1282,6 +1295,23 @@ class Car:
             self.x = max(ROAD_LO, min(ROAD_HI_X, self.x))
             self.y = max(ROAD_LO, min(ROAD_HI_Y, self.y))
         self.hit_pedestrians(abs(self.spd))
+        # Spieler immer aus dem Auto-Rect herausschieben, unabhängig von Geschwindigkeit
+        s = current()
+        if s.in_car is not self and not self.dead:
+            cr = self.rect()
+            pr = s.player.rect()
+            if cr.colliderect(pr):
+                dx = s.player.x - self.x
+                dy = s.player.y - self.y
+                nx = dx / (math.hypot(dx, dy) or 1)
+                ny = dy / (math.hypot(dx, dy) or 1)
+                ox = (cr.w / 2 + 12) - abs(dx)
+                oy = (cr.h / 2 + 12) - abs(dy)
+                if ox > 0 and oy > 0:
+                    if ox < oy:
+                        s.player.x += nx * (ox + 1)
+                    else:
+                        s.player.y += ny * (oy + 1)
         if rect_in_park_pond(self.rect()):
             self.sink_in_pond()
             return
@@ -1449,18 +1479,25 @@ class Car:
                    not rect_on_road(test))
         if not blocked and self.car_blocking_rect(test, padding=10):
             blocked = True
-        if blocked:
-            self.spd *= max(0.0, 1 - 3.0 * dt)
-            self.yield_timer = max(self.yield_timer, 0.12)
-            return
-        # Frühzeitige Kreuzungserkennung: Abstand zur nächsten Kreuzung in Fahrtrichtung
+        # Kreuzungserkennung: Abstand zur nächsten Kreuzung in Fahrtrichtung
         _ix = nearest_road_x(self.x); _iy = nearest_road_y(self.y)
         _ar = math.radians(self.angle)
         _fwd_dist = ((_ix - self.x) * math.sin(_ar) + (_iy - self.y) * (-math.cos(_ar)))
         _perp_on_road = (abs(self.x - _ix) < 34 if self.is_vertical() else abs(self.y - _iy) < 34)
         at_intersection = _perp_on_road and 18 < _fwd_dist < 94
-        if at_intersection and (self.turn_cd <= 0 or self.near_road_end()):
-            self.choose_intersection_turn(allow_reverse=self.near_road_end())
+        # T-Kreuzung / Strassenende: Abbiegen VOR dem blocked-Check
+        road_end = self.near_road_end()
+        if at_intersection and road_end:
+            self.choose_intersection_turn(allow_reverse=True)
+        if blocked:
+            # Auch an internen T-Kreuzungen abbiegen wenn Weg vorne versperrt
+            if at_intersection and self.arc is None:
+                self.choose_intersection_turn(allow_reverse=road_end)
+            self.spd *= max(0.0, 1 - 3.0 * dt)
+            self.yield_timer = max(self.yield_timer, 0.12)
+            return
+        if at_intersection and self.turn_cd <= 0 and not road_end:
+            self.choose_intersection_turn(allow_reverse=False)
         self.x, self.y = nx, ny
         for _ in range(4):
             other = self.overlaps_other_car()

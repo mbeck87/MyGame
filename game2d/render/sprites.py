@@ -73,46 +73,152 @@ def _draw_limo_sprite(body_col, w, h):
 
 def _draw_sport_sprite(body_col, w, h):
     s = pygame.Surface((w, h), pygame.SRCALPHA)
-    _draw_car_shadow(s, w, h, inset_x=5, inset_y=8)
-    pygame.draw.polygon(
-        s,
-        body_col,
-        [(w // 2, 3), (w - 5, 12), (w - 3, h - 14), (w // 2, h - 4), (3, h - 14), (5, 12)],
-    )
-    pygame.draw.polygon(s, _shade(body_col, 36), [(w // 2, 5), (w - 7, 13), (w - 10, 19), (10, 19), (7, 13)])
-    pygame.draw.polygon(s, (60, 78, 96), [(10, 24), (w - 10, 24), (w - 14, 38), (14, 38)])
-    pygame.draw.polygon(s, (120, 190, 230), [(12, 25), (w - 12, 25), (w - 15, 36), (15, 36)])
-    pygame.draw.rect(s, _shade(body_col, -35), (13, 39, w - 26, h - 58), border_radius=5)
-    stripe_col = (245, 245, 230) if sum(body_col) < 360 else (35, 35, 38)
-    pygame.draw.rect(s, stripe_col, (w // 2 - 2, 8, 4, h - 16), border_radius=2)
-    pygame.draw.rect(s, (255, 250, 205), (7, 8, 7, 4), border_radius=2)
-    pygame.draw.rect(s, (255, 250, 205), (w - 14, 8, 7, 4), border_radius=2)
-    pygame.draw.rect(s, (205, 30, 30), (8, h - 10, 8, 4), border_radius=2)
-    pygame.draw.rect(s, (205, 30, 30), (w - 16, h - 10, 8, 4), border_radius=2)
-    _draw_car_wheels(s, w, h, front_y=13, rear_y=h - 26, wheel_h=13)
+    _draw_car_shadow(s, w, h, inset_x=4, inset_y=6)
+
+    # Fastback-Coupe Karosserie: spitze Nase, breite Kotflügel, abfallendes Heck
+    pygame.draw.polygon(s, body_col, [
+        (w // 2, 2),    (w - 7, 10),   (w - 2, 24),
+        (w - 3, h - 16), (w // 2, h - 3), (3, h - 16),
+        (2, 24),         (7, 10),
+    ])
+
+    # Motorhaube mit hellem Reflex
+    pygame.draw.polygon(s, _shade(body_col, 40), [
+        (w // 2, 4), (w - 9, 12), (w - 11, 22), (11, 22), (9, 12)
+    ])
+    # Mittlere Haubenkante (Sportwagen-Detail)
+    pygame.draw.polygon(s, _shade(body_col, 58), [
+        (w // 2 - 2, 4), (w // 2 + 2, 4), (w // 2 + 3, 22), (w // 2 - 3, 22)
+    ])
+
+    # Frontscheibe (breit, stark geneigt)
+    pygame.draw.polygon(s, (48, 68, 90), [
+        (8, 23), (w - 8, 23), (w - 12, 40), (12, 40)
+    ])
+    pygame.draw.polygon(s, (105, 175, 220), [
+        (10, 24), (w - 10, 24), (w - 14, 38), (14, 38)
+    ])
+
+    # Dach / Kabine (niedrig, dunkel — Sportwagenoptik)
+    pygame.draw.rect(s, _shade(body_col, -44), (12, 41, w - 24, 11), border_radius=3)
+
+    # Heckscheibe (Fastback-Neigung)
+    pygame.draw.polygon(s, (48, 68, 90), [
+        (11, 53), (w - 11, 53), (w - 9, 61), (9, 61)
+    ])
+    pygame.draw.polygon(s, (88, 148, 192), [
+        (12, 54), (w - 12, 54), (w - 10, 60), (10, 60)
+    ])
+
+    # Seitliche Karosserie-Kante (Styling-Linie)
+    pygame.draw.line(s, _shade(body_col, 26), (4, 28), (4, h - 18), 1)
+    pygame.draw.line(s, _shade(body_col, 26), (w - 4, 28), (w - 4, h - 18), 1)
+
+    # Heck-Diffusor
+    pygame.draw.polygon(s, _shade(body_col, -50), [
+        (7, h - 14), (w - 7, h - 14), (w - 4, h - 5), (4, h - 5)
+    ])
+
+    # LED-Scheinwerfer (schmal, scharf)
+    pygame.draw.rect(s, (255, 252, 195), (5, 7, 9, 3), border_radius=1)
+    pygame.draw.rect(s, (255, 252, 195), (w - 14, 7, 9, 3), border_radius=1)
+    pygame.draw.line(s, (210, 228, 255), (5, 11), (13, 11), 1)
+    pygame.draw.line(s, (210, 228, 255), (w - 13, 11), (w - 5, 11), 1)
+
+    # Breite Rücklichter
+    pygame.draw.rect(s, (220, 22, 22), (5, h - 8, 11, 4), border_radius=1)
+    pygame.draw.rect(s, (220, 22, 22), (w - 16, h - 8, 11, 4), border_radius=1)
+    pygame.draw.line(s, (255, 95, 95), (6, h - 7), (14, h - 7), 1)
+    pygame.draw.line(s, (255, 95, 95), (w - 15, h - 7), (w - 7, h - 7), 1)
+
+    _draw_car_wheels(s, w, h, front_y=10, rear_y=h - 26, wheel_h=14)
     return s
 
 
 def _draw_lamborghini_sprite(body_col, w, h):
     s = pygame.Surface((w, h), pygame.SRCALPHA)
-    _draw_car_shadow(s, w, h, inset_x=4, inset_y=8)
-    pygame.draw.polygon(
-        s,
-        body_col,
-        [(w // 2, 3), (w - 4, 13), (w - 8, h - 7), (w // 2, h - 2), (8, h - 7), (4, 13)],
-    )
-    pygame.draw.polygon(s, _shade(body_col, 42), [(w // 2, 5), (w - 8, 14), (w - 12, 22), (12, 22), (8, 14)])
-    pygame.draw.polygon(s, (36, 48, 62), [(11, 24), (w - 11, 24), (w - 15, 42), (15, 42)])
-    pygame.draw.polygon(s, (94, 175, 225), [(13, 25), (w - 13, 25), (w - 16, 39), (16, 39)])
-    pygame.draw.polygon(s, _shade(body_col, -38), [(12, 44), (w - 12, 44), (w - 15, h - 19), (15, h - 19)])
-    pygame.draw.line(s, (30, 30, 32), (w // 2, 24), (w // 2, h - 18), 2)
-    pygame.draw.polygon(s, (28, 28, 30), [(7, 25), (13, 30), (11, 51), (5, 47)])
-    pygame.draw.polygon(s, (28, 28, 30), [(w - 7, 25), (w - 13, 30), (w - 11, 51), (w - 5, 47)])
-    pygame.draw.rect(s, (255, 246, 190), (7, 8, 10, 4), border_radius=2)
-    pygame.draw.rect(s, (255, 246, 190), (w - 17, 8, 10, 4), border_radius=2)
-    pygame.draw.rect(s, (210, 28, 28), (8, h - 9, 10, 4), border_radius=2)
-    pygame.draw.rect(s, (210, 28, 28), (w - 18, h - 9, 10, 4), border_radius=2)
-    _draw_car_wheels(s, w, h, front_y=13, rear_y=h - 25, wheel_h=13)
+    _draw_car_shadow(s, w, h, inset_x=3, inset_y=6)
+
+    # Ultra-eckige Supercar-Karosserie (Huracán/Aventador-Stil)
+    pygame.draw.polygon(s, body_col, [
+        (w // 2, 3),      (w - 5, 8),    (w - 2, 20),
+        (w - 2, h - 24),  (w - 6, h - 6), (w // 2, h - 4),
+        (6, h - 6),       (2, h - 24),   (2, 20),
+        (5, 8),
+    ])
+
+    # Frontspoiler / Splitter (aggressiv, flach)
+    pygame.draw.polygon(s, (20, 20, 23), [
+        (w // 2, 2), (w - 6, 7), (w - 8, 13), (8, 13), (6, 7)
+    ])
+
+    # Motorhaube mit starker Mittelkante
+    pygame.draw.polygon(s, _shade(body_col, 50), [
+        (w // 2, 5), (w - 9, 10), (w - 10, 20), (10, 20), (9, 10)
+    ])
+    pygame.draw.polygon(s, _shade(body_col, 68), [
+        (w // 2 - 2, 5), (w // 2 + 2, 5), (w // 2 + 3, 20), (w // 2 - 3, 20)
+    ])
+    # Hauben-Lüftungsschlitze
+    pygame.draw.line(s, _shade(body_col, -8), (w // 2 - 7, 14), (w // 2 - 5, 20), 1)
+    pygame.draw.line(s, _shade(body_col, -8), (w // 2 + 7, 14), (w // 2 + 5, 20), 1)
+
+    # Sehr eckige Frontscheibe
+    pygame.draw.polygon(s, (30, 44, 60), [
+        (8, 21), (w - 8, 21), (w - 14, 39), (14, 39)
+    ])
+    pygame.draw.polygon(s, (72, 145, 200), [
+        (10, 22), (w - 10, 22), (w - 15, 37), (15, 37)
+    ])
+    pygame.draw.line(s, (18, 28, 40), (8, 21), (14, 39), 1)
+    pygame.draw.line(s, (18, 28, 40), (w - 8, 21), (w - 14, 39), 1)
+
+    # Cockpit (sehr schmal — Mittelmotor-Supercar)
+    pygame.draw.rect(s, (10, 10, 14), (13, 40, w - 26, 13), border_radius=2)
+
+    # SEITENLUFTEINLÄSSE (Lambo-Signaturmerkmal)
+    pygame.draw.polygon(s, (14, 14, 17), [(2, 43), (9, 40), (9, 56), (2, 58)])
+    pygame.draw.polygon(s, (38, 38, 44), [(3, 44), (8, 41), (8, 55), (3, 57)])
+    pygame.draw.polygon(s, (14, 14, 17), [(w - 2, 43), (w - 9, 40), (w - 9, 56), (w - 2, 58)])
+    pygame.draw.polygon(s, (38, 38, 44), [(w - 3, 44), (w - 8, 41), (w - 8, 55), (w - 3, 57)])
+
+    # Heckdeckel / Motorabdeckung (eckig)
+    pygame.draw.polygon(s, (30, 44, 60), [
+        (14, 54), (w - 14, 54), (w - 11, 63), (11, 63)
+    ])
+    pygame.draw.polygon(s, (58, 125, 175), [
+        (15, 55), (w - 15, 55), (w - 12, 62), (12, 62)
+    ])
+
+    # HECKSPOILER (fest, hochmontiert)
+    wing_y = h - 22
+    pygame.draw.rect(s, (18, 18, 21), (5, wing_y - 1, w - 10, 4))
+    pygame.draw.rect(s, _shade(body_col, -10), (6, wing_y, w - 12, 2))
+    pygame.draw.rect(s, (18, 18, 21), (8, wing_y - 5, 3, 5))
+    pygame.draw.rect(s, (18, 18, 21), (w - 11, wing_y - 5, 3, 5))
+
+    # Heck-Diffusor mit Lamellen
+    pygame.draw.polygon(s, (14, 14, 17), [
+        (8, h - 20), (w - 8, h - 20), (w - 6, h - 5), (6, h - 5)
+    ])
+    for xi in range(10, w - 10, 6):
+        pygame.draw.line(s, (34, 34, 38), (xi, h - 19), (xi, h - 6), 1)
+
+    # Eckige Scheinwerfer mit DRL-Slash (Huracán-Stil)
+    pygame.draw.rect(s, (255, 252, 188), (6, 7, 11, 3), border_radius=1)
+    pygame.draw.rect(s, (255, 252, 188), (w - 17, 7, 11, 3), border_radius=1)
+    pygame.draw.line(s, (215, 232, 255), (7, 11), (14, 16), 1)
+    pygame.draw.line(s, (215, 232, 255), (w - 7, 11), (w - 14, 16), 1)
+
+    # DURCHGEHENDER Rücklichtstreifen (Aventador-Signatur)
+    pygame.draw.rect(s, (215, 16, 16), (6, h - 9, w - 12, 4), border_radius=1)
+    pygame.draw.line(s, (255, 72, 72), (7, h - 8), (w - 7, h - 8), 1)
+    # Mittelunterbrechung mit Auspuffrohren
+    pygame.draw.rect(s, (14, 14, 17), (w // 2 - 5, h - 10, 10, 5))
+    pygame.draw.circle(s, (28, 28, 32), (w // 2 - 2, h - 8), 2)
+    pygame.draw.circle(s, (28, 28, 32), (w // 2 + 2, h - 8), 2)
+
+    _draw_car_wheels(s, w, h, front_y=9, rear_y=h - 29, wheel_h=18)
     return s
 
 
@@ -1249,17 +1355,36 @@ def _outline(surf, pts, col, width=1):
 
 
 def _icon_armor(s):
-    """Schutzweste, 36×36."""
-    # Westen-Umriss
-    pygame.draw.rect(s, (180, 180, 180), (8, 10, 20, 16), border_radius=4)
-    # Westen-Füllung
-    pygame.draw.rect(s, (220, 220, 220), (9, 11, 18, 14), border_radius=3)
-    # Details - horizontale Linien für "Platten"
-    pygame.draw.line(s, (140, 140, 140), (11, 15), (25, 15), 2)
-    pygame.draw.line(s, (140, 140, 140), (11, 20), (25, 20), 2)
-    pygame.draw.line(s, (140, 140, 140), (11, 25), (25, 25), 2)
-    # Verschluss oben
-    pygame.draw.rect(s, (100, 100, 100), (14, 11, 8, 4), border_radius=1)
+    """Schutzweste (Body-Armor-Silhouette), 36×36."""
+    # Schulterklappen (oben links/rechts)
+    pygame.draw.rect(s, (62, 76, 92),  (5, 7, 8, 6),  border_radius=2)   # links
+    pygame.draw.rect(s, (62, 76, 92),  (23, 7, 8, 6), border_radius=2)   # rechts
+    pygame.draw.rect(s, (85, 102, 122),(6, 8, 6, 4),  border_radius=1)
+    pygame.draw.rect(s, (85, 102, 122),(24, 8, 6, 4), border_radius=1)
+
+    # Haupt-Weste (torso-förmig: oben breiter, unten schmaler)
+    vest = [(8, 12), (28, 12), (30, 28), (25, 32), (11, 32), (6, 28)]
+    pygame.draw.polygon(s, (52, 66, 80), [(x+1, y+1) for x, y in vest])  # Schatten
+    pygame.draw.polygon(s, (76, 96, 118), vest)
+
+    # Vorderseite (heller)
+    front = [(10, 14), (26, 14), (27, 27), (23, 31), (13, 31), (9, 27)]
+    pygame.draw.polygon(s, (95, 120, 148), front)
+
+    # Plattensegmente (horizontale Rillen)
+    for ly in (18, 22, 26):
+        pygame.draw.line(s, (62, 80, 100), (10, ly), (26, ly), 1)
+
+    # Mittlerer Verschluss (Reißverschluss / Klettverschluss)
+    pygame.draw.rect(s, (42, 54, 66), (16, 13, 4, 18), border_radius=1)
+    for zy in range(14, 30, 3):
+        pygame.draw.rect(s, (105, 130, 158), (17, zy, 2, 2))
+
+    # Kragen-Ausschnitt (V-Form)
+    pygame.draw.polygon(s, (42, 54, 66), [(14, 12), (22, 12), (18, 18)])
+
+    # Konturlinie außen
+    pygame.draw.polygon(s, (38, 48, 60), vest, 1)
 
 
 def _icon_heart(s):

@@ -28,6 +28,7 @@ class GameState:
     pedestrian_park_nodes: set = field(default_factory=set)
     amusement_park_nodes: set = field(default_factory=set)
     central_bank_rect: Any = None
+    bank_robbery_cooldown: float = 0.0
     roads_h:   list = field(default_factory=list)        # horizontale Straßen-y
     roads_v:   list = field(default_factory=list)        # vertikale Straßen-x
     road_segments: list = field(default_factory=list)    # befahrbare Straßensegmente

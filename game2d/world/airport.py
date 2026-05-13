@@ -63,6 +63,18 @@ def airport_layout(airport):
         130,
         44,
     )
+    # Airplane parking positions (center x, center y) on apron
+    plane_positions = [
+        (apron.x + 130, apron.y + 55),
+        (apron.x + 240, apron.y + 55),
+        (apron.right - 170, apron.y + 55),
+        (apron.right - 80, apron.y + 55),
+    ]
+    # Bounding rects for parked planes (88×68 px, wings span ±44, body ±34)
+    airplane_rects = [
+        pygame.Rect(px - 44, py - 34, 88, 68) for px, py in plane_positions
+    ]
+
     return {
         "runway": runway,
         "taxiway": taxiway,
@@ -71,6 +83,8 @@ def airport_layout(airport):
         "hangars": (hangar_west, hangar_east),
         "tower": tower,
         "gate": gate,
+        "airplane_rects": airplane_rects,
+        "plane_positions": plane_positions,
     }
 
 
@@ -80,4 +94,5 @@ def airport_building_rects(airport):
         layout["terminal"],
         *layout["hangars"],
         layout["tower"],
+        *layout["airplane_rects"],
     ]

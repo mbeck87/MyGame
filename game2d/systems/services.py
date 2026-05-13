@@ -178,6 +178,9 @@ def nearby_service(state, radius=85):
         building, walk, _ = barber_layout(bx, by)
         if building.inflate(radius, radius).collidepoint(x, y) or walk.inflate(18, 18).collidepoint(x, y):
             return "barber"
+    bank = getattr(state, "central_bank_rect", None)
+    if bank and bank.inflate(radius, radius).collidepoint(x, y):
+        return "bank"
     return ""
 
 

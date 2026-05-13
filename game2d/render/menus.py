@@ -158,11 +158,13 @@ def draw_hint(screen, state, service, font):
     if state.message_timer > 0 and state.message:
         text = state.message
     elif service == "garage":
-        text = "[G] Garage"
+        text = "[F] Garage"
     elif service == "shop":
-        text = "[B] Shop"
+        text = "[F] Shop"
     elif service == "barber":
-        text = "[H] Friseur"
+        text = "[F] Friseur"
+    elif service == "bank":
+        text = "[F] Zentralbank"
     else:
         text = "[P] Pause"
     img = font.render(text, 1, (245, 245, 245))
@@ -171,7 +173,7 @@ def draw_hint(screen, state, service, font):
 
 
 def draw_overlay_menu(screen, state, big, med, font):
-    if state.menu not in ("shop", "garage", "barber"):
+    if state.menu not in ("shop", "garage", "barber", "bank"):
         return
     overlay = pygame.Surface((W, H), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 165))
@@ -186,14 +188,28 @@ def draw_overlay_menu(screen, state, big, med, font):
     elif state.menu == "barber":
         title = "FRISUR" if state.barber_step == "style" else "HAARFARBE"
         lines = barber_lines(state)
+    elif state.menu == "bank":
+        title = "ZENTRALBANK"
+        cd = getattr(state, "bank_robbery_cooldown", 0.0)
+        if cd > 0:
+            lines = [f"1. Bank ausrauben   (Sperre: {int(cd)}s)"]
+        else:
+            lines = ["1. Bank ausrauben   +$5000  (4 Sterne)"]
     else:
         title = "PAUSE"
-        lines = ["P/ESC Resume", "Near shop: B", "Near garage: G", "Near barber: H"]
+        lines = ["P/ESC Resume", "Near shop/garage/barber: F"]
 
     box_h = 430 if state.menu == "barber" else 380
     box = pygame.Rect(W // 2 - 260, H // 2 - box_h // 2, 520, box_h)
     panel_col = (24, 26, 30)
-    border_col = (90, 130, 165) if state.menu == "garage" else ((210, 70, 170) if state.menu == "barber" else (70, 150, 92))
+    if state.menu == "garage":
+        border_col = (90, 130, 165)
+    elif state.menu == "barber":
+        border_col = (210, 70, 170)
+    elif state.menu == "bank":
+        border_col = (220, 185, 30)
+    else:
+        border_col = (70, 150, 92)
     text_col = (245, 245, 245)
     muted_col = (170, 176, 185)
     pygame.draw.rect(screen, panel_col, box, border_radius=6)
@@ -210,6 +226,6 @@ def draw_overlay_menu(screen, state, big, med, font):
     key_count = len(lines) - (1 if state.menu in ("garage", "barber") and ((state.menu == "garage" and not state.in_car) or (state.menu == "barber" and state.in_car)) else 0)
     foot_text = f"[1-{key_count}] Auswaehlen   [ESC/P] Schliessen"
     if state.menu == "barber" and state.barber_step == "color":
-        foot_text = f"[1-{key_count}] Auswaehlen   [H] Frisur   [ESC/P] Schliessen"
+        foot_text = f"[1-{key_count}] Auswaehlen   [F] Frisur   [ESC/P] Schliessen"
     foot = font.render(foot_text, 1, muted_col)
     screen.blit(foot, (W // 2 - foot.get_width() // 2, box.bottom - 42))
