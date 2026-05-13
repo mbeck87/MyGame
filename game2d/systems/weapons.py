@@ -6,6 +6,10 @@ import pygame
 from game2d.config import WPN_RATE, WPN_DMG, WPN_PEL, WPN_SPRD
 from game2d.state import current
 from game2d.systems import audio
+from game2d.systems.services import add_wanted_heat
+
+
+LIGHTSABER_IDX = 0
 
 
 _SHOT_SOUND = {
@@ -45,10 +49,9 @@ def _lightsaber_swing():
         dx, dy = car.x - p.x, car.y - p.y
         dist = math.hypot(dx, dy)
         if dist <= swing_range + 12 and _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
-            car.take_damage(WPN_DMG[6])
+            car.take_damage(WPN_DMG[LIGHTSABER_IDX], source_pos=(p.x, p.y))
             audio.play('hit_metal', volume=0.7, pos=(car.x, car.y))
-            p.wanted = min(5, p.wanted + 1)
-            p.crime_timer = 30
+            add_wanted_heat(s, "assault")
 
     for ped, group, reward in (
         *((ped, s.peds, (15, 45)) for ped in list(s.peds)),
@@ -61,7 +64,7 @@ def _lightsaber_swing():
         from game2d.systems.effects import make_corpse, spawn_blood
         from game2d.systems.services import add_money
 
-        ped.hp -= WPN_DMG[6]
+        ped.hp -= WPN_DMG[LIGHTSABER_IDX]
         ped.state = 'flee'
         spawn_blood(ped.x, ped.y, 8)
         audio.play('hit_flesh', pos=(ped.x, ped.y))
@@ -70,14 +73,16 @@ def _lightsaber_swing():
             s.corpses.append((make_corpse(ped), ped.x, ped.y, ped.angle))
             spawn_blood(ped.x, ped.y, 20)
             add_money(p, random.randint(*reward))
-            p.wanted = min(5, p.wanted + 1)
-            p.crime_timer = 30
+            add_wanted_heat(s, "kill_cop" if ped.is_cop else "kill_ped")
 
 
 def fire():
     """Aktuelle Waffe abfeuern (state.weapon). Setzt state.fire_cd."""
     s = current()
     weapon = s.weapon
+    if weapon < 0 or weapon >= len(WPN_RATE):
+        weapon = LIGHTSABER_IDX
+        s.weapon = weapon
     if weapon != 0 and s.ammo[weapon] <= 0: return
     if weapon == 0:
         s.fire_cd = WPN_RATE[weapon]
@@ -85,7 +90,7 @@ def fire():
         return
     s.ammo[weapon] -= 1
     s.fire_cd = WPN_RATE[weapon]
-    if s.in_car:
+    if s.in_car and s.in_car.kind != "motorcycle":
         ax, ay = s.in_car.x, s.in_car.y
         ang = s.in_car.angle
     else:

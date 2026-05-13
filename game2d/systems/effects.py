@@ -6,7 +6,7 @@ import pygame
 from game2d.state import current
 from game2d.persistence import save_score
 from game2d.systems import audio
-from game2d.systems.services import add_money
+from game2d.systems.services import add_money, add_wanted_heat
 
 
 def make_corpse(ped):
@@ -37,6 +37,10 @@ def trigger_game_over():
         return
     state.game_over = True
     audio.set_engine(False)
+    for car in state.cops:
+        if getattr(car, '_siren_channel', None) is not None:
+            audio.stop_loop(car._siren_channel)
+            car._siren_channel = None
     audio.play('game_over')
     if not state.score_saved:
         state.score_saved = True
@@ -58,7 +62,7 @@ def do_explosion(x, y, radius=140, dmg=500):
     for c in list(state.cars):
         if c.dead: continue
         if math.hypot(c.x-x, c.y-y) < radius:
-            c.take_damage(dmg)
+            c.take_damage(dmg, source_pos=(x, y))
     for p in list(state.peds):
         if math.hypot(p.x-x, p.y-y) < radius:
             p.hp -= dmg
@@ -67,8 +71,7 @@ def do_explosion(x, y, radius=140, dmg=500):
                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                 spawn_blood(p.x, p.y, 20)
                 add_money(state.player, random.randint(20, 55))
-                state.player.wanted = min(5, state.player.wanted + 1)
-                state.player.crime_timer = 30
+                add_wanted_heat(state, "kill_ped")
     for c in list(state.cops):
         if math.hypot(c.x-x, c.y-y) < radius:
             c.hp -= dmg
@@ -77,8 +80,7 @@ def do_explosion(x, y, radius=140, dmg=500):
                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                 spawn_blood(c.x, c.y, 24)
                 add_money(state.player, random.randint(50, 100))
-                state.player.wanted = min(5, state.player.wanted + 1)
-                state.player.crime_timer = 30
+                add_wanted_heat(state, "kill_cop")
     dist = math.hypot(state.player.x-x, state.player.y-y)
     if dist < radius and not state.game_over:
         state.player.hp -= int(dmg * max(0.0, 1 - dist/radius))

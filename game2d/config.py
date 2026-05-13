@@ -28,6 +28,7 @@ WATER_MID  = (40, 100, 160)
 WATER_LITE = (95, 160, 210)
 SAND       = (225, 205, 155)
 TIRE_BLOOD = (135, 0, 0)
+TIRE_SKID  = (22, 20, 18)
 
 # ── Welt-Geometrie ───────────────────────────────────────
 WORLD_W, WORLD_H = 6000, 6000

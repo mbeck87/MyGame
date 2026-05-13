@@ -16,28 +16,211 @@ from game2d.persistence import name_input_screen
 from game2d.render.hud import draw_star
 from game2d.render.menus import draw_hint, draw_overlay_menu, draw_service_markers
 from game2d.render.minimap import draw_minimap
-from game2d.render.sprites import make_ped_frames, get_pickup_icon
+from game2d.render.sprites import make_ped_frames, make_swim_frames, get_pickup_icon
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
-from game2d.world.geometry import in_water
+from game2d.world.geometry import in_water, point_in_polygon, rect_hits_amusement_stand
 from game2d.world.spawning import (
-    safe_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
+    safe_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
-from game2d.entities.car import Car
+from game2d.entities.car import (
+    Car,
+    law_color_for_kind,
+    law_kind_for_wanted,
+    random_car_color,
+    random_car_kind,
+)
 from game2d.entities.ped import Ped
 from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
 )
 from game2d.systems.services import (
-    add_money,
-    buy_shop_item, cop_damage_for_wanted, cop_fire_rate_for_wanted,
-    escalate_police, init_services, nearby_service, use_garage_item,
+    add_money, add_wanted_heat, cop_weapon_profile, sync_wanted_heat_after_drop,
+    buy_shop_item, clear_roadblocks,
+    escalate_police, init_services, nearby_service, use_barber_item, use_garage_item,
+    SHOP_ITEMS, GARAGE_ITEMS, BARBER_COLORS, BARBER_STYLES,
 )
 from game2d.systems.weapons import fire, aim_to_mouse
 from game2d.systems import audio
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
+
+
+def _nearest_point_on_segment(px, py, ax, ay, bx, by):
+    vx = bx - ax
+    vy = by - ay
+    seg_len_sq = vx * vx + vy * vy
+    if seg_len_sq <= 0:
+        return ax, ay, (px - ax) ** 2 + (py - ay) ** 2
+    t = max(0.0, min(1.0, ((px - ax) * vx + (py - ay) * vy) / seg_len_sq))
+    x = ax + vx * t
+    y = ay + vy * t
+    return x, y, (px - x) ** 2 + (py - y) ** 2
+
+
+def _nearest_pond_edge_point(state, x, y):
+    best = None
+    best_dist_sq = None
+    for pond in state.park_ponds:
+        for p0, p1 in zip(pond, pond[1:] + pond[:1]):
+            px, py, dist_sq = _nearest_point_on_segment(x, y, p0[0], p0[1], p1[0], p1[1])
+            if best_dist_sq is None or dist_sq < best_dist_sq:
+                best = (px, py)
+                best_dist_sq = dist_sq
+    return best, math.sqrt(best_dist_sq) if best_dist_sq is not None else 999999
+
+
+def _player_at_pond_shore(state):
+    if state.in_car or not state.park_ponds:
+        return False, None
+    x, y = state.player.x, state.player.y
+    if any(point_in_polygon(x, y, pond) for pond in state.park_ponds):
+        return False, None
+    edge, dist = _nearest_pond_edge_point(state, x, y)
+    return dist <= 42, edge
+
+
+def _update_duck_easter(state, dt, moved):
+    if state.duck_easter_duck:
+        duck = state.duck_easter_duck
+        dx = duck[2] - duck[0]
+        dy = duck[3] - duck[1]
+        dist = math.hypot(dx, dy)
+        if dist > 1:
+            step = min(dist, 48 * dt)
+            duck[0] += dx / dist * step
+            duck[1] += dy / dist * step
+        duck[4] -= dt
+        if duck[4] <= 0:
+            state.duck_easter_duck = None
+
+    if state.duck_easter_done:
+        return
+    at_shore, edge = _player_at_pond_shore(state)
+    if at_shore and moved < 1.0:
+        state.duck_easter_timer += dt
+    else:
+        state.duck_easter_timer = 0.0
+    if state.duck_easter_timer < 5.0 or edge is None:
+        return
+
+    px, py = state.player.x, state.player.y
+    vx = px - edge[0]
+    vy = py - edge[1]
+    dist = math.hypot(vx, vy) or 1
+    target_x = px - vx / dist * 22
+    target_y = py - vy / dist * 22
+    state.duck_easter_duck = [edge[0], edge[1], target_x, target_y, 8.0]
+    state.duck_easter_done = True
+    state.message = "Die Enten wissen Bescheid"
+    state.message_timer = 3.5
+
+
+def _spawn_traffic_and_player(state):
+    for _ in range(50):
+        kind = random_car_kind()
+        x, y, angle = road_spawn(kind)
+        car = Car(x, y, random_car_color(kind), kind=kind)
+        car.angle = angle
+        car.driver = True
+        state.cars.append(car)
+
+    for _ in range(60):
+        x, y = pedestrian_spawn()
+        state.peds.append(Ped(x, y))
+
+    player_x, player_y = safe_spawn()
+    player = Ped(player_x, player_y)
+    player.shirt = (40, 100, 200)
+    player.gender = "m"
+    player.hair_style = "short"
+    player.hair_color = (30, 20, 15)
+    player.frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.back_frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style, back=True)
+    player.swim_frames = make_swim_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.sprite = player.back_frames[0]
+    player.hp = 100
+    player.money = 0
+    player.total_money_earned = 0
+    player.wanted = 0
+    player.crime_timer = 0
+    player.aim_angle = 0
+    player.step_cd = 0.0
+    state.player = player
+    state.in_car = None
+    state.weapon = 0
+    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
+    state.unlocked_weapons = {0, 1}
+    state.fire_cd = 0
+    state.cam = [player.x - W // 2, player.y - H // 2]
+
+    pickup_defs = (
+        [('hp', None)] * 22 +
+        [(2,   None)] * 6 +
+        [(3,   None)] * 4 +
+        [(4,   None)] * 3 +
+        [(5,   None)] * 2
+    )
+    for kind, _ in pickup_defs:
+        px, py = safe_spawn()
+        state.pickups.append([px, py, kind, 0.0])
+
+    amusement_nodes = list(state.amusement_park_nodes)
+    for _ in range(38):
+        if not amusement_nodes:
+            break
+        x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
+        ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
+        ped.route_replan = random.uniform(0.1, 1.0)
+        state.peds.append(ped)
+
+
+def reset_game(state):
+    for car in state.cops:
+        if getattr(car, '_siren_channel', None) is not None:
+            audio.stop_loop(car._siren_channel)
+            car._siren_channel = None
+    for car in state.cars:
+        if getattr(car, '_engine_channel', None) is not None:
+            audio.stop_loop(car._engine_channel)
+            car._engine_channel = None
+    for r in state.rockets:
+        if len(r) > 5 and r[5] is not None:
+            audio.stop_loop(r[5])
+    state.cars.clear()
+    state.peds.clear()
+    state.cops.clear()
+    state.intersection_claims.clear()
+    state.bullets.clear()
+    state.rockets.clear()
+    state.blood_splats.clear()
+    state.blood_particles.clear()
+    state.smoke_particles.clear()
+    state.fire_particles.clear()
+    state.explosions.clear()
+    state.lightsaber_swings.clear()
+    state.wrecks.clear()
+    state.corpses.clear()
+    state.pickups.clear()
+    state.roadblocks.clear()
+    state.cop_spawn = 0.0
+    state.wanted_heat = 0.0
+    state.last_wanted_level = 0
+    state.roadblock_wanted_level = 0
+    state.roadblocks_cleared_on_drop = False
+    state.duck_easter_timer = 0.0
+    state.duck_easter_done = False
+    state.duck_easter_duck = None
+    state.duck_easter_last_pos = None
+    state.message = ""
+    state.message_timer = 0.0
+    state.game_over = False
+    state.score_saved = False
+    state.paused = False
+    state.menu = None
+    state.final_scores = []
+    _spawn_traffic_and_player(state)
 
 
 def main():
@@ -47,6 +230,7 @@ def main():
     audio.MASTER_VOL = settings['sfx_volume']
     screen = pygame.display.set_mode((W, H))
     pygame.display.set_caption("Mini GTA 2D")
+    pygame.mouse.set_visible(False)
     clock = pygame.time.Clock()
     FONT = pygame.font.SysFont("arial", 20, bold=True)
     BIG  = pygame.font.SysFont("arial", 64, bold=True)
@@ -64,56 +248,15 @@ def main():
     state.settings = settings
     state_init(state)
     build_world(state)
+    init_services(state)
     menu_ctrl = MenuController(W, H, settings)
 
-    # Initial-Verkehr und NPCs
-    for _ in range(50):
-        x, y, angle = road_spawn()
-        col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
-        car = Car(x, y, col)
-        car.angle = angle
-        state.cars.append(car)
-
-    for _ in range(60):
-        x, y = safe_spawn()
-        state.peds.append(Ped(x, y))
-
-    # Spieler
-    player_x, player_y = safe_spawn()
-    player = Ped(player_x, player_y)
-    player.frames = make_ped_frames((40, 100, 200), hair=(30,20,15))
-    player.sprite = player.frames[0]
-    player.hp = 100
-    player.money = 0
-    player.total_money_earned = 0
-    player.wanted = 0
-    player.crime_timer = 0
-    player.aim_angle = 0
-    player.step_cd = 0.0
-    state.player = player
-    state.in_car = None
-    state.weapon = 0
-    state.ammo = {1: 80, 2: 0, 3: 0, 4: 0, 5: 0}
-    state.unlocked_weapons = {0, 1}
-    state.fire_cd = 0
-
-    # Pickups
-    pickup_defs = (
-        [('hp', None)] * 22 +
-        [(2,   None)] * 6 +
-        [(3,   None)] * 4 +
-        [(4,   None)] * 3 +
-        [(5,   None)] * 2
-    )
-    for kind, _ in pickup_defs:
-        px, py = safe_spawn()
-        state.pickups.append([px, py, kind, 0.0])
-    init_services(state)
-
-    cop_spawn = 0.0
+    _spawn_traffic_and_player(state)
+    player = state.player
 
     while state.running:
         dt = clock.tick(60) / 1000
+        player = state.player
         if state.message_timer > 0:
             state.message_timer = max(0.0, state.message_timer - dt)
         if not state.menu:
@@ -142,15 +285,26 @@ def main():
                     state.running = False
                 continue
 
-            if state.menu in ("shop", "garage"):
-                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g):
+            if state.menu in ("shop", "garage", "barber"):
+                if e.type == pygame.KEYDOWN and state.menu == "barber" and e.key == pygame.K_h:
+                    state.barber_step = "style"
+                    continue
+                if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_b, pygame.K_g, pygame.K_h):
                     state.menu = None
                     continue
-                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key <= pygame.K_7:
+                if state.menu == "shop":
+                    max_key = max(SHOP_ITEMS)
+                elif state.menu == "garage":
+                    max_key = max(GARAGE_ITEMS)
+                else:
+                    max_key = len(BARBER_COLORS if state.barber_step == "color" else BARBER_STYLES)
+                if e.type == pygame.KEYDOWN and pygame.K_1 <= e.key < pygame.K_1 + max_key:
                     if state.menu == "shop":
                         buy_shop_item(state, e.key - pygame.K_0)
-                    else:
+                    elif state.menu == "garage":
                         use_garage_item(state, e.key - pygame.K_0)
+                    else:
+                        use_barber_item(state, e.key - pygame.K_0)
                     continue
                 continue
 
@@ -166,28 +320,45 @@ def main():
                     state.menu = "pause"
                     audio.set_engine(False)
                     continue
-                if state.game_over and e.key == pygame.K_r:
-                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                if state.game_over and e.key == pygame.K_SPACE:
+                    reset_game(state)
+                    continue
                 if e.key == pygame.K_b and nearby_service(state) == "shop" and not state.game_over:
                     state.menu = "shop"
                     continue
                 if e.key == pygame.K_g and nearby_service(state) == "garage" and not state.game_over:
                     state.menu = "garage"
                     continue
-                if e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7):
+                if e.key == pygame.K_h and nearby_service(state) == "barber" and not state.game_over:
+                    state.menu = "barber"
+                    state.barber_step = "style"
+                    continue
+                if pygame.K_1 <= e.key < pygame.K_1 + len(WPN_NAMES):
                     w = e.key - pygame.K_1
                     if w in state.unlocked_weapons:
                         state.weapon = w
                 if e.key == pygame.K_e and not state.game_over:
                     if state.in_car:
                         player.x, player.y = exit_car_position(state.in_car)
+                        state.in_car.driver = None
                         state.in_car = None
                         audio.play('door_close', pos=(player.x, player.y))
                         audio.set_engine(False)
                     else:
                         for c in state.cars:
-                            if math.hypot(c.x-player.x, c.y-player.y) < 60:
+                            if c.dead or getattr(c, "sunk", False):
+                                continue
+                            if c.rect().inflate(36, 36).collidepoint(player.x, player.y):
+                                if c.driver is not None and not c.is_cop:
+                                    # Fahrer rauswerfen
+                                    ex, ey = exit_car_position(c)
+                                    ejected = Ped(ex, ey)
+                                    ejected.state = 'flee'
+                                    state.peds.append(ejected)
+                                    add_wanted_heat(state, "carjack", timer=20)
                                 state.in_car = c
+                                c.driver = player
+                                c.signal_dir = 0
                                 audio.play('door_open', pos=(c.x, c.y))
                                 break
                 if e.key == pygame.K_f and not state.in_car and not state.game_over:
@@ -195,12 +366,14 @@ def main():
                         if math.hypot(p.x-player.x, p.y-player.y) < 35:
                             add_money(player, random.randint(15, 50))
                             p.state = 'flee'
-                            player.wanted = min(5, player.wanted + 1)
-                            player.crime_timer = 30
+                            add_wanted_heat(state, "robbery")
                             audio.play('robbery', pos=(p.x, p.y))
                             break
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over and not state.paused and not state.menu:
-                if state.fire_cd <= 0 and not WPN_AUTO[state.weapon]:
+                on_motorcycle = state.in_car and state.in_car.kind == "motorcycle"
+                if state.fire_cd <= 0 and not WPN_AUTO[state.weapon] and (not state.in_car or on_motorcycle):
+                    if on_motorcycle:
+                        player.aim_angle = aim_to_mouse()
                     fire()
 
         if not state.game_over and not state.menu:
@@ -210,7 +383,8 @@ def main():
             if state.in_car:
                 accel = (1 if keys[pygame.K_w] else 0) - (1 if keys[pygame.K_s] else 0)
                 steer = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
-                state.in_car.update(dt, accel, steer)
+                handbrake = bool(keys[pygame.K_SPACE])
+                state.in_car.update(dt, accel, steer, handbrake=handbrake)
                 if state.in_car and not state.in_car.dead:
                     player.x, player.y = state.in_car.x, state.in_car.y
                     audio.set_engine(True, throttle=accel,
@@ -219,6 +393,11 @@ def main():
                     audio.set_engine(False)
                 if state.in_car and in_water(state.in_car.x, state.in_car.y):
                     state.in_car.explode()
+                if state.in_car and state.in_car.kind == "motorcycle":
+                    player.aim_angle = aim_to_mouse()
+                    if keys[pygame.K_SPACE] or (pygame.mouse.get_pressed()[0] and WPN_AUTO[state.weapon]):
+                        if state.fire_cd <= 0:
+                            fire()
             else:
                 audio.set_engine(False)
                 sp = 220
@@ -226,11 +405,23 @@ def main():
                 dy = (1 if keys[pygame.K_s] else 0) - (1 if keys[pygame.K_w] else 0)
                 if dx or dy:
                     n = math.hypot(dx, dy)
-                    nx = player.x + dx/n * sp * dt
-                    ny = player.y + dy/n * sp * dt
-                    pr = pygame.Rect(nx-10, ny-10, 20, 20)
-                    if not any(pr.colliderect(b[0]) for b in state.buildings):
-                        player.x, player.y = nx, ny
+                    mvx = dx/n * sp * dt
+                    mvy = dy/n * sp * dt
+                    solid_cars = [c for c in state.cars
+                                  if not c.dead and not getattr(c, 'sunk', False)]
+                    def _blocked(rx, ry):
+                        pr = pygame.Rect(rx-10, ry-10, 20, 20)
+                        if any(pr.colliderect(b[0]) for b in state.buildings):
+                            return True
+                        if rect_hits_amusement_stand(pr):
+                            return True
+                        return any(pr.colliderect(c.rect()) for c in solid_cars)
+                    nx = player.x + mvx
+                    if not _blocked(nx, player.y):
+                        player.x = nx
+                    ny = player.y + mvy
+                    if not _blocked(player.x, ny):
+                        player.y = ny
                     player.angle = math.degrees(math.atan2(dx, -dy))
                     player.step_cd -= dt
                     if player.step_cd <= 0:
@@ -252,6 +443,11 @@ def main():
                                                 random.uniform(0.3, 0.7), random.randint(2,4)])
                     trigger_game_over()
 
+            prev_duck_pos = state.duck_easter_last_pos
+            duck_moved = 999.0 if prev_duck_pos is None else math.hypot(player.x - prev_duck_pos[0], player.y - prev_duck_pos[1])
+            _update_duck_easter(state, dt, duck_moved)
+            state.duck_easter_last_pos = (player.x, player.y)
+
             tx = (state.in_car.x if state.in_car else player.x) - W//2
             ty = (state.in_car.y if state.in_car else player.y) - H//2
             state.cam[0] += (tx - state.cam[0]) * min(1, 6*dt)
@@ -261,21 +457,67 @@ def main():
                 player.crime_timer -= dt
                 if player.crime_timer <= 0:
                     player.wanted = max(0, player.wanted - 1)
+                    sync_wanted_heat_after_drop(state)
                     player.crime_timer = 25
-                cop_spawn -= dt
-                active_cop_cars = sum(1 for c in state.cars if c.is_cop and not c.dead and not getattr(c, "sunk", False) and not getattr(c, "is_roadblock_support", False))
-                cop_limit = max(1, player.wanted + max(0, player.wanted - 2))
-                if cop_spawn <= 0 and active_cop_cars < cop_limit:
-                    cop_spawn = max(1.2, 8 - player.wanted*1.35)
-                    cx, cy, angle = cop_car_spawn_near(player.x, player.y, state.cam)
-                    car = Car(cx, cy, (245,245,250), is_cop=True)
-                    car.angle = angle
-                    car.max_spd += max(0, player.wanted - 3) * 30
-                    state.cars.append(car)
+                state.cop_spawn -= dt
+                law_kind = law_kind_for_wanted(player.wanted)
+                wanted_increased = player.wanted > state.last_wanted_level
+                view = pygame.Rect(int(state.cam[0]), int(state.cam[1]), W, H)
+                if not wanted_increased and any(
+                    getattr(car, "is_roadblock_support", False) and getattr(car, "kind", "cop") != law_kind
+                    for car in state.cars
+                ):
+                    clear_roadblocks(state)
+                for cop in list(state.cops):
+                    if getattr(cop, "cop_kind", "cop") != law_kind:
+                        if wanted_increased and view.colliderect(cop.rect()):
+                            cop.keep_after_tier_change = True
+                        elif not getattr(cop, "keep_after_tier_change", False):
+                            state.cops.remove(cop)
+                for car in list(state.cars):
+                    if (
+                        car.is_cop
+                        and car is not state.in_car
+                        and getattr(car, "kind", "cop") != law_kind
+                        and not getattr(car, "is_roadblock_support", False)
+                        and not getattr(car, "keep_after_tier_change", False)
+                    ):
+                        if wanted_increased and view.colliderect(car.rect()):
+                            car.keep_after_tier_change = True
+                            continue
+                        if car._siren_channel is not None:
+                            audio.stop_loop(car._siren_channel)
+                            car._siren_channel = None
+                        state.cars.remove(car)
+                active_tier_cars = sum(
+                    1 for c in state.cars
+                    if (
+                        c.is_cop
+                        and getattr(c, "kind", "cop") == law_kind
+                        and not c.dead
+                        and not getattr(c, "sunk", False)
+                        and not getattr(c, "is_roadblock_support", False)
+                    )
+                )
+                cop_limit_by_wanted = {3: 6, 4: 8, 5: 10}
+                cop_limit = cop_limit_by_wanted.get(player.wanted, max(1, player.wanted))
+                if state.cop_spawn <= 0 and active_tier_cars < cop_limit:
+                    state.cop_spawn = max(1.2, 8 - player.wanted*1.35)
+                    spawn = cop_car_spawn_near(player.x, player.y, state.cam, law_kind)
+                    if spawn is not None:
+                        cx, cy, angle = spawn
+                        car = Car(cx, cy, law_color_for_kind(law_kind), is_cop=True, kind=law_kind)
+                        car.angle = angle
+                        car.max_spd += max(0, player.wanted - 3) * 30
+                        state.cars.append(car)
                 escalate_police(state)
+                state.last_wanted_level = player.wanted
             else:
                 state.cops.clear()
                 state.roadblocks.clear()
+                state.roadblock_wanted_level = 0
+                state.roadblocks_cleared_on_drop = False
+                state.last_wanted_level = 0
                 for c in list(state.cars):
                     if c.is_cop and c is not state.in_car:
                         if c._siren_channel is not None:
@@ -298,12 +540,16 @@ def main():
                 wants_shoot = c.update(dt, player)
                 c.animate(dt)
                 if wants_shoot:
-                    c.shoot_tick = cop_fire_rate_for_wanted(player.wanted)
+                    profile = cop_weapon_profile(getattr(c, "cop_kind", "cop"), player.wanted)
+                    c.shoot_tick = profile["rate"]
                     dx, dy = player.x - c.x, player.y - c.y
                     d = math.hypot(dx, dy) or 1
-                    state.bullets.append([c.x, c.y, dx/d*700, dy/d*700, 0.8, True,
-                                          cop_damage_for_wanted(player.wanted)])
-                    audio.play('cop_shoot', pos=(c.x, c.y))
+                    base = math.atan2(dy, dx)
+                    spread = random.uniform(-profile["spread"], profile["spread"])
+                    vx = math.cos(base + spread) * profile["speed"]
+                    vy = math.sin(base + spread) * profile["speed"]
+                    state.bullets.append([c.x, c.y, vx, vy, 0.8, True, profile["damage"]])
+                    audio.play(profile["sound"], pos=(c.x, c.y))
 
             for b in list(state.bullets):
                 b[0] += b[2]*dt; b[1] += b[3]*dt; b[4] -= dt
@@ -314,7 +560,7 @@ def main():
                     state.bullets.remove(b); continue
                 if b[5]:
                     if state.in_car and br.colliderect(state.in_car.rect()):
-                        state.in_car.take_damage(b[6] * 0.6)
+                        state.in_car.take_damage(b[6] * 0.6, world_pos=(b[0], b[1]))
                         audio.play('hit_metal', volume=0.6, pos=(b[0], b[1]))
                         state.bullets.remove(b)
                         continue
@@ -333,7 +579,7 @@ def main():
                     for c in state.cars:
                         if c is state.in_car or c.dead: continue
                         if br.colliderect(c.rect()):
-                            c.take_damage(b[6] * 0.5)
+                            c.take_damage(b[6] * 0.5, world_pos=(b[0], b[1]))
                             audio.play('hit_metal', volume=0.55, pos=(b[0], b[1]))
                             state.bullets.remove(b); hit_any = True; break
                     if hit_any: continue
@@ -348,8 +594,7 @@ def main():
                                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                                 spawn_blood(p.x, p.y, 20)
                                 add_money(player, random.randint(15, 60))
-                                player.wanted = min(5, player.wanted + 1)
-                                player.crime_timer = 30
+                                add_wanted_heat(state, "kill_ped")
                             state.bullets.remove(b); hit_any=True; break
                     if hit_any: continue
                     for c in list(state.cops):
@@ -362,8 +607,7 @@ def main():
                                 state.cops.remove(c)
                                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                                 spawn_blood(c.x, c.y, 24)
-                                player.wanted = min(5, player.wanted + 1)
-                                player.crime_timer = 30
+                                add_wanted_heat(state, "kill_cop")
                             state.bullets.remove(b); break
 
             for c in list(state.cars):
@@ -371,10 +615,11 @@ def main():
                 if c.dead:
                     state.cars.remove(c)
                     if not c.is_cop:
-                        nx, ny, angle = road_spawn()
-                        col = (random.randint(60,230), random.randint(60,230), random.randint(60,230))
-                        car = Car(nx, ny, col)
+                        kind = random_car_kind()
+                        nx, ny, angle = road_spawn(kind)
+                        car = Car(nx, ny, random_car_color(kind), kind=kind)
                         car.angle = angle
+                        car.driver = True
                         state.cars.append(car)
 
             for sp_ in list(state.smoke_particles):
@@ -416,8 +661,7 @@ def main():
                     audio.stop_loop(r[5])
                     do_explosion(r[0], r[1])
                     state.rockets.remove(r)
-                    player.wanted = min(5, player.wanted + 1)
-                    player.crime_timer = 30
+                    add_wanted_heat(state, "explosion")
                 else:
                     audio.update_loop(r[5], pos=(r[0], r[1]))
 
@@ -476,7 +720,11 @@ def main():
                 r = rot.get_rect(center=(wx - icam[0], wy - icam[1]))
                 screen.blit(rot, r)
                 rad = math.radians(wa); cs_, sn_ = math.cos(rad), math.sin(rad)
-                for dx_, dy_, dr_ in wd:
+                for dent in wd:
+                    if len(dent) == 3:
+                        dx_, dy_, dr_ = dent
+                    else:
+                        dx_, dy_, dr_ = dent[0], dent[1], max(3, int(dent[2] * 0.7))
                     wxr = dx_ * cs_ - dy_ * sn_
                     wyr = dx_ * sn_ + dy_ * cs_
                     pygame.draw.circle(screen, (10,10,12),
@@ -575,9 +823,11 @@ def main():
             draw_hud_text(label, (10, wy), col)
         for i in range(player.wanted):
             draw_star(screen, W//2 - 36 + i * 20, 23, 9, (255, 200, 40))
-        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | P Pause | 1-7 Waffe",
+        screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F rauben | B Shop | G Garage | H Friseur | P Pause | 1-6 Waffe",
                                 1, (230,230,230)), (10, H-26))
         draw_minimap(screen, state, FONT)
+        fps_val = int(clock.get_fps())
+        draw_hud_text(f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
         if state.in_car:
             kmh = int(abs(state.in_car.spd) * 0.5)
             screen.blit(FONT.render(f"{kmh} km/h", 1, (255,255,255)), (W-140, 238))
@@ -585,10 +835,11 @@ def main():
             frac = max(0, state.in_car.hp) / state.in_car.max_hp
             col = (60,200,60) if frac > 0.6 else ((230,180,40) if frac > 0.3 else (220,40,40))
             pygame.draw.rect(screen, col, (W-228, 274, 216*frac, 18))
-            label = "BRENNT!" if state.in_car.burning else f"Auto {int(state.in_car.hp)}/{state.in_car.max_hp}"
+            car_label = getattr(state.in_car, "label", "Auto")
+            label = "BRENNT!" if state.in_car.burning else f"{car_label} {int(state.in_car.hp)}/{state.in_car.max_hp}"
             screen.blit(FONT.render(label, 1, (255,255,255)), (W-225, 274))
         draw_hint(screen, state, service, FONT)
-        if not state.in_car:
+        if not state.in_car or (state.in_car and state.in_car.kind == "motorcycle"):
             mx, my = pygame.mouse.get_pos()
             pygame.draw.circle(screen, (255,255,255), (mx,my), 8, 1)
             pygame.draw.line(screen, (255,255,255), (mx-12,my), (mx+12,my), 1)
@@ -609,7 +860,7 @@ def main():
                 line = f"{rank_sym:<4} {entry['name']:<18} ${entry['money']:>8}"
                 lt = FONT.render(line, 1, col)
                 screen.blit(lt, (W//2 - lt.get_width()//2, 175 + i * 30))
-            t2 = FONT.render("[R] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
+            t2 = FONT.render("[LEERTASTE] Neu starten   [ESC] Beenden", 1, (200, 200, 200))
             screen.blit(t2, (W//2 - t2.get_width()//2, H - 50))
         else:
             draw_overlay_menu(screen, state, BIG, MED, FONT)
