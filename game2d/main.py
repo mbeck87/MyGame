@@ -20,7 +20,7 @@ from game2d.render.sprites import make_ped_frames, make_swim_frames, get_pickup_
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
-from game2d.world.geometry import in_water, point_in_polygon, rect_hits_amusement_stand
+from game2d.world.geometry import in_city, in_water, point_in_polygon, rect_hits_amusement_stand
 from game2d.world.spawning import (
     safe_spawn, sidewalk_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
@@ -131,10 +131,18 @@ def _spawn_traffic_and_player(state):
         x, y = pedestrian_spawn()
         state.peds.append(Ped(x, y))
     
-    # Katzen spawnen
-    for _ in range(15):
-        x, y = pedestrian_spawn()
-        state.cats.append(Cat(x, y))
+    # Katze spawnen (max 1, bevorzugt im Park, nie im Wasser)
+    park = state.parks[0] if state.parks else None
+    cx, cy = pedestrian_spawn()   # sicherer Fallback
+    if park:
+        margin = 60
+        for _ in range(60):
+            px = random.randint(park.left + margin, park.right - margin)
+            py = random.randint(park.top + margin, park.bottom - margin)
+            if in_city(px, py, 20):
+                cx, cy = px, py
+                break
+    state.cats.append(Cat(cx, cy))
 
     player_x, player_y = safe_spawn()
     player = Ped(player_x, player_y)
