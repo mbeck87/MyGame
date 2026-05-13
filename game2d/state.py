@@ -39,6 +39,7 @@ class GameState:
     cars: list = field(default_factory=list)
     peds: list = field(default_factory=list)
     cops: list = field(default_factory=list)
+    cats: list = field(default_factory=list)
     player: Any = None
     in_car: Any = None
     intersection_claims: dict = field(default_factory=dict)

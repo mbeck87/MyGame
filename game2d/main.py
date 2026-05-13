@@ -32,6 +32,7 @@ from game2d.entities.car import (
     random_car_kind,
 )
 from game2d.entities.ped import Ped
+from game2d.entities.cat import Cat
 from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
 )
@@ -129,6 +130,11 @@ def _spawn_traffic_and_player(state):
     for _ in range(60):
         x, y = pedestrian_spawn()
         state.peds.append(Ped(x, y))
+    
+    # Katzen spawnen
+    for _ in range(15):
+        x, y = pedestrian_spawn()
+        state.cats.append(Cat(x, y))
 
     player_x, player_y = safe_spawn()
     player = Ped(player_x, player_y)
@@ -193,6 +199,7 @@ def reset_game(state):
     state.cars.clear()
     state.peds.clear()
     state.cops.clear()
+    state.cats.clear()
     state.intersection_claims.clear()
     state.bullets.clear()
     state.rockets.clear()
@@ -538,6 +545,9 @@ def main():
             for p in state.peds:
                 p.update(dt, player)
                 p.animate(dt)
+            for cat in state.cats:
+                cat.update(dt, player)
+                cat.animate(dt)
             for c in list(state.cops):
                 wants_shoot = c.update(dt, player)
                 c.animate(dt)
@@ -604,6 +614,23 @@ def main():
                                 add_wanted_heat(state, "kill_ped")
                             state.bullets.remove(b); hit_any=True; break
                     if hit_any: continue
+                    for cat in list(state.cats):
+                        if br.colliderect(cat.rect()):
+                            cat.hp -= b[6]
+                            spawn_blood(cat.x, cat.y, 3)
+                            audio.play('hit_flesh', pos=(cat.x, cat.y))
+                            audio.play('scream', pos=(cat.x, cat.y))
+                            if cat.hp <= 0:
+                                state.cats.remove(cat)
+                                state.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
+                                spawn_blood(cat.x, cat.y, 10)
+                                # 5 Sterne wanted für Katzen-Tötung
+                                player.wanted = 5
+                                player.crime_timer = 30
+                                state.wanted_heat = 5 * 100  # MAX
+                                add_money(player, random.randint(50, 100))
+                            state.bullets.remove(b); hit_any=True; break
+                    if hit_any: continue
                     for c in list(state.cops):
                         if br.colliderect(c.rect()):
                             c.hp -= b[6]
@@ -664,6 +691,8 @@ def main():
                         if rr.colliderect(p.rect()): hit = True; break
                     for c in state.cops:
                         if rr.colliderect(c.rect()): hit = True; break
+                    for cat in state.cats:
+                        if rr.colliderect(cat.rect()): hit = True; break
                 if hit:
                     audio.stop_loop(r[5])
                     do_explosion(r[0], r[1])
@@ -743,6 +772,7 @@ def main():
         for c in state.cars: c.draw(screen, icam)
         for roadblock in state.roadblocks: roadblock.draw(screen, icam)
         for p in state.peds: p.draw(screen, icam)
+        for cat in state.cats: cat.draw(screen, icam)
         for c in state.cops: c.draw(screen, icam)
         if not state.in_car:
             player.draw(screen, icam)

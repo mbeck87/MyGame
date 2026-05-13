@@ -1143,6 +1143,27 @@ class Car:
                     s.player.money += random.randint(10, 35)
         return True
 
+    def _run_over_cat(self, cat, group, damage):
+        s = current()
+        if not self.rect().colliderect(cat.rect()):
+            return False
+        cat.hp -= damage
+        self.blood_trail = max(self.blood_trail, 2.0)
+        spawn_blood(cat.x, cat.y, 3)
+        audio.play('scream', pos=(cat.x, cat.y))
+        if cat.hp <= 0:
+            if cat in group:
+                group.remove(cat)
+            s.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
+            spawn_blood(cat.x, cat.y, 8)
+            if self is s.in_car:
+                # 5 Sterne für Katzen-Tötung
+                s.player.wanted = 5
+                s.player.crime_timer = 30
+                s.wanted_heat = 5 * 100
+                s.player.money += random.randint(50, 100)
+        return True
+
     def _run_over_player(self, damage):
         s = current()
         if s.in_car is self or not self.rect().colliderect(s.player.rect()):
@@ -1164,6 +1185,8 @@ class Car:
         if not self.is_cop:
             for p in list(s.peds):
                 self._run_over_ped(p, s.peds, dmg, is_cop=False)
+            for cat in list(s.cats):
+                self._run_over_cat(cat, s.cats, dmg)
         for c in list(s.cops):
             self._run_over_ped(c, s.cops, dmg + 12, is_cop=True)
         self._run_over_player(dmg + 10)

@@ -78,6 +78,18 @@ def do_explosion(x, y, radius=140, dmg=500):
                 spawn_blood(p.x, p.y, 20)
                 add_money(state.player, random.randint(20, 55))
                 add_wanted_heat(state, "kill_ped")
+    for cat in list(state.cats):
+        if math.hypot(cat.x-x, cat.y-y) < radius:
+            cat.hp -= dmg
+            if cat.hp <= 0:
+                state.cats.remove(cat)
+                state.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
+                spawn_blood(cat.x, cat.y, 10)
+                # 5 Sterne für Katzen-Tötung
+                state.player.wanted = 5
+                state.player.crime_timer = 30
+                state.wanted_heat = 5 * 100
+                add_money(state.player, random.randint(50, 100))
     for c in list(state.cops):
         if math.hypot(c.x-x, c.y-y) < radius:
             c.hp -= dmg
