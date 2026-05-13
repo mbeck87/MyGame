@@ -22,7 +22,7 @@ from game2d.state import GameState, init as state_init
 from game2d.world.generation import build_world
 from game2d.world.geometry import in_water, point_in_polygon, rect_hits_amusement_stand
 from game2d.world.spawning import (
-    safe_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
+    safe_spawn, sidewalk_spawn, pedestrian_spawn, exit_car_position, road_spawn, cop_car_spawn_near,
 )
 from game2d.entities.car import (
     Car,
@@ -141,6 +141,7 @@ def _spawn_traffic_and_player(state):
     player.swim_frames = make_swim_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
     player.sprite = player.back_frames[0]
     player.hp = 100
+    player.armor = 0
     player.money = 0
     player.total_money_earned = 0
     player.wanted = 0
@@ -157,13 +158,15 @@ def _spawn_traffic_and_player(state):
 
     pickup_defs = (
         [('hp', None)] * 22 +
+        [('armor', None)] * 8 +
         [(2,   None)] * 6 +
         [(3,   None)] * 4 +
         [(4,   None)] * 3 +
         [(5,   None)] * 2
     )
     for kind, _ in pickup_defs:
-        px, py = safe_spawn()
+        spawn_fn = sidewalk_spawn if kind == 'armor' else safe_spawn
+        px, py = spawn_fn()
         state.pickups.append([px, py, kind, 0.0])
 
     amusement_nodes = list(state.amusement_park_nodes)
@@ -177,14 +180,13 @@ def _spawn_traffic_and_player(state):
 
 
 def reset_game(state):
-    for car in state.cops:
-        if getattr(car, '_siren_channel', None) is not None:
-            audio.stop_loop(car._siren_channel)
-            car._siren_channel = None
-    for car in state.cars:
-        if getattr(car, '_engine_channel', None) is not None:
-            audio.stop_loop(car._engine_channel)
-            car._engine_channel = None
+    # Stop alle Loop-Sounds von allen Cars
+    for car in list(state.cops) + list(state.cars):
+        for attr in ['_siren_channel', '_engine_channel', '_squeal_channel']:
+            ch = getattr(car, attr, None)
+            if ch is not None:
+                audio.stop_loop(ch)
+                setattr(car, attr, None)
     for r in state.rockets:
         if len(r) > 5 and r[5] is not None:
             audio.stop_loop(r[5])
@@ -565,7 +567,12 @@ def main():
                         state.bullets.remove(b)
                         continue
                     if br.colliderect(player.rect()):
-                        player.hp -= b[6]
+                        damage = b[6]
+                        if player.armor > 0:
+                            armor_dmg = min(player.armor, damage)
+                            player.armor -= armor_dmg
+                            damage -= armor_dmg
+                        player.hp -= damage
                         spawn_blood(player.x, player.y, 6)
                         audio.play('hurt', pos=(player.x, player.y))
                         state.bullets.remove(b)
@@ -673,6 +680,10 @@ def main():
                     kind = pk[2]
                     if kind == 'hp':
                         player.hp = min(100, player.hp + 30)
+                        audio.play('pickup_hp')
+                    elif kind == 'armor':
+                        armor_amount = random.randint(100, 200)
+                        player.armor = min(200, player.armor + armor_amount)
                         audio.play('pickup_hp')
                     else:
                         state.unlocked_weapons.add(kind)
@@ -800,7 +811,13 @@ def main():
         pygame.draw.rect(screen, (0,0,0), (10, 10, 220, 30))
         pygame.draw.rect(screen, (200,40,40), (12, 12, 216*max(0,player.hp)/100, 26))
         draw_hud_text(f"HP {int(player.hp)}", (16, 14), (255,255,255))
-        draw_hud_text(f"${player.money}", (10, 50), (90,255,115))
+        # Armor bar
+        pygame.draw.rect(screen, (0,0,0), (10, 40, 220, 14))
+        armor_width = 216 * max(0, player.armor) / 200
+        if armor_width > 0:
+            pygame.draw.rect(screen, (180,180,220), (12, 42, armor_width, 10))
+        draw_hud_text(f"ARMOR {int(player.armor)}", (16, 42), (255,255,255))
+        draw_hud_text(f"${player.money}", (10, 56), (90,255,115))
         for wi, wname in enumerate(WPN_NAMES):
             wy = 75 + wi * 22
             selected = wi == state.weapon

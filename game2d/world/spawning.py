@@ -54,6 +54,35 @@ def safe_spawn():
     return ROAD_LO, ROAD_LO
 
 
+def sidewalk_spawn():
+    """Spawn nur auf Gehwegen (für Armor-Pickups)."""
+    s = current()
+    for _ in range(300):
+        segments = [seg for seg in s.road_segments if seg.length > 90]
+        if not segments:
+            break
+        seg = random.choice(segments)
+        if seg.axis == "h":
+            side = -1 if random.random() < 0.5 else 1
+            x = random.randint(int(seg.lo + 30), int(seg.hi - 30))
+            y = int(seg.fixed + side * (ROAD_W//2 + SIDEWALK_W//2))
+        else:
+            side = -1 if random.random() < 0.5 else 1
+            x = int(seg.fixed + side * (ROAD_W//2 + SIDEWALK_W//2))
+            y = random.randint(int(seg.lo + 30), int(seg.hi - 30))
+        r = pygame.Rect(x-12, y-12, 24, 24)
+        if (
+            in_city(x, y, 20)
+            and not any(r.colliderect(b[0]) for b in s.buildings)
+            and not any(r.colliderect(park) for park in s.amusement_parks)
+            and not rect_in_park_pond(r)
+            and not rect_in_airport(r)
+        ):
+            return x, y
+    # Fallback: irgendwo auf der Straße
+    return safe_spawn()
+
+
 def pedestrian_spawn():
     s = current()
     prefer_park = bool(s.pedestrian_park_nodes) and random.random() < 0.28

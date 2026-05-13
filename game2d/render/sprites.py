@@ -1248,6 +1248,20 @@ def _outline(surf, pts, col, width=1):
         pygame.draw.lines(surf, col, True, pts, width)
 
 
+def _icon_armor(s):
+    """Schutzweste, 36×36."""
+    # Westen-Umriss
+    pygame.draw.rect(s, (180, 180, 180), (8, 10, 20, 16), border_radius=4)
+    # Westen-Füllung
+    pygame.draw.rect(s, (220, 220, 220), (9, 11, 18, 14), border_radius=3)
+    # Details - horizontale Linien für "Platten"
+    pygame.draw.line(s, (140, 140, 140), (11, 15), (25, 15), 2)
+    pygame.draw.line(s, (140, 140, 140), (11, 20), (25, 20), 2)
+    pygame.draw.line(s, (140, 140, 140), (11, 25), (25, 25), 2)
+    # Verschluss oben
+    pygame.draw.rect(s, (100, 100, 100), (14, 11, 8, 4), border_radius=1)
+
+
 def _icon_heart(s):
     """Rotes Herz, 36×36."""
     cx, cy = 18, 19
@@ -1390,6 +1404,8 @@ def get_pickup_icon(kind):
 
     if kind == 'hp':
         _icon_heart(s)
+    elif kind == 'armor':
+        _icon_armor(s)
     elif kind == 2:
         _icon_smg(s)
     elif kind == 3:

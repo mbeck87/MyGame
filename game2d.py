@@ -1,4 +1,4 @@
-#!/home/jixo/GTA/venv/bin/python3
+#!/usr/bin/env -S ./venv/bin/python
 """Mini GTA 2D — Einstiegspunkt.
 
 Die gesamte Spiellogik ist in das Paket `game2d/` ausgelagert.

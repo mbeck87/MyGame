@@ -37,10 +37,16 @@ def trigger_game_over():
         return
     state.game_over = True
     audio.set_engine(False)
-    for car in state.cops:
-        if getattr(car, '_siren_channel', None) is not None:
-            audio.stop_loop(car._siren_channel)
-            car._siren_channel = None
+    # Stop alle Loop-Sounds von allen Cars und Rockets
+    for car in list(state.cops) + list(state.cars):
+        for attr in ['_siren_channel', '_engine_channel', '_squeal_channel']:
+            ch = getattr(car, attr, None)
+            if ch is not None:
+                audio.stop_loop(ch)
+                setattr(car, attr, None)
+    for r in state.rockets:
+        if len(r) > 5 and r[5] is not None:
+            audio.stop_loop(r[5])
     audio.play('game_over')
     if not state.score_saved:
         state.score_saved = True
@@ -83,5 +89,10 @@ def do_explosion(x, y, radius=140, dmg=500):
                 add_wanted_heat(state, "kill_cop")
     dist = math.hypot(state.player.x-x, state.player.y-y)
     if dist < radius and not state.game_over:
-        state.player.hp -= int(dmg * max(0.0, 1 - dist/radius))
+        damage = int(dmg * max(0.0, 1 - dist/radius))
+        if state.player.armor > 0:
+            armor_dmg = min(state.player.armor, damage)
+            state.player.armor -= armor_dmg
+            damage -= armor_dmg
+        state.player.hp -= damage
         spawn_blood(state.player.x, state.player.y, 8)

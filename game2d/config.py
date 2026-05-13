@@ -56,6 +56,6 @@ WPN_AUTO  = [False, False, True, False, True, False]
 
 # ── Pickup-Definitionen ──────────────────────────────────
 PICKUP_AMMO    = {2: 60, 3: 10, 4: 120, 5: 3}
-PICKUP_COLOR   = {'hp': (40,220,80), 2: (220,210,40), 3: (220,120,40), 4: (210,40,40), 5: (180,60,255)}
-PICKUP_LABEL   = {'hp': 'HP', 2: 'SMG', 3: 'SG', 4: 'MG', 5: 'RPG'}
+PICKUP_COLOR   = {'hp': (40,220,80), 'armor': (200,200,200), 2: (220,210,40), 3: (220,120,40), 4: (210,40,40), 5: (180,60,255)}
+PICKUP_LABEL   = {'hp': 'HP', 'armor': 'ARMOR', 2: 'SMG', 3: 'SG', 4: 'MG', 5: 'RPG'}
 PICKUP_RESPAWN = 20.0   # Sekunden bis zur Wiederkehr

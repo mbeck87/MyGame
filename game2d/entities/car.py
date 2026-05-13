@@ -493,7 +493,12 @@ class Car:
             if math.hypot(c.x-self.x, c.y-self.y) < R + 10:
                 c.take_damage(110, source_pos=(self.x, self.y))
         if math.hypot(s.player.x-self.x, s.player.y-self.y) < R:
-            s.player.hp -= 95 if s.in_car is self else 60
+            damage = 95 if s.in_car is self else 60
+            if s.player.armor > 0:
+                armor_dmg = min(s.player.armor, damage)
+                s.player.armor -= armor_dmg
+                damage -= armor_dmg
+            s.player.hp -= damage
             if s.player.hp <= 0:
                 s.corpses.append((make_corpse(s.player), s.player.x, s.player.y, s.player.angle))
                 spawn_blood(s.player.x, s.player.y, 24)

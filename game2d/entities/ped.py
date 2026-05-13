@@ -115,6 +115,7 @@ class Ped:
         self.frame_idx = 0
         self.last_x, self.last_y = x, y
         self.hp = COP_KIND_PROFILES[self.cop_kind]["hp"] if is_cop else 60
+        self.armor = 0
         self.cop_speed = COP_KIND_PROFILES[self.cop_kind]["speed"] if is_cop else 0
         self.angle = random.uniform(0, 360)
         self.state = 'wander'
