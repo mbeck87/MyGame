@@ -117,3 +117,23 @@ Recent commits use short, imperative messages such as `explosive autos` and `upd
 
 ## Environment Notes
 Do not commit local runtime artifacts such as `.venv/`, `venv/`, `.tmp/`, `.run.*`, `__pycache__/`, `scores.json`, or `settings.json`. Prefer `pygame-ce` on current Windows Python versions, since it provides compatible wheels earlier than classic `pygame`.
+
+---
+
+# Vibe Agent Workflow
+
+## Quality Checks
+Run linters after **complex changes or refactorings**:
+- **Refactoring** (renaming functions, moving code): Always run `pyflakes game2d/` to find old references
+- **Multiple files changed**: Run `pyflakes game2d/` and `flake8 game2d/ --max-line-length=120`
+- **Single small change** (1-2 lines, value tweaks): Manual verification is sufficient
+
+## Quick Commands
+```bash
+# After refactoring - find old function names
+pyflakes game2d/
+grep -r "old_function_name" game2d/
+
+# Before commit
+python -m py_compile game2d.py && echo "Syntax OK"
+```

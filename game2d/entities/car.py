@@ -16,7 +16,7 @@ from game2d.world.geometry import (
 )
 from game2d.world.traffic import intersection_has_sign_control, traffic_rule_allows
 from game2d.systems.effects import spawn_blood, make_corpse, trigger_game_over
-from game2d.systems.services import add_wanted_heat
+from game2d.systems.services import add_wanted_heat, on_kill
 from game2d.systems import audio
 from game2d.entities.ped import Ped
 
@@ -500,22 +500,32 @@ class Car:
         if self._siren_channel is not None:
             audio.stop_loop(self._siren_channel)
             self._siren_channel = None
-        s.explosions.append([self.x, self.y, 0.0, 0.55, 150])
+        s.explosions.append([self.x, self.y, 0.0, 0.55, 188])
         audio.play('explosion', pos=(self.x, self.y))
         if s.in_car is self:
             audio.set_engine(False)
-        R = 130
+        R = 163
+        
+        def calc_damage(dist, rad):
+            ratio = dist / rad
+            if ratio <= 0.2:
+                return 530
+            else:
+                return max(30, int(530 - 500 * ((ratio - 0.2) / 0.8)))
+        
         for p in list(s.peds):
-            if math.hypot(p.x-self.x, p.y-self.y) < R:
-                p.hp -= 90
+            dist = math.hypot(p.x-self.x, p.y-self.y)
+            if dist < R:
+                p.hp -= calc_damage(dist, R)
                 spawn_blood(p.x, p.y, 6)
                 if p.hp <= 0:
                     s.peds.remove(p)
                     s.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                     spawn_blood(p.x, p.y, 18)
         for c in list(s.cops):
-            if math.hypot(c.x-self.x, c.y-self.y) < R:
-                c.hp -= 90
+            dist = math.hypot(c.x-self.x, c.y-self.y)
+            if dist < R:
+                c.hp -= calc_damage(dist, R)
                 spawn_blood(c.x, c.y, 6)
                 if c.hp <= 0:
                     s.cops.remove(c)
@@ -524,10 +534,12 @@ class Car:
                     s.player.money += random.randint(40, 80)
         for c in s.cars:
             if c is self or c.dead: continue
-            if math.hypot(c.x-self.x, c.y-self.y) < R + 10:
-                c.take_damage(110, source_pos=(self.x, self.y))
+            dist = math.hypot(c.x-self.x, c.y-self.y)
+            if dist < R + 13:
+                c.take_damage(calc_damage(dist, R + 13), source_pos=(self.x, self.y))
         if math.hypot(s.player.x-self.x, s.player.y-self.y) < R:
-            damage = 95 if s.in_car is self else 60
+            dist = math.hypot(s.player.x-self.x, s.player.y-self.y)
+            damage = calc_damage(dist, R)
             if s.player.armor > 0:
                 armor_dmg = min(s.player.armor, damage)
                 s.player.armor -= armor_dmg
@@ -1241,7 +1253,7 @@ class Car:
             s.corpses.append((make_corpse(ped), ped.x, ped.y, ped.angle))
             spawn_blood(ped.x, ped.y, 18 if is_cop else 16)
             if self is s.in_car:
-                add_wanted_heat(s, "kill_cop" if is_cop else "kill_ped")
+                on_kill(s, ped, is_cop=is_cop)
                 if not is_cop:
                     s.player.money += random.randint(10, 35)
         return True
@@ -1260,7 +1272,9 @@ class Car:
             s.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
             spawn_blood(cat.x, cat.y, 8)
             if self is s.in_car:
-                # 5 Sterne für Katzen-Tötung
+                # Katzen-Tötung zählt als Kill für Wanted-Level
+                on_kill(s, cat, is_cop=False)
+                # Aber zusätzlich: 5 Sterne für Katzen-Tötung
                 s.player.wanted = 5
                 s.player.crime_timer = 30
                 s.wanted_heat = 5 * 100

@@ -123,6 +123,9 @@ class Ped:
         self.armor = 0
         self.cop_speed = COP_KIND_PROFILES[self.cop_kind]["speed"] if is_cop else 0
         self.angle = random.uniform(0, 360)
+        # Waffe für Cops basierend auf Typ
+        from game2d.systems.services import COP_KIND_WEAPONS
+        self.weapon = COP_KIND_WEAPONS.get(self.cop_kind, 1) if is_cop else None
         self.state = 'wander'
         self.tick = random.uniform(0, 3)
         self.spd = random.uniform(40, 70)

@@ -37,7 +37,7 @@ from game2d.systems.effects import (
     make_corpse, spawn_blood, trigger_game_over, do_explosion,
 )
 from game2d.systems.services import (
-    add_money, add_wanted_heat, cop_weapon_profile, sync_wanted_heat_after_drop,
+    add_money, add_wanted_heat, on_kill, cop_weapon_profile, sync_wanted_heat_after_drop,
     buy_shop_item, clear_roadblocks,
     escalate_police, init_services, nearby_service, use_barber_item, use_garage_item,
     SHOP_ITEMS, GARAGE_ITEMS, BARBER_COLORS, BARBER_STYLES,
@@ -121,7 +121,7 @@ def _update_duck_easter(state, dt, moved):
 def _spawn_traffic_and_player(state):
     # Reduzierte Start-Anzahl für bessere Performance
     # Original: 50 Autos, 60 Peds, 38 Amusement-Peds
-    NUM_START_CARS = 30  # Reduziert von 50
+    NUM_START_CARS = 50
     NUM_START_PEDS = 40  # Reduziert von 60
     NUM_AMUSEMENT_PEDS = 20  # Reduziert von 38
     
@@ -535,7 +535,7 @@ def main():
                         and not getattr(c, "is_roadblock_support", False)
                     )
                 )
-                cop_limit_by_wanted = {3: 6, 4: 8, 5: 10}
+                cop_limit_by_wanted = {1: 20, 2: 20, 3: 20, 4: 20, 5: 20}
                 cop_limit = cop_limit_by_wanted.get(player.wanted, max(1, player.wanted))
                 if state.cop_spawn <= 0 and active_tier_cars < cop_limit:
                     state.cop_spawn = max(1.2, 8 - player.wanted*1.35)
@@ -657,7 +657,7 @@ def main():
                                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                                 spawn_blood(p.x, p.y, 20)
                                 add_money(player, random.randint(15, 60))
-                                add_wanted_heat(state, "kill_ped")
+                                on_kill(state, p, is_cop=False)
                             state.bullets.remove(b); hit_any=True; break
                     if hit_any: continue
                     # Nur Cats in der Nähe prüfen
@@ -691,7 +691,7 @@ def main():
                                 state.cops.remove(c)
                                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                                 spawn_blood(c.x, c.y, 24)
-                                add_wanted_heat(state, "kill_cop")
+                                on_kill(state, c, is_cop=True)
                             state.bullets.remove(b); break
 
             for c in list(state.cars):
@@ -700,7 +700,13 @@ def main():
                     state.cars.remove(c)
                     if not c.is_cop:
                         kind = random_car_kind()
-                        nx, ny, angle = road_spawn(kind)
+                        # Spawn weit entfernt vom Spieler
+                        min_dist = 800
+                        for _ in range(50):
+                            nx, ny, angle = road_spawn(kind)
+                            dist = math.hypot(nx - player.x, ny - player.y)
+                            if dist >= min_dist:
+                                break
                         car = Car(nx, ny, random_car_color(kind), kind=kind)
                         car.angle = angle
                         car.driver = True
@@ -764,6 +770,12 @@ def main():
                         armor_amount = random.randint(100, 200)
                         player.armor = min(200, player.armor + armor_amount)
                         audio.play('pickup_hp')
+                    elif isinstance(kind, int) and kind < 0:
+                        # Magazine drop: negative weapon index = 10 bullets
+                        weapon_idx = -kind
+                        state.unlocked_weapons.add(weapon_idx)
+                        state.ammo[weapon_idx] = state.ammo.get(weapon_idx, 0) + 10
+                        audio.play('pickup_weapon')
                     else:
                         state.unlocked_weapons.add(kind)
                         state.ammo[kind] = state.ammo.get(kind, 0) + PICKUP_AMMO[kind]

@@ -55,6 +55,8 @@ class GameState:
     cop_spawn: float = 0.0
     wanted_heat: float = 0.0
     last_wanted_level: int = 0
+    kill_count: int = 0
+    cop_kills: int = 0
 
     # ── Pickups ─────────────────────────────────────────────────────
     pickups: list = field(default_factory=list)          # [[x, y, kind, respawn_cd], ...]

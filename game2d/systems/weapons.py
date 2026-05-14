@@ -6,7 +6,7 @@ import pygame
 from game2d.config import WPN_RATE, WPN_DMG, WPN_PEL, WPN_SPRD
 from game2d.state import current
 from game2d.systems import audio
-from game2d.systems.services import add_wanted_heat
+from game2d.systems.services import add_wanted_heat, on_kill
 
 
 LIGHTSABER_IDX = 0
@@ -73,7 +73,7 @@ def _lightsaber_swing():
             s.corpses.append((make_corpse(ped), ped.x, ped.y, ped.angle))
             spawn_blood(ped.x, ped.y, 20)
             add_money(p, random.randint(*reward))
-            add_wanted_heat(s, "kill_cop" if ped.is_cop else "kill_ped")
+            on_kill(s, ped, is_cop=ped.is_cop)
 
 
 def fire():

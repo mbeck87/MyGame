@@ -6,7 +6,7 @@ import pygame
 from game2d.state import current
 from game2d.persistence import save_score
 from game2d.systems import audio
-from game2d.systems.services import add_money, add_wanted_heat
+from game2d.systems.services import add_money, add_wanted_heat, on_kill
 
 
 def make_corpse(ped):
@@ -60,48 +60,62 @@ def trigger_game_over():
         state.final_scores = scores
 
 
-def do_explosion(x, y, radius=140, dmg=500):
+def do_explosion(x, y, radius=175, dmg=500):
     state = current()
     state.explosions.append([x, y, 0, 0.5, radius])
     audio.play('explosion', pos=(x, y))
     spawn_blood(x, y, 28)
+    
+    def calc_damage(dist, rad):
+        ratio = dist / rad
+        if ratio <= 0.2:
+            return 530
+        else:
+            return max(30, int(530 - 500 * ((ratio - 0.2) / 0.8)))
+    
     for c in list(state.cars):
         if c.dead: continue
-        if math.hypot(c.x-x, c.y-y) < radius:
-            c.take_damage(dmg, source_pos=(x, y))
+        dist = math.hypot(c.x-x, c.y-y)
+        if dist < radius:
+            c.take_damage(calc_damage(dist, radius), source_pos=(x, y))
     for p in list(state.peds):
-        if math.hypot(p.x-x, p.y-y) < radius:
-            p.hp -= dmg
+        dist = math.hypot(p.x-x, p.y-y)
+        if dist < radius:
+            p.hp -= calc_damage(dist, radius)
             if p.hp <= 0:
                 state.peds.remove(p)
                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                 spawn_blood(p.x, p.y, 20)
                 add_money(state.player, random.randint(20, 55))
-                add_wanted_heat(state, "kill_ped")
+                on_kill(state, p, is_cop=False)
     for cat in list(state.cats):
-        if math.hypot(cat.x-x, cat.y-y) < radius:
-            cat.hp -= dmg
+        dist = math.hypot(cat.x-x, cat.y-y)
+        if dist < radius:
+            cat.hp -= calc_damage(dist, radius)
             if cat.hp <= 0:
                 state.cats.remove(cat)
                 state.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
                 spawn_blood(cat.x, cat.y, 10)
-                # 5 Sterne für Katzen-Tötung
+                # Katzen-Tötung zählt als Kill für Wanted-Level
+                on_kill(state, cat, is_cop=False)
+                # Aber zusätzlich: 5 Sterne für Katzen-Tötung
                 state.player.wanted = 5
                 state.player.crime_timer = 30
                 state.wanted_heat = 5 * 100
                 add_money(state.player, random.randint(50, 100))
     for c in list(state.cops):
-        if math.hypot(c.x-x, c.y-y) < radius:
-            c.hp -= dmg
+        dist = math.hypot(c.x-x, c.y-y)
+        if dist < radius:
+            c.hp -= calc_damage(dist, radius)
             if c.hp <= 0:
                 state.cops.remove(c)
                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                 spawn_blood(c.x, c.y, 24)
                 add_money(state.player, random.randint(50, 100))
-                add_wanted_heat(state, "kill_cop")
+                on_kill(state, c, is_cop=True)
     dist = math.hypot(state.player.x-x, state.player.y-y)
     if dist < radius and not state.game_over:
-        damage = int(dmg * max(0.0, 1 - dist/radius))
+        damage = calc_damage(dist, radius)
         if state.player.armor > 0:
             armor_dmg = min(state.player.armor, damage)
             state.player.armor -= armor_dmg

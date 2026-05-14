@@ -22,8 +22,19 @@ WANTED_HEAT = {
     "carjack": 55,
     "robbery": 65,
     "kill_ped": 38,
-    "kill_cop": 75,
     "explosion": 85,
+}
+
+# Kill requirements: cumulative kills needed for each wanted level
+# Level 1: 0, Level 2: 15, Level 3: 30, Level 4: 50, Level 5: 75
+WANTED_KILL_REQUIREMENTS = [0, 15, 30, 50, 75]
+
+# Weapon assignment for cop kinds (weapon index -> ammo type)
+COP_KIND_WEAPONS = {
+    "cop": 1,     # Pistol
+    "fbi": 2,     # SMG
+    "swat": 4,    # MG
+    "military": 5, # Rocket launcher
 }
 
 
@@ -31,6 +42,40 @@ def _wanted_from_heat(heat):
     if heat <= 0:
         return 0
     return min(5, 1 + int(heat // WANTED_HEAT_PER_STAR))
+
+
+def get_wanted_from_kills(kills):
+    """Get wanted level from cumulative kill count (all kills)."""
+    for level in range(4, -1, -1):
+        if kills >= WANTED_KILL_REQUIREMENTS[level]:
+            return level + 1
+    return 1
+
+
+def drop_magazine(x, y, weapon_idx, state):
+    """Drop a magazine with 10 bullets of the given weapon type."""
+    from game2d.config import PICKUP_RESPAWN
+    # Use negative weapon index to indicate magazine drop (10 bullets)
+    # Normal pickups use positive index and give PICKUP_AMMO[kind] bullets
+    state.pickups.append([x, y, -weapon_idx, PICKUP_RESPAWN])
+
+
+def on_kill(state, entity, is_cop=False):
+    """Handle kill: increment kill counters, update wanted level, drop magazine for cops."""
+    state.kill_count += 1
+    
+    # Update wanted level based on total kill count
+    new_wanted = get_wanted_from_kills(state.kill_count)
+    if new_wanted > state.player.wanted:
+        state.player.wanted = new_wanted
+        state.roadblock_wanted_level = min(state.roadblock_wanted_level, state.player.wanted)
+    
+    # Track cop kills separately for magazine drops
+    if is_cop:
+        state.cop_kills += 1
+        # Drop magazine with 10 bullets of cop's weapon
+        if hasattr(entity, 'weapon') and entity.weapon is not None:
+            drop_magazine(entity.x, entity.y, entity.weapon, state)
 
 
 def add_wanted_heat(state, crime="kill_ped", heat=None, timer=30):
