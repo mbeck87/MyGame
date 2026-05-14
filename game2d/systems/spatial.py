@@ -3,8 +3,7 @@
 Provides a uniform grid for fast range queries and collision tests.
 Used for entities (cars, peds, cops, cats) and static obstacles (buildings).
 """
-import math
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from game2d.config import WORLD_W, WORLD_H
 
@@ -151,9 +150,6 @@ class SpatialGrid:
         r_sq = radius * radius
         
         # Calculate cell range to search
-        cells_x = max(1, math.ceil(radius / self.cell_size))
-        cells_y = max(1, math.ceil(radius / self.cell_size))
-        
         start_cx = max(0, int((x - radius) // self.cell_size))
         end_cx = min(self.cols - 1, int((x + radius) // self.cell_size))
         start_cy = max(0, int((y - radius) // self.cell_size))
@@ -266,6 +262,83 @@ def get_spatial_grid() -> SpatialGrid:
 
 def reset_spatial_grid() -> None:
     """Reset/clear the global spatial grid."""
-    global _entity_grid
     if _entity_grid is not None:
         _entity_grid.clear()
+
+
+# Entity registration helpers
+# These functions provide convenient wrappers for adding/removing entities with rect() method
+
+def register_entity(obj: Any, x: float = None, y: float = None, radius: float = None) -> int:
+    """Register an entity with the spatial grid.
+    
+    Args:
+        obj: Entity object (should have x, y attributes and rect() method)
+        x: Optional X coordinate (uses obj.x if not provided)
+        y: Optional Y coordinate (uses obj.y if not provided)
+        radius: Optional radius for range queries (uses approx size from rect if not provided)
+        
+    Returns:
+        Spatial grid ID for the object (used for removal)
+    """
+    grid = get_spatial_grid()
+    if x is None:
+        x = getattr(obj, 'x', 0)
+    if y is None:
+        y = getattr(obj, 'y', 0)
+    if radius is None:
+        # Approximate radius from rect
+        if hasattr(obj, 'rect'):
+            r = obj.rect()
+            radius = max(r.w, r.h) / 2
+        else:
+            radius = 30  # Default radius
+    return grid.add(obj, x, y, radius)
+
+
+def update_entity_position(obj: Any) -> None:
+    """Update an entity's position in the spatial grid.
+    
+    Args:
+        obj: Entity object with x, y attributes
+    """
+    grid = get_spatial_grid()
+    x = getattr(obj, 'x', 0)
+    y = getattr(obj, 'y', 0)
+    grid.update(obj, x, y)
+
+
+def unregister_entity(obj: Any) -> None:
+    """Remove an entity from the spatial grid.
+    
+    Args:
+        obj: Entity object to remove
+    """
+    grid = get_spatial_grid()
+    grid.remove(obj)
+
+
+def query_entities_radius(x: float, y: float, radius: float) -> List[Any]:
+    """Query all entities within a radius.
+    
+    Args:
+        x: Center X coordinate
+        y: Center Y coordinate
+        radius: Search radius
+        
+    Returns:
+        List of entities within the radius
+    """
+    return get_spatial_grid().query_radius(x, y, radius)
+
+
+def query_entities_rect(rect) -> List[Any]:
+    """Query all entities that might intersect with a rectangle.
+    
+    Args:
+        rect: pygame.Rect or similar with x, y, w, h attributes
+        
+    Returns:
+        List of entities in overlapping cells
+    """
+    return get_spatial_grid().query_rect(rect)

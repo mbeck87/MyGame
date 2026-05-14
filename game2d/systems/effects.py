@@ -6,6 +6,9 @@ import pygame
 from game2d.state import current
 from game2d.persistence import save_score
 from game2d.systems import audio
+from game2d.systems.pooling import acquire_blood_particle
+from game2d.systems.spatial import unregister_entity
+from game2d.systems.events import emit_game_over
 
 
 def make_corpse(ped):
@@ -21,8 +24,10 @@ def spawn_blood(x, y, amount=14):
     for _ in range(amount):
         a = random.uniform(0, 6.28)
         sp = random.uniform(40, 220)
-        state.blood_particles.append([x, y, math.cos(a)*sp, math.sin(a)*sp,
-                                      random.uniform(0.3, 0.7), random.randint(2,4)])
+        state.blood_particles.append(acquire_blood_particle(
+            x, y, math.cos(a)*sp, math.sin(a)*sp,
+            random.uniform(0.3, 0.7), random.randint(2,4)
+        ))
     for _ in range(random.randint(3, 6)):
         ox = x + random.uniform(-12, 12)
         oy = y + random.uniform(-12, 12)
@@ -35,6 +40,8 @@ def trigger_game_over():
     if state.game_over:
         return
     state.game_over = True
+    # Emit game over event
+    emit_game_over(state, "player_died")
     audio.set_engine(False)
     # Stop alle Loop-Sounds von allen Cars und Rockets
     for car in list(state.cops) + list(state.cars):
@@ -83,6 +90,7 @@ def do_explosion(x, y, radius=175, dmg=500):
         if dist < radius:
             p.hp -= calc_damage(dist, radius)
             if p.hp <= 0:
+                unregister_entity(p)
                 state.peds.remove(p)
                 state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                 spawn_blood(p.x, p.y, 20)
@@ -93,6 +101,7 @@ def do_explosion(x, y, radius=175, dmg=500):
         if dist < radius:
             cat.hp -= calc_damage(dist, radius)
             if cat.hp <= 0:
+                unregister_entity(cat)
                 state.cats.remove(cat)
                 state.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
                 spawn_blood(cat.x, cat.y, 10)
@@ -111,6 +120,7 @@ def do_explosion(x, y, radius=175, dmg=500):
                 if c._siren_channel is not None:
                     audio.stop_loop(c._siren_channel)
                     c._siren_channel = None
+                unregister_entity(c)
                 state.cops.remove(c)
                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                 spawn_blood(c.x, c.y, 24)

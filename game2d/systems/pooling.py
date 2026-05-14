@@ -51,6 +51,8 @@ class ObjectPool(Generic[T]):
         self._pool: list[T] = []
         self._active: set[int] = set()
         self._next_id: int = 0
+        # Mapping von id(obj) zu pool_id für alle Objekte (funktioniert auch mit Listen)
+        self._object_to_id: dict[int, int] = {}
         
         # Vorab Objekte erstellen
         for _ in range(initial_size):
@@ -72,10 +74,9 @@ class ObjectPool(Generic[T]):
         self._next_id += 1
         self._active.add(obj_id)
         
-        # Objekt-ID speichern (für Tracking)
-        if not hasattr(obj, '_pool_id'):
-            object.__setattr__(obj, '_pool_id', None)
-        object.__setattr__(obj, '_pool_id', obj_id)
+        # Objekt-ID speichern (für Tracking) - funktioniert mit allen Objekten inkl. Listen
+        obj_key = id(obj)
+        self._object_to_id[obj_key] = obj_id
         
         return obj
     
@@ -85,10 +86,8 @@ class ObjectPool(Generic[T]):
         Args:
             obj: Das zurückzugebende Objekt
         """
-        if not hasattr(obj, '_pool_id'):
-            return
-        
-        obj_id = object.__getattribute__(obj, '_pool_id')
+        obj_key = id(obj)
+        obj_id = self._object_to_id.get(obj_key)
         if obj_id is None:
             return
         
@@ -96,9 +95,9 @@ class ObjectPool(Generic[T]):
         if self._reset_fn:
             self._reset_fn(obj)
         
-        # Entferne aus Active
+        # Entferne aus Active und Mapping
         self._active.discard(obj_id)
-        object.__setattr__(obj, '_pool_id', None)
+        del self._object_to_id[obj_key]
         
         # Zurück in den Pool
         self._pool.append(obj)
@@ -112,7 +111,7 @@ class ObjectPool(Generic[T]):
         Returns:
             True wenn das Objekt aus diesem Pool ist
         """
-        return hasattr(obj, '_pool_id') and object.__getattribute__(obj, '_pool_id') is not None
+        return id(obj) in self._object_to_id
     
     @property
     def size(self) -> int:
@@ -136,6 +135,7 @@ class ObjectPool(Generic[T]):
                 self._reset_fn(obj)
         self._pool.clear()
         self._active.clear()
+        self._object_to_id.clear()
         self._next_id = 0
     
     def preallocate(self, count: int) -> None:
@@ -267,3 +267,150 @@ def reset_pools():
         fire_particle_pool.clear()
     if rocket_pool:
         rocket_pool.clear()
+
+
+# =============================================================================
+# Helferfunktionen für einfache Pool-Nutzung
+# =============================================================================
+
+def acquire_bullet(x: float = 0.0, y: float = 0.0, vx: float = 0.0, vy: float = 0.0, 
+                   ttl: float = 0.8, from_cop: bool = False, damage: int = 0) -> list:
+    """Holt einen Bullet aus dem Pool und initialisiert ihn.
+    
+    Returns:
+        Initialisierter Bullet als Liste: [x, y, vx, vy, ttl, from_cop, damage]
+    """
+    if bullet_pool is None:
+        # Fallback: erstelle neuen Bullet (für den Fall dass Pools nicht initialisiert sind)
+        return [x, y, vx, vy, ttl, from_cop, damage]
+    bullet = bullet_pool.acquire()
+    bullet[0] = x
+    bullet[1] = y
+    bullet[2] = vx
+    bullet[3] = vy
+    bullet[4] = ttl
+    bullet[5] = from_cop
+    bullet[6] = damage
+    return bullet
+
+
+def release_bullet(bullet: list) -> None:
+    """Gibt einen Bullet zurück in den Pool."""
+    if bullet_pool is not None:
+        bullet_pool.release(bullet)
+
+
+def acquire_blood_particle(x: float = 0.0, y: float = 0.0, vx: float = 0.0, vy: float = 0.0,
+                           ttl: float = 0.0, radius: float = 0.0) -> list:
+    """Holt einen Blood-Particle aus dem Pool und initialisiert ihn."""
+    if blood_particle_pool is None:
+        return [x, y, vx, vy, ttl, radius]
+    p = blood_particle_pool.acquire()
+    p[0] = x
+    p[1] = y
+    p[2] = vx
+    p[3] = vy
+    p[4] = ttl
+    p[5] = radius
+    return p
+
+
+def release_blood_particle(p: list) -> None:
+    """Gibt einen Blood-Particle zurück in den Pool."""
+    if blood_particle_pool is not None:
+        blood_particle_pool.release(p)
+
+
+def acquire_smoke_particle(x: float = 0.0, y: float = 0.0, vx: float = 0.0, vy: float = 0.0,
+                           ttl: float = 0.0, max_ttl: float = 0.0, radius: float = 0.0) -> list:
+    """Holt einen Smoke-Particle aus dem Pool und initialisiert ihn."""
+    if smoke_particle_pool is None:
+        return [x, y, vx, vy, ttl, max_ttl, radius]
+    p = smoke_particle_pool.acquire()
+    p[0] = x
+    p[1] = y
+    p[2] = vx
+    p[3] = vy
+    p[4] = ttl
+    p[5] = max_ttl
+    p[6] = radius
+    return p
+
+
+def release_smoke_particle(p: list) -> None:
+    """Gibt einen Smoke-Particle zurück in den Pool."""
+    if smoke_particle_pool is not None:
+        smoke_particle_pool.release(p)
+
+
+def acquire_fire_particle(x: float = 0.0, y: float = 0.0, vx: float = 0.0, vy: float = 0.0,
+                          ttl: float = 0.0, max_ttl: float = 0.0, radius: float = 0.0) -> list:
+    """Holt einen Fire-Particle aus dem Pool und initialisiert ihn."""
+    if fire_particle_pool is None:
+        return [x, y, vx, vy, ttl, max_ttl, radius]
+    p = fire_particle_pool.acquire()
+    p[0] = x
+    p[1] = y
+    p[2] = vx
+    p[3] = vy
+    p[4] = ttl
+    p[5] = max_ttl
+    p[6] = radius
+    return p
+
+
+def release_fire_particle(p: list) -> None:
+    """Gibt einen Fire-Particle zurück in den Pool."""
+    if fire_particle_pool is not None:
+        fire_particle_pool.release(p)
+
+
+def acquire_rocket(x: float = 0.0, y: float = 0.0, vx: float = 0.0, vy: float = 0.0,
+                   ttl: float = 0.0, audio_channel=None) -> list:
+    """Holt eine Rocket aus dem Pool und initialisiert sie."""
+    if rocket_pool is None:
+        return [x, y, vx, vy, ttl, audio_channel]
+    r = rocket_pool.acquire()
+    r[0] = x
+    r[1] = y
+    r[2] = vx
+    r[3] = vy
+    r[4] = ttl
+    r[5] = audio_channel
+    return r
+
+
+def release_rocket(r: list) -> None:
+    """Gibt eine Rocket zurück in den Pool."""
+    if rocket_pool is not None:
+        rocket_pool.release(r)
+
+
+def release_all_bullets(bullets: list) -> None:
+    """Gibt alle Bullets aus einer Liste zurück in den Pool."""
+    for bullet in bullets:
+        release_bullet(bullet)
+
+
+def release_all_blood_particles(particles: list) -> None:
+    """Gibt alle Blood Particles aus einer Liste zurück in den Pool."""
+    for p in particles:
+        release_blood_particle(p)
+
+
+def release_all_smoke_particles(particles: list) -> None:
+    """Gibt alle Smoke Particles aus einer Liste zurück in den Pool."""
+    for p in particles:
+        release_smoke_particle(p)
+
+
+def release_all_fire_particles(particles: list) -> None:
+    """Gibt alle Fire Particles aus einer Liste zurück in den Pool."""
+    for p in particles:
+        release_fire_particle(p)
+
+
+def release_all_rockets(rockets: list) -> None:
+    """Gibt alle Rockets aus einer Liste zurück in den Pool."""
+    for r in rockets:
+        release_rocket(r)

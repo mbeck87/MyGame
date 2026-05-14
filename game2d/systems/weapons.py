@@ -8,6 +8,7 @@ from game2d.config import WPN_RATE, WPN_DMG, WPN_PEL, WPN_SPRD
 from game2d.state import current, GameState
 from game2d.systems import audio
 from game2d.systems.utils import angle_diff
+from game2d.systems.pooling import acquire_bullet, acquire_rocket
 
 
 LIGHTSABER_IDX: int = 0
@@ -100,9 +101,9 @@ def fire() -> None:
     if weapon == 5:
         rad = math.radians(ang)
         ch = audio.start_loop('shoot_rocket', pos=(ax, ay))
-        s.rockets.append([ax, ay, math.sin(rad)*480, -math.cos(rad)*480, 2.0, ch])
+        s.rockets.append(acquire_rocket(ax, ay, math.sin(rad)*480, -math.cos(rad)*480, 2.0, ch))
         return
     for _ in range(WPN_PEL[weapon]):
         a = ang + random.uniform(-WPN_SPRD[weapon], WPN_SPRD[weapon]) * 57
         rad = math.radians(a)
-        s.bullets.append([ax, ay, math.sin(rad)*900, -math.cos(rad)*900, 0.6, False, WPN_DMG[weapon]])
+        s.bullets.append(acquire_bullet(ax, ay, math.sin(rad)*900, -math.cos(rad)*900, 0.6, False, WPN_DMG[weapon]))

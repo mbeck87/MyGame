@@ -214,8 +214,8 @@ class TestConfigureLogging(unittest.TestCase):
                 content = f.read()
             self.assertIn('Test message', content)
         finally:
-            shutil.rmtree(test_dir, ignore_errors=True)
             shutdown_logging()
+            shutil.rmtree(test_dir, ignore_errors=True)
 
 
 class TestShutdownLogging(unittest.TestCase):

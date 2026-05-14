@@ -5,6 +5,8 @@ import pygame
 
 from game2d.config import BLOCK, ROAD_LO, ROAD_HI_X, ROAD_HI_Y, ROAD_W, SIDEWALK_W, W, H
 from game2d.systems import audio
+from game2d.systems.spatial import unregister_entity, register_entity
+from game2d.systems.events import emit_kill, emit_wanted_changed, emit_wanted_heat_added, emit_entity_spawned
 
 
 SHOP_ITEMS = {
@@ -62,6 +64,8 @@ def drop_magazine(x, y, weapon_idx, state):
 
 def on_kill(state, entity, is_cop=False):
     """Handle kill: increment kill counters, update wanted level, drop magazine for cops."""
+    # Emit kill event
+    emit_kill(state, entity, is_cop=is_cop)
     state.kill_count += 1
     
     # Update wanted level based on total kill count
@@ -87,7 +91,10 @@ def add_wanted_heat(state, crime="kill_ped", heat=None, timer=30):
     old_wanted = state.player.wanted
     state.player.wanted = max(state.player.wanted, _wanted_from_heat(state.wanted_heat))
     state.player.crime_timer = max(state.player.crime_timer, timer)
+    # Emit wanted events
+    emit_wanted_heat_added(state, crime, amount)
     if state.player.wanted > old_wanted:
+        emit_wanted_changed(state, old_wanted, state.player.wanted)
         state.roadblock_wanted_level = min(state.roadblock_wanted_level, state.player.wanted)
 
 
@@ -419,6 +426,7 @@ def clear_roadblocks(state):
             if car._siren_channel is not None:
                 audio.stop_loop(car._siren_channel)
                 car._siren_channel = None
+            unregister_entity(car)
             state.cars.remove(car)
 
 
@@ -512,6 +520,8 @@ def escalate_police(state):
         if _rect_hits_park_area(state, car.rect()):
             continue
         state.cars.append(car)
+        register_entity(car)  # Spatial Grid Registrierung
+        emit_entity_spawned(car, "roadblock_car")
         state.roadblocks.append(roadblock)
 
 
@@ -531,6 +541,7 @@ def lose_cops_after_repaint(state):
             if car._siren_channel is not None:
                 audio.stop_loop(car._siren_channel)
                 car._siren_channel = None
+            unregister_entity(car)
             state.cars.remove(car)
     set_message(state, "Repainted - cops lost")
 

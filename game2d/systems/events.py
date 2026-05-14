@@ -21,7 +21,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 
 class EventType(Enum):
@@ -95,7 +95,7 @@ class Event:
     event_type: EventType
     data: Dict[str, Any] = field(default_factory=dict)
     sender: Optional[Any] = None
-    timestamp: float = field(default_factory=lambda: pygame.time.get_ticks() / 1000.0)
+    timestamp: float = field(default_factory=lambda: __import__('pygame').time.get_ticks() / 1000.0)
     
     def __post_init__(self):
         if not isinstance(self.data, dict):

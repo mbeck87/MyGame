@@ -169,7 +169,9 @@ class Logger:
 # =============================================================================
 
 # Standard-Log-Level (kann über Umgebungsvariable überschrieben werden)
-_DEFAULT_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+# Standardmäßig auf einen hohen Wert setzen, um Logging zu deaktivieren
+# unless LOG_LEVEL Umgebungsvariable gesetzt ist oder -log Flag verwendet wird
+_DEFAULT_LEVEL = os.environ.get('LOG_LEVEL', 'CRITICAL').upper()
 _LEVEL_MAP = {
     'DEBUG': LogLevel.DEBUG,
     'INFO': LogLevel.INFO,
@@ -177,7 +179,7 @@ _LEVEL_MAP = {
     'ERROR': LogLevel.ERROR,
     'CRITICAL': LogLevel.CRITICAL,
 }
-DEFAULT_LOG_LEVEL = _LEVEL_MAP.get(_DEFAULT_LEVEL, LogLevel.INFO)
+DEFAULT_LOG_LEVEL = _LEVEL_MAP.get(_DEFAULT_LEVEL, LogLevel.CRITICAL)
 
 # Log-Datei-Pfad (kann über Umgebungsvariable überschrieben werden)
 _LOG_FILE = os.environ.get('LOG_FILE', None)

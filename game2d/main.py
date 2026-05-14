@@ -8,7 +8,6 @@ import pygame
 
 from game2d.config import (
     W, H,
-    WORLD_W, WORLD_H,
     WPN_NAMES, WPN_AUTO,
     PICKUP_AMMO, PICKUP_RESPAWN,
 )
@@ -44,7 +43,24 @@ from game2d.systems.services import (
 )
 from game2d.systems.weapons import fire, aim_to_mouse
 from game2d.systems import audio
-from game2d.systems.pooling import init_pools, reset_pools
+from game2d.systems.pooling import (
+    init_pools, reset_pools,
+    acquire_bullet, release_bullet, release_all_bullets,
+    acquire_blood_particle, release_blood_particle, release_all_blood_particles,
+    release_smoke_particle, release_all_smoke_particles,
+    release_fire_particle, release_all_fire_particles,
+    release_rocket, release_all_rockets,
+)
+from game2d.systems.spatial import (
+    init_spatial_grid, reset_spatial_grid,
+    register_entity, update_entity_position, unregister_entity,
+)
+from game2d.systems.events import (
+    emit_wanted_changed, emit_pickup_collected, emit_player_damaged,
+    emit_entity_spawned,
+)
+from game2d.systems.profiling import profiler, frame_scope, FPSMonitor, profile
+from game2d.systems.di import provider
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
 
@@ -121,11 +137,10 @@ def _update_duck_easter(state, dt, moved):
 
 def _spawn_traffic_and_player(state):
     # Reduzierte Start-Anzahl für bessere Performance
-    # Original: 50 Autos, 60 Peds, 38 Amusement-Peds
     NUM_START_CARS = 50
-    NUM_START_PEDS = 40  # Reduziert von 60
-    NUM_AMUSEMENT_PEDS = 20  # Reduziert von 38
-    
+    NUM_START_PEDS = 40
+    NUM_AMUSEMENT_PEDS = 20
+
     for _ in range(NUM_START_CARS):
         kind = random_car_kind()
         x, y, angle = road_spawn(kind)
@@ -133,33 +148,51 @@ def _spawn_traffic_and_player(state):
         car.angle = angle
         car.driver = True
         state.cars.append(car)
+        register_entity(car)  # Spatial Grid Registrierung
+        emit_entity_spawned(car, "car")
 
     for _ in range(NUM_START_PEDS):
         x, y = pedestrian_spawn()
-        state.peds.append(Ped(x, y))
-    
+        ped = Ped(x, y)
+        state.peds.append(ped)
+        register_entity(ped)  # Spatial Grid Registrierung
+        emit_entity_spawned(ped, "ped")
+
     # Katze spawnen (max 1, bevorzugt im Park, nie im Wasser)
     park = state.parks[0] if state.parks else None
     cx, cy = pedestrian_spawn()   # sicherer Fallback
     if park:
         margin = 60
-        for _ in range(40):  # Reduziert von 60
+        for _ in range(40):
             px = random.randint(park.left + margin, park.right - margin)
             py = random.randint(park.top + margin, park.bottom - margin)
             if in_city(px, py, 20):
                 cx, cy = px, py
                 break
-    state.cats.append(Cat(cx, cy))
+    cat = Cat(cx, cy)
+    state.cats.append(cat)
+    register_entity(cat)  # Spatial Grid Registrierung
+    emit_entity_spawned(cat, "cat")
 
     player_x, player_y = safe_spawn()
     player = Ped(player_x, player_y)
     player.shirt = (40, 100, 200)
+    register_entity(player)  # Spatial Grid Registrierung
+    emit_entity_spawned(player, "player")
     player.gender = "m"
     player.hair_style = "short"
     player.hair_color = (30, 20, 15)
-    player.frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
-    player.back_frames = make_ped_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style, back=True)
-    player.swim_frames = make_swim_frames(player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style)
+    player.frames = make_ped_frames(
+        player.shirt, hair=player.hair_color, gender=player.gender, hair_style=player.hair_style
+    )
+    player.back_frames = make_ped_frames(
+        player.shirt, hair=player.hair_color, gender=player.gender,
+        hair_style=player.hair_style, back=True
+    )
+    player.swim_frames = make_swim_frames(
+        player.shirt, hair=player.hair_color, gender=player.gender,
+        hair_style=player.hair_style
+    )
     player.sprite = player.back_frames[0]
     player.hp = 100
     player.armor = 0
@@ -198,11 +231,25 @@ def _spawn_traffic_and_player(state):
         ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
         ped.route_replan = random.uniform(0.1, 1.0)
         state.peds.append(ped)
+        register_entity(ped)  # Spatial Grid Registrierung
+        emit_entity_spawned(ped, "ped")
 
 
 def reset_game(state):
     # Zurücksetzen der Object Pools
     reset_pools()
+    # Zurücksetzen des Spatial Grids
+    reset_spatial_grid()
+    # Zurücksetzen des EventBus
+    from game2d.systems.events import EventBus as _EventBus
+    _EventBus.reset()
+    # Zurücksetzen des Profilers
+    from game2d.systems.profiling import profiler
+    profiler.clear()
+    profiler.enabled = False
+    # Re-install State im DI-Provider
+    from game2d.systems.di import provider
+    provider.install(state)
     # Stop alle Loop-Sounds von allen Cars
     for car in list(state.cops) + list(state.cars):
         for attr in ['_siren_channel', '_engine_channel', '_squeal_channel']:
@@ -218,11 +265,16 @@ def reset_game(state):
     state.cops.clear()
     state.cats.clear()
     state.intersection_claims.clear()
+    release_all_bullets(state.bullets)
     state.bullets.clear()
+    release_all_rockets(state.rockets)
     state.rockets.clear()
     state.blood_splats.clear()
+    release_all_blood_particles(state.blood_particles)
     state.blood_particles.clear()
+    release_all_smoke_particles(state.smoke_particles)
     state.smoke_particles.clear()
+    release_all_fire_particles(state.fire_particles)
     state.fire_particles.clear()
     state.explosions.clear()
     state.lightsaber_swings.clear()
@@ -250,11 +302,18 @@ def reset_game(state):
     _spawn_traffic_and_player(state)
 
 
+@profile
 def _handle_events(state, menu_ctrl, dt):
     player = state.player
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             state.running = False
+            continue
+        # Profiling Toggle mit F12
+        if e.type == pygame.KEYDOWN and e.key == pygame.K_F12 and not state.game_over:
+            from game2d.systems.profiling import profiler
+            profiler.enabled = not profiler.enabled
+            print(f"[PROFILING] {'AKTIVIERT' if profiler.enabled else 'DEAKTIVIERT'}")
             continue
         if state.menu in ("pause", "options"):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p):
@@ -354,6 +413,8 @@ def _handle_events(state, menu_ctrl, dt):
                                 ejected = Ped(ex, ey)
                                 ejected.state = 'flee'
                                 state.peds.append(ejected)
+                                register_entity(ejected)  # Spatial Grid Registrierung
+                                emit_entity_spawned(ejected, "ped")
                             state.in_car = c
                             c.driver = player
                             c.signal_dir = 0
@@ -367,7 +428,8 @@ def _handle_events(state, menu_ctrl, dt):
                         add_wanted_heat(state, "robbery")
                         audio.play('robbery', pos=(p.x, p.y))
                         break
-        if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and not state.game_over and not state.paused and not state.menu:
+        if (e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and
+                not state.game_over and not state.paused and not state.menu):
             on_motorcycle = state.in_car and state.in_car.kind == "motorcycle"
             if state.fire_cd <= 0 and not WPN_AUTO[state.weapon] and (not state.in_car or on_motorcycle):
                 if on_motorcycle:
@@ -375,6 +437,7 @@ def _handle_events(state, menu_ctrl, dt):
                 fire()
 
 
+@profile
 def _update_player_and_wanted(state, dt):
     player = state.player
     keys = pygame.key.get_pressed()
@@ -385,8 +448,10 @@ def _update_player_and_wanted(state, dt):
         steer = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
         handbrake = bool(keys[pygame.K_SPACE])
         state.in_car.update(dt, accel, steer, handbrake=handbrake)
+        update_entity_position(state.in_car)  # Spatial Grid Position update
         if state.in_car and not state.in_car.dead:
             player.x, player.y = state.in_car.x, state.in_car.y
+            update_entity_position(player)  # Spatial Grid Position update
             audio.set_engine(True, throttle=accel,
                              speed_norm=abs(state.in_car.spd) / state.in_car.max_spd)
         else:
@@ -408,6 +473,7 @@ def _update_player_and_wanted(state, dt):
             mvx = dx / n * sp * dt
             mvy = dy / n * sp * dt
             solid_cars = [c for c in state.cars if not c.dead and not getattr(c, 'sunk', False)]
+
             def _blocked(rx, ry):
                 pr = pygame.Rect(rx - 10, ry - 10, 20, 20)
                 if any(pr.colliderect(b[0]) for b in state.buildings):
@@ -422,6 +488,7 @@ def _update_player_and_wanted(state, dt):
             if not _blocked(player.x, ny):
                 player.y = ny
             player.angle = math.degrees(math.atan2(dx, -dy))
+            update_entity_position(player)  # Spatial Grid Position update
             player.step_cd -= dt
             if player.step_cd <= 0:
                 player.step_cd = 0.34
@@ -438,12 +505,16 @@ def _update_player_and_wanted(state, dt):
             for _ in range(20):
                 a = random.uniform(0, 6.28)
                 sp_ = random.uniform(40, 180)
-                state.blood_particles.append([player.x, player.y,
-                                              math.cos(a) * sp_, math.sin(a) * sp_,
-                                              random.uniform(0.3, 0.7), random.randint(2, 4)])
+                state.blood_particles.append(acquire_blood_particle(
+                    player.x, player.y,
+                    math.cos(a) * sp_, math.sin(a) * sp_,
+                    random.uniform(0.3, 0.7), random.randint(2, 4)
+                ))
             trigger_game_over()
     prev_duck_pos = state.duck_easter_last_pos
-    duck_moved = 999.0 if prev_duck_pos is None else math.hypot(player.x - prev_duck_pos[0], player.y - prev_duck_pos[1])
+    duck_moved = 999.0 if prev_duck_pos is None else math.hypot(
+        player.x - prev_duck_pos[0], player.y - prev_duck_pos[1]
+    )
     _update_duck_easter(state, dt, duck_moved)
     state.duck_easter_last_pos = (player.x, player.y)
     tx = (state.in_car.x if state.in_car else player.x) - W // 2
@@ -453,7 +524,9 @@ def _update_player_and_wanted(state, dt):
     if player.wanted > 0:
         player.crime_timer -= dt
         if player.crime_timer <= 0:
+            old_wanted = player.wanted
             player.wanted = max(0, player.wanted - 1)
+            emit_wanted_changed(state, old_wanted, player.wanted)
             sync_wanted_heat_after_drop(state)
             player.crime_timer = 25
         state.cop_spawn -= dt
@@ -470,6 +543,7 @@ def _update_player_and_wanted(state, dt):
                 if wanted_increased and view.colliderect(cop.rect()):
                     cop.keep_after_tier_change = True
                 elif not getattr(cop, "keep_after_tier_change", False):
+                    unregister_entity(cop)
                     state.cops.remove(cop)
         for car in list(state.cars):
             if (
@@ -485,6 +559,7 @@ def _update_player_and_wanted(state, dt):
                 if car._siren_channel is not None:
                     audio.stop_loop(car._siren_channel)
                     car._siren_channel = None
+                unregister_entity(car)
                 state.cars.remove(car)
         active_tier_cars = sum(
             1 for c in state.cars
@@ -507,6 +582,8 @@ def _update_player_and_wanted(state, dt):
                 car.angle = angle
                 car.max_spd += max(0, player.wanted - 3) * 30
                 state.cars.append(car)
+                register_entity(car)  # Spatial Grid Registrierung
+                emit_entity_spawned(car, "cop_car")
         escalate_police(state)
         state.last_wanted_level = player.wanted
     else:
@@ -523,6 +600,7 @@ def _update_player_and_wanted(state, dt):
                 state.cars.remove(c)
 
 
+@profile
 def _update_entities_and_physics(state, dt):
     player = state.player
     state.intersection_claims.clear()
@@ -532,16 +610,20 @@ def _update_entities_and_physics(state, dt):
         if c in state.roadblocks:
             continue
         c.ai_update(dt)
+        update_entity_position(c)  # Spatial Grid Position update
     player.animate(dt)
     for p in state.peds:
         p.update(dt, player)
         p.animate(dt)
+        update_entity_position(p)  # Spatial Grid Position update
     for cat in state.cats:
         cat.update(dt, player)
         cat.animate(dt)
+        update_entity_position(cat)  # Spatial Grid Position update
     for c in list(state.cops):
         wants_shoot = c.update(dt, player)
         c.animate(dt)
+        update_entity_position(c)  # Spatial Grid Position update
         if wants_shoot:
             profile = cop_weapon_profile(getattr(c, "cop_kind", "cop"), player.wanted)
             c.shoot_tick = profile["rate"]
@@ -550,13 +632,14 @@ def _update_entities_and_physics(state, dt):
             spread = random.uniform(-profile["spread"], profile["spread"])
             vx = math.cos(base + spread) * profile["speed"]
             vy = math.sin(base + spread) * profile["speed"]
-            state.bullets.append([c.x, c.y, vx, vy, 0.8, True, profile["damage"]])
+            state.bullets.append(acquire_bullet(c.x, c.y, vx, vy, 0.8, True, profile["damage"]))
             audio.play(profile["sound"], pos=(c.x, c.y))
     for b in list(state.bullets):
         b[0] += b[2] * dt
         b[1] += b[3] * dt
         b[4] -= dt
         if b[4] <= 0:
+            release_bullet(b)
             state.bullets.remove(b)
             continue
         br = pygame.Rect(b[0] - 3, b[1] - 3, 6, 6)
@@ -580,15 +663,18 @@ def _update_entities_and_physics(state, dt):
                     state.bullets.remove(b)
                     continue
             player_rect = player.rect()
-            if abs(player_rect.centerx - bx) < 30 and abs(player_rect.centery - by) < 30 and br.colliderect(player_rect):
+            if (abs(player_rect.centerx - bx) < 30 and
+                    abs(player_rect.centery - by) < 30 and br.colliderect(player_rect)):
                 damage = b[6]
                 if player.armor > 0:
                     armor_dmg = min(player.armor, damage)
                     player.armor -= armor_dmg
                     damage -= armor_dmg
                 player.hp -= damage
+                emit_player_damaged(state, damage, source=b)
                 spawn_blood(player.x, player.y, 6)
                 audio.play('hurt', pos=(player.x, player.y))
+                release_bullet(b)
                 state.bullets.remove(b)
                 if player.hp <= 0:
                     state.corpses.append((make_corpse(player), player.x, player.y, player.angle))
@@ -620,11 +706,13 @@ def _update_entities_and_physics(state, dt):
                     audio.play('hit_flesh', pos=(p.x, p.y))
                     audio.play('scream', pos=(p.x, p.y))
                     if p.hp <= 0:
+                        unregister_entity(p)
                         state.peds.remove(p)
                         state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                         spawn_blood(p.x, p.y, 20)
                         add_money(player, random.randint(15, 60))
                         on_kill(state, p, is_cop=False)
+                    release_bullet(b)
                     state.bullets.remove(b)
                     hit_any = True
                     break
@@ -639,6 +727,7 @@ def _update_entities_and_physics(state, dt):
                     audio.play('hit_flesh', pos=(cat.x, cat.y))
                     audio.play('scream', pos=(cat.x, cat.y))
                     if cat.hp <= 0:
+                        unregister_entity(cat)
                         state.cats.remove(cat)
                         state.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
                         spawn_blood(cat.x, cat.y, 10)
@@ -646,6 +735,7 @@ def _update_entities_and_physics(state, dt):
                         player.crime_timer = 30
                         state.wanted_heat = 5 * 100
                         add_money(player, random.randint(50, 100))
+                    release_bullet(b)
                     state.bullets.remove(b)
                     hit_any = True
                     break
@@ -663,10 +753,12 @@ def _update_entities_and_physics(state, dt):
                         if c._siren_channel is not None:
                             audio.stop_loop(c._siren_channel)
                             c._siren_channel = None
+                        unregister_entity(c)
                         state.cops.remove(c)
                         state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                         spawn_blood(c.x, c.y, 24)
                         on_kill(state, c, is_cop=True)
+                    release_bullet(b)
                     state.bullets.remove(b)
                     break
     for c in list(state.cars):
@@ -675,6 +767,7 @@ def _update_entities_and_physics(state, dt):
             if c._siren_channel is not None:
                 audio.stop_loop(c._siren_channel)
                 c._siren_channel = None
+            unregister_entity(c)
             state.cars.remove(c)
             if not c.is_cop:
                 kind = random_car_kind()
@@ -688,9 +781,12 @@ def _update_entities_and_physics(state, dt):
                 car.angle = angle
                 car.driver = True
                 state.cars.append(car)
+                register_entity(car)  # Spatial Grid Registrierung
+                emit_entity_spawned(car, "car")
     for sp_ in list(state.smoke_particles):
         sp_[4] -= dt
         if sp_[4] <= 0:
+            release_smoke_particle(sp_)
             state.smoke_particles.remove(sp_)
             continue
         sp_[0] += sp_[2] * dt
@@ -700,6 +796,7 @@ def _update_entities_and_physics(state, dt):
     for fp in list(state.fire_particles):
         fp[4] -= dt
         if fp[4] <= 0:
+            release_fire_particle(fp)
             state.fire_particles.remove(fp)
             continue
         fp[0] += fp[2] * dt
@@ -742,6 +839,7 @@ def _update_entities_and_physics(state, dt):
         if hit:
             audio.stop_loop(r[5])
             do_explosion(r[0], r[1])
+            release_rocket(r)
             state.rockets.remove(r)
             add_wanted_heat(state, "explosion")
         else:
@@ -768,11 +866,13 @@ def _update_entities_and_physics(state, dt):
                 state.unlocked_weapons.add(kind)
                 state.ammo[kind] = state.ammo.get(kind, 0) + PICKUP_AMMO[kind]
                 audio.play('pickup_weapon')
+            emit_pickup_collected(state, pk, kind)
             pk[3] = PICKUP_RESPAWN
     for bp in list(state.blood_particles):
         bp[4] -= dt
         if bp[4] <= 0:
             state.blood_splats.append((bp[0], bp[1], bp[5], (random.randint(110, 160), 0, 0)))
+            release_blood_particle(bp)
             state.blood_particles.remove(bp)
             continue
         bp[0] += bp[2] * dt
@@ -781,7 +881,8 @@ def _update_entities_and_physics(state, dt):
         bp[3] *= 0.92
 
 
-def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED):
+@profile
+def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, fps_monitor=None, profiler_obj=None, dt=0.0):
     player = state.player
     icam = (int(state.cam[0]), int(state.cam[1]))
     draw_world_bg(screen, icam)
@@ -975,11 +1076,43 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED):
         draw_hud_text(screen, FONT, label, (10, wy), col)
     for i in range(player.wanted):
         draw_star(screen, W // 2 - 36 + i * 20, 23, 9, (255, 200, 40))
-    screen.blit(FONT.render("WASD | Maus/LMB | E Auto | F Aktion/Shop/Garage | SPACE Handbremse | P Pause | 1-6 Waffe",
-                            1, (230, 230, 230)), (10, H - 26))
+    screen.blit(FONT.render(
+        "WASD | Maus/LMB | E Auto | F Aktion/Shop/Garage | SPACE Handbremse | "
+        "P Pause | 1-6 Waffe | F12 Profiling",
+        1, (230, 230, 230)
+    ), (10, H - 26))
     draw_minimap(screen, state, FONT)
-    fps_val = int(clock.get_fps())
-    draw_hud_text(screen, FONT, f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
+
+    # FPS und Profiling-Infos anzeigen
+    if profiler_obj and profiler_obj.enabled:
+        # Erweitere Profiling-Anzeige
+        current_fps = profiler_obj.fps
+        frame_time = profiler_obj.frame_time * 1000  # in ms
+        avg_frame_time = profiler_obj.average_frame_time * 1000  # in ms
+        memory = profiler_obj.current_memory_mb
+
+        # FPS mit Profiling-Infos (Profiler-FPS ist genauer)
+        profiling_text = (
+            f"FPS {current_fps:.0f} | Frame {frame_time:.1f}ms/{avg_frame_time:.1f}ms | "
+            f"Mem {memory:.1f}MB"
+        )
+        draw_hud_text(screen, FONT, profiling_text, (W - 450, 210), (220, 200, 100))
+
+        # Top 3 langsamste Funktionen anzeigen (wenn profiled)
+        if profiler_obj._function_stats:
+            top_funcs = profiler_obj.get_top_functions(3, "total_time")
+            for i, stat in enumerate(top_funcs):
+                func_text = f"{stat.name}: {stat.avg_time * 1000:.2f}ms ({stat.call_count})"
+                draw_hud_text(screen, FONT, func_text, (W - 500, 230 + i * 20), (180, 180, 180))
+
+        # Optional: FPS Monitor rendern
+        if fps_monitor:
+            fps_monitor.render(screen)
+    else:
+        # Standard FPS-Anzeige - verwende eigene Berechnung statt clock.get_fps()
+        # (clock.get_fps() ist ungenau wenn es jeden Frame aufgerufen wird)
+        fps_val = int(1.0 / max(dt, 0.0001))
+        draw_hud_text(screen, FONT, f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
     if state.in_car:
         kmh = int(abs(state.in_car.spd) * 0.5)
         screen.blit(FONT.render(f"{kmh} km/h", 1, (255, 255, 255)), (W - 140, 238))
@@ -1020,6 +1153,52 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED):
     pygame.display.flip()
 
 
+def _setup_event_handlers(state):
+    """Registriere Event-Handler für das EventBus-System."""
+    from game2d.systems.events import EventBus as _EventBus, EventType as _EventType
+    bus = _EventBus()
+
+    # Debug-Handler: Logge wichtige Events (kann später entfernt werden)
+    def debug_event_logger(event):
+        import logging as std_logging
+        # Nur wichtige Events loggen, nicht alle
+        important_types = {
+            _EventType.KILL, _EventType.PLAYER_DIED, _EventType.GAME_OVER,
+            _EventType.WANTED_LEVEL_CHANGED, _EventType.PICKUP_COLLECTED,
+            _EventType.PLAYER_DAMAGED, _EventType.ENTITY_SPAWNED
+        }
+        if event.event_type in important_types:
+            std_logging.getLogger("game2d.events").info(
+                f"[EVENT] {event.event_type.name}: {event.data}"
+            )
+
+    # Registriere Debug-Logger für alle Events (niedrige Priorität)
+    bus.subscribe_wildcard(debug_event_logger, priority=-10, once=False)
+
+    # Handler für Game Over: Reset EventBus
+    def on_game_over(event):
+        # Reset EventBus bei Game Over
+        _EventBus.reset()
+        # Re-registriere Handler nach Reset
+        _setup_event_handlers(state)
+
+    bus.subscribe(_EventType.GAME_OVER, on_game_over, priority=100)
+
+    # Handler für Entity Spawned: Logge Spawns
+    def on_entity_spawned(event):
+        # Kann später für Statistiken, Achievements, etc. genutzt werden
+        pass
+
+    bus.subscribe(_EventType.ENTITY_SPAWNED, on_entity_spawned, priority=0)
+
+    # Handler für Kills: Statistiken
+    def on_kill(event):
+        # Kann später für Kill-Counter, Achievements, etc. genutzt werden
+        pass
+
+    bus.subscribe(_EventType.KILL, on_kill, priority=0)
+
+
 def main():
     pygame.init()
     audio.init()
@@ -1027,23 +1206,32 @@ def main():
     audio.MASTER_VOL = settings['sfx_volume']
     # Initialisiere Object Pools für Performance-Optimierung
     init_pools()
+    # Initialisiere Spatial Grid für Kollisionsdetektion
+    init_spatial_grid()
+    # Initialisiere Profiler (standardmäßig deaktiviert, kann per Taste aktiviert werden)
+    profiler.enabled = False
+    # FPS Monitor für Profiling-Anzeige
+    fps_monitor = FPSMonitor(x=W - 140, y=210, color=(200, 200, 200))
     screen = pygame.display.set_mode((W, H))
     pygame.display.set_caption("Mini GTA 2D")
     pygame.mouse.set_visible(False)
     clock = pygame.time.Clock()
     FONT = pygame.font.SysFont("arial", 20, bold=True)
-    BIG  = pygame.font.SysFont("arial", 64, bold=True)
-    MED  = pygame.font.SysFont("arial", 32, bold=True)
-
+    BIG = pygame.font.SysFont("arial", 64, bold=True)
+    MED = pygame.font.SysFont("arial", 32, bold=True)
 
     player_name = name_input_screen(screen, W, H, BIG, MED, FONT)
 
-    state = GameState(player_name=player_name)
+    # State über DI-Provider erstellen und installieren
+    state = provider.create(player_name=player_name)
     state.settings = settings
-    state_init(state)
+    provider.install(state)
     build_world(state)
     init_services(state)
     menu_ctrl = MenuController(W, H, settings)
+
+    # EventBus Handler registrieren
+    _setup_event_handlers(state)
 
     _spawn_traffic_and_player(state)
     while state.running:
@@ -1056,7 +1244,13 @@ def main():
         if not state.game_over and not state.menu:
             _update_player_and_wanted(state, dt)
             _update_entities_and_physics(state, dt)
-        _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED)
+
+        # Profiling: Frame-Boundary markieren
+        with frame_scope():
+            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, fps_monitor, profiler, dt)
+
+        # Update FPS Monitor
+        fps_monitor.update()
     pygame.quit()
 
 

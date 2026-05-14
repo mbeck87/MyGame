@@ -194,6 +194,10 @@ class Profiler:
     @enabled.setter
     def enabled(self, value: bool) -> None:
         self._enabled = value
+        # Clear samples when enabling to get fresh measurements
+        if value:
+            self._frame_times.clear()
+            self._fps_samples.clear()
     
     @property
     def paused(self) -> bool:

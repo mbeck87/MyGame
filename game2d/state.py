@@ -11,8 +11,6 @@ müssen explizit über `state.<feld>` reassigned werden.
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from game2d.systems.spatial import SpatialGrid
-
 
 @dataclass
 class GameState:
@@ -80,9 +78,6 @@ class GameState:
     roadblocks: list = field(default_factory=list)       # [Roadblock, ...]
     roadblock_wanted_level: int = 0
     roadblocks_cleared_on_drop: bool = False
-
-    # ── Spatial Partitioning für Performance-Optimierung ────────────
-    entity_grid: Any = field(default_factory=lambda: SpatialGrid(cell_size=150))
 
     # ── Loop / Frame ────────────────────────────────────────────────
     cam: list = field(default_factory=lambda: [0, 0])

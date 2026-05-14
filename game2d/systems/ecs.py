@@ -124,7 +124,7 @@ class ECSManager(Generic[C]):
         self._components: Dict[Type[Component], Dict[EntityID, Component]] = {}
         self._entity_components: Dict[EntityID, Dict[Type[Component], Component]] = {}
         self._next_id: int = 1
-        self._systems: List[Callable[[float], None]] = []
+        self._systems: List[Tuple[int, Callable[[float], None]]] = []
     
     def create_entity(self) -> EntityID:
         """Erstellt eine neue Entity.

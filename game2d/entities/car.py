@@ -28,6 +28,7 @@ from game2d.config import (
 )
 from game2d.render.sprites import make_car_sprite, make_cop_car_sprite
 from game2d.state import current
+from game2d.systems.pooling import acquire_fire_particle, acquire_smoke_particle
 from game2d.world.geometry import (
     in_city, lane_center_for_car, move_toward,
     intersection_zone_at, point_in_polygon, rect_in_park_pond, rect_on_road,
@@ -37,17 +38,14 @@ from game2d.world.traffic import intersection_has_sign_control, traffic_rule_all
 from game2d.systems.effects import spawn_blood, make_corpse, trigger_game_over
 from game2d.systems.services import add_wanted_heat, on_kill
 from game2d.systems import audio
+from game2d.systems.spatial import register_entity
+from game2d.systems.events import emit_entity_spawned
 from game2d.entities.ped import Ped
 
 
 # =============================================================================
 # PERFORMANCE OPTIMIZATION: Cached building collision rects
 # =============================================================================
-# Cache für Gebäude-Collider - wird einmal pro Frame aufgebaut
-_building_collider_cache = None
-_building_collider_frame = -1
-
-
 def _get_building_colliders():
     """Holt alle Gebäude-Rects aus dem State. Wird für schnelle Kollisionstests genutzt."""
     s = current()
@@ -572,12 +570,16 @@ class Car:
             s.in_car = None
         for _ in range(45):
             a = random.uniform(0, 6.28); sp = random.uniform(80, 320)
-            s.fire_particles.append([self.x, self.y, math.cos(a)*sp, math.sin(a)*sp,
-                                     random.uniform(0.4, 0.9), 0.9, random.randint(4, 8)])
+            s.fire_particles.append(acquire_fire_particle(
+                self.x, self.y, math.cos(a)*sp, math.sin(a)*sp,
+                random.uniform(0.4, 0.9), 0.9, random.randint(4, 8)
+            ))
         for _ in range(35):
             a = random.uniform(0, 6.28); sp = random.uniform(40, 180)
-            s.smoke_particles.append([self.x, self.y, math.cos(a)*sp, math.sin(a)*sp - 30,
-                                      random.uniform(1.8, 3.5), 3.5, random.randint(6, 11)])
+            s.smoke_particles.append(acquire_smoke_particle(
+                self.x, self.y, math.cos(a)*sp, math.sin(a)*sp - 30,
+                random.uniform(1.8, 3.5), 3.5, random.randint(6, 11)
+            ))
         wreck_surf = self._sprite_with_damage().copy()
         scorch = pygame.Surface(wreck_surf.get_size(), pygame.SRCALPHA)
         scorch.fill((20, 20, 20, 200))
@@ -661,16 +663,20 @@ class Car:
             self._fire_cd -= dt
             if self._fire_cd <= 0:
                 self._fire_cd = 0.04
-                s.fire_particles.append([self.x + random.uniform(-12, 12),
-                                         self.y + random.uniform(-15, 15),
-                                         random.uniform(-25, 25), random.uniform(-70, -25),
-                                         random.uniform(0.3, 0.6), 0.6, random.randint(3, 6)])
+                s.fire_particles.append(acquire_fire_particle(
+                    self.x + random.uniform(-12, 12),
+                    self.y + random.uniform(-15, 15),
+                    random.uniform(-25, 25), random.uniform(-70, -25),
+                    random.uniform(0.3, 0.6), 0.6, random.randint(3, 6)
+                ))
             self._smoke_cd -= dt
             if self._smoke_cd <= 0:
                 self._smoke_cd = 0.08
-                s.smoke_particles.append([self.x, self.y, random.uniform(-15, 15),
-                                          random.uniform(-55, -25), random.uniform(1.5, 2.8), 2.8,
-                                          random.randint(5, 9)])
+                s.smoke_particles.append(acquire_smoke_particle(
+                    self.x, self.y, random.uniform(-15, 15),
+                    random.uniform(-55, -25), random.uniform(1.5, 2.8), 2.8,
+                    random.randint(5, 9)
+                ))
             if self.burn_timer <= 0:
                 self.explode()
         elif self.hp < self.max_hp * 0.6:
@@ -680,8 +686,10 @@ class Car:
             if self._smoke_cd <= 0:
                 self._smoke_cd = rate
                 col_r = random.randint(4, 8) if heavy else random.randint(3, 6)
-                s.smoke_particles.append([self.x, self.y, random.uniform(-10, 10),
-                                          random.uniform(-45, -18), random.uniform(1.2, 2.2), 2.2, col_r])
+                s.smoke_particles.append(acquire_smoke_particle(
+                    self.x, self.y, random.uniform(-10, 10),
+                    random.uniform(-45, -18), random.uniform(1.2, 2.2), 2.2, col_r
+                ))
 
     def rect_at_angle(self, x, y, angle):
         return car_rect_at(x, y, angle, self.kind, is_cop=self.is_cop)
@@ -1607,6 +1615,8 @@ class Car:
                     cop = Ped(px, py, is_cop=True, cop_kind=self.kind)
                     cop.shoot_tick = 0.25
                     s.cops.append(cop)
+                    register_entity(cop)  # Spatial Grid Registrierung
+                    emit_entity_spawned(cop, "cop")
                     self.deployed_cops += 1
                     self.spd *= 0.35
             if self.deployed_cops >= self.deploy_count:
