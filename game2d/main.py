@@ -59,7 +59,7 @@ from game2d.systems.events import (
     emit_wanted_changed, emit_pickup_collected, emit_player_damaged,
     emit_entity_spawned,
 )
-from game2d.systems.profiling import profiler, frame_scope, FPSMonitor, profile
+from game2d.systems.profiling import profiler, timed, profile
 from game2d.systems.di import provider
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
@@ -882,7 +882,7 @@ def _update_entities_and_physics(state, dt):
 
 
 @profile
-def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, fps_monitor=None, profiler_obj=None, dt=0.0):
+def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=None, dt=0.0, fps_val=None):
     player = state.player
     icam = (int(state.cam[0]), int(state.cam[1]))
     draw_world_bg(screen, icam)
@@ -1083,35 +1083,80 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, fps_monitor=N
     ), (10, H - 26))
     draw_minimap(screen, state, FONT)
 
-    # FPS und Profiling-Infos anzeigen
+    # FPS und Profiling-Infos anzeigen (fps_val wird aus Hauptloop übergeben)
     if profiler_obj and profiler_obj.enabled:
-        # Erweitere Profiling-Anzeige
-        current_fps = profiler_obj.fps
+        # Immer Standard-FPS anzeigen (korrekte FPS die der Spieler sieht)
         frame_time = profiler_obj.frame_time * 1000  # in ms
         avg_frame_time = profiler_obj.average_frame_time * 1000  # in ms
         memory = profiler_obj.current_memory_mb
+        
+        # Zeiten der drei Hauptphasen aus Profiler
+        event_stats = profiler_obj.get_function_stats("handle_events")
+        update_stats = profiler_obj.get_function_stats("update_logic")
+        render_stats = profiler_obj.get_function_stats("render")
+        
+        event_time = event_stats.avg_time * 1000 if event_stats else 0
+        update_time = update_stats.avg_time * 1000 if update_stats else 0
+        render_time = render_stats.avg_time * 1000 if render_stats else 0
 
-        # FPS mit Profiling-Infos (Profiler-FPS ist genauer)
+        # Profiling-Anzeige mit Standard-FPS und Phasenzeiten - links neben der Minimap
+        # Minimap: linker Rand bei W-236, Breite 216, also Bereich [W-236, W-20]
+        # Profiling: rechter Rand bei W-236-20 = W-256 (20px Abstand links von Minimap)
+        # Tabelle ist 420px breit (col3_x + 30 - col1_x = 390 + 30 = 420)
+        # Also profile_x = (W-256) - 420 = W-676, dann +20px nach rechts = W-656, dann -40px nach links = W-696
+        profile_x = W - 696
+        
         profiling_text = (
-            f"FPS {current_fps:.0f} | Frame {frame_time:.1f}ms/{avg_frame_time:.1f}ms | "
+            f"FPS {fps_val} | Frame {frame_time:.1f}ms/{avg_frame_time:.1f}ms | "
             f"Mem {memory:.1f}MB"
         )
-        draw_hud_text(screen, FONT, profiling_text, (W - 450, 210), (220, 200, 100))
+        draw_hud_text(screen, FONT, profiling_text, (profile_x, 10), (220, 200, 100))
+        
+        # Phasenzeiten anzeigen
+        phases_text = (
+            f"Evt {event_time:.1f}ms | Upd {update_time:.1f}ms | Rnd {render_time:.1f}ms"
+        )
+        draw_hud_text(screen, FONT, phases_text, (profile_x, 30), (180, 200, 100))
 
-        # Top 3 langsamste Funktionen anzeigen (wenn profiled)
+        # Top 3 langsamste Funktionen - jede Zelle an fester Position
         if profiler_obj._function_stats:
             top_funcs = profiler_obj.get_top_functions(3, "total_time")
-            for i, stat in enumerate(top_funcs):
-                func_text = f"{stat.name}: {stat.avg_time * 1000:.2f}ms ({stat.call_count})"
-                draw_hud_text(screen, FONT, func_text, (W - 500, 230 + i * 20), (180, 180, 180))
+            if top_funcs:
+                # Feste Spaltenpositionen
+                col1_x = profile_x      # Function Name
+                col2_x = profile_x + 240  # Avg Time (ms)
+                col3_x = profile_x + 390  # Calls (150px Abstand von col2: 145px + 5px)
+                
+                # Tabellenkopf - jede Spalte einzeln rendern
+                draw_hud_text(screen, FONT, "Function Name", (col1_x, 60), (220, 200, 100))
+                draw_hud_text(screen, FONT, "Avg Time (ms)", (col2_x, 60), (220, 200, 100))
+                draw_hud_text(screen, FONT, "Calls", (col3_x, 60), (220, 200, 100))
+                
+                # Trennlinie über alle Spalten (bei col1_x beginnend)
+                line_surface = pygame.Surface((430, 1))
+                line_surface.fill((180, 180, 180))
+                screen.blit(line_surface, (profile_x, 78))
+                
+                # Funktionen - jede Zelle einzeln an ihrer Position
+                for i, stat in enumerate(top_funcs):
+                    y_pos = 90 + i * 20
+                    
+                    # Function Name (left-aligned, max 25 chars)
+                    name = stat.name
+                    if len(name) > 22:
+                        name = name[:19] + "..."
+                    draw_hud_text(screen, FONT, name, (col1_x, y_pos), (180, 180, 180))
+                    
+                    # Avg Time (right-aligned)
+                    avg_time = stat.avg_time * 1000
+                    draw_hud_text(screen, FONT, f"{avg_time:.2f}", (col2_x, y_pos), (180, 180, 180))
+                    
+                    # Calls (right-aligned)
+                    calls = stat.call_count
+                    draw_hud_text(screen, FONT, f"{calls}", (col3_x, y_pos), (180, 180, 180))
 
-        # Optional: FPS Monitor rendern
-        if fps_monitor:
-            fps_monitor.render(screen)
     else:
-        # Standard FPS-Anzeige - verwende eigene Berechnung statt clock.get_fps()
-        # (clock.get_fps() ist ungenau wenn es jeden Frame aufgerufen wird)
-        fps_val = int(1.0 / max(dt, 0.0001))
+        # Standard FPS-Anzeige
         draw_hud_text(screen, FONT, f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
     if state.in_car:
         kmh = int(abs(state.in_car.spd) * 0.5)
@@ -1210,8 +1255,6 @@ def main():
     init_spatial_grid()
     # Initialisiere Profiler (standardmäßig deaktiviert, kann per Taste aktiviert werden)
     profiler.enabled = False
-    # FPS Monitor für Profiling-Anzeige
-    fps_monitor = FPSMonitor(x=W - 140, y=210, color=(200, 200, 200))
     screen = pygame.display.set_mode((W, H))
     pygame.display.set_caption("Mini GTA 2D")
     pygame.mouse.set_visible(False)
@@ -1236,21 +1279,52 @@ def main():
     _spawn_traffic_and_player(state)
     while state.running:
         dt = clock.tick(60) / 1000
+        # FPS einmal pro Frame berechnen (dieselbe Variable für beide Anzeigen)
+        fps_val = int(1.0 / max(dt, 0.0001))
+        
+        # Profiling: Nur aktiv wenn enabled - Entity Counts nur alle 10 Frames berechnen
+        entity_counts = None
+        if profiler.enabled and profiler.frame_count % 10 == 0:
+            entity_counts = {"cars": len(state.cars), "peds": len(state.peds), 
+                            "bullets": len(state.bullets), "cops": len(state.cops),
+                            "particles": len(state.smoke_particles) + len(state.fire_particles) + len(state.blood_particles),
+                            "rockets": len(state.rockets), "wrecks": len(state.wrecks),
+                            "corpses": len(state.corpses)}
+        if profiler.enabled:
+            profiler.start_frame()
+        
         if state.message_timer > 0:
             state.message_timer = max(0.0, state.message_timer - dt)
         if not state.menu:
             state.traffic_time += dt
-        _handle_events(state, menu_ctrl, dt)
+        
+        # Event Handling - mit Profiling nur wenn enabled
+        if profiler.enabled:
+            with timed("handle_events"):
+                _handle_events(state, menu_ctrl, dt)
+        else:
+            _handle_events(state, menu_ctrl, dt)
+        
         if not state.game_over and not state.menu:
-            _update_player_and_wanted(state, dt)
-            _update_entities_and_physics(state, dt)
+            # Update Logic - mit Profiling nur wenn enabled
+            if profiler.enabled:
+                with timed("update_logic"):
+                    _update_player_and_wanted(state, dt)
+                    _update_entities_and_physics(state, dt)
+            else:
+                _update_player_and_wanted(state, dt)
+                _update_entities_and_physics(state, dt)
+        
+        # Render - mit Profiling nur wenn enabled, FPS immer gleich
+        if profiler.enabled:
+            with timed("render"):
+                _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val)
+        else:
+            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val)
 
-        # Profiling: Frame-Boundary markieren
-        with frame_scope():
-            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, fps_monitor, profiler, dt)
-
-        # Update FPS Monitor
-        fps_monitor.update()
+        # Profiling: Frame end markieren
+        if profiler.enabled and entity_counts is not None:
+            profiler.end_frame(entity_counts)
     pygame.quit()
 
 

@@ -165,6 +165,8 @@ class Profiler:
         # Memory tracking
         self._memory_samples: List[Tuple[float, float]] = []  # (timestamp, mb)
         self._peak_memory = 0.0
+        self._cached_memory = 0.0  # Cached current memory value
+        self._last_memory_update_frame = 0  # Frame count when memory was last updated
         
         # Custom metrics
         self._custom_metrics: Dict[str, List[MetricSample]] = defaultdict(list)
@@ -248,8 +250,13 @@ class Profiler:
     
     @property
     def current_memory_mb(self) -> float:
-        """Current memory usage in megabytes."""
-        return self._get_memory_usage()
+        """Current memory usage in megabytes. Cached and updated every 10 frames for performance."""
+        # Update cached memory every 10 frames
+        if self._frame_count != self._last_memory_update_frame and self._frame_count % 10 == 0:
+            self._cached_memory = self._get_memory_usage()
+            self._peak_memory = max(self._peak_memory, self._cached_memory)
+            self._last_memory_update_frame = self._frame_count
+        return self._cached_memory
     
     @property
     def peak_memory_mb(self) -> float:
@@ -257,17 +264,26 @@ class Profiler:
         return self._peak_memory
     
     def _get_memory_usage(self) -> float:
-        """Get current memory usage in MB."""
+        """Get current memory usage in MB. Optimized to avoid expensive gc.get_objects()."""
         try:
             import psutil
             process = psutil.Process()
             return process.memory_info().rss / (1024 * 1024)
         except ImportError:
-            # Fallback: estimate from sys.getsizeof (not accurate but works)
-            return sum(
-                sys.getsizeof(obj) / (1024 * 1024)
-                for obj in gc.get_objects()
-            )
+            # Fallback: Use a fast estimate (process memory via /proc on Linux)
+            try:
+                import os
+                # On Linux, read /proc/self/status for VmRSS
+                if os.path.exists('/proc/self/status'):
+                    with open('/proc/self/status', 'r') as f:
+                        for line in f:
+                            if line.startswith('VmRSS:'):
+                                # VmRSS is in kB
+                                return int(line.split()[1]) / 1024.0
+            except:
+                pass
+            # Last resort: return 0 (memory tracking disabled in fallback)
+            return 0.0
     
     def start_frame(self) -> None:
         """Mark the start of a new frame."""
@@ -278,7 +294,7 @@ class Profiler:
         self._frame_count += 1
     
     def end_frame(self, entity_counts: Optional[Dict[str, int]] = None) -> None:
-        """Mark the end of a frame and record statistics."""
+        """Mark the end of a frame and record statistics. Optimized for minimal overhead."""
         if not self._enabled or self._paused:
             return
         
@@ -286,18 +302,18 @@ class Profiler:
         frame_time = now - self._last_frame_time
         fps = 1.0 / frame_time if frame_time > 0 else 0.0
         
-        # Store frame time for FPS calculation
+        # Store frame time for FPS calculation (use deque for O(1) append)
         self._frame_times.append(frame_time)
-        if len(self._frame_times) > 240:  # Keep last 2 seconds at 60fps
-            self._frame_times = self._frame_times[-120:]
         
         # Store FPS sample
         self._fps_samples.append(fps)
-        if len(self._fps_samples) > 60:
-            self._fps_samples = self._fps_samples[-60:]
         
-        memory = self._get_memory_usage()
-        self._peak_memory = max(self._peak_memory, memory)
+        # Memory usage: use cached value, update every 10 frames
+        memory = self._cached_memory
+        if self._frame_count % 10 == 0:
+            memory = self._get_memory_usage()
+            self._cached_memory = memory
+            self._peak_memory = max(self._peak_memory, memory)
         
         # Record frame stats
         frame_stat = FrameStats(
@@ -310,9 +326,14 @@ class Profiler:
         )
         self._frame_stats.append(frame_stat)
         
-        # Limit frame stats storage
-        if len(self._frame_stats) > self._max_frame_stats:
-            self._frame_stats = self._frame_stats[-self._max_frame_stats:]
+        # Limit storage by slicing only when needed (every 60 frames)
+        if self._frame_count % 60 == 0:
+            if len(self._frame_times) > 240:
+                self._frame_times = self._frame_times[-120:]
+            if len(self._fps_samples) > 60:
+                self._fps_samples = self._fps_samples[-60:]
+            if len(self._frame_stats) > self._max_frame_stats:
+                self._frame_stats = self._frame_stats[-self._max_frame_stats:]
         
         # Sample custom metrics periodically
         if now - self._last_sample_time >= self._sample_interval:
