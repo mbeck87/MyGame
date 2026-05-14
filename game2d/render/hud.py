@@ -1,7 +1,13 @@
-"""HUD-Hilfsfunktionen (Sterne, Zahlen). Volles HUD-Layout bleibt vorerst
-in der Hauptschleife, da es eng mit Loop-State verzahnt ist."""
+"""HUD-Hilfsfunktionen (Sterne, Zahlen, Text)."""
 import math
 import pygame
+
+
+def draw_hud_text(surf, font, text, pos, color):
+    shadow = font.render(text, 1, (0, 0, 0))
+    label = font.render(text, 1, color)
+    surf.blit(shadow, (pos[0] + 2, pos[1] + 2))
+    surf.blit(label, pos)
 
 
 def draw_star(surf, x, y, outer_r, color, inner_color=(255, 235, 120)):

@@ -6,6 +6,25 @@ import pygame
 from game2d.config import (
     BLOCK, ROAD_LO, ROAD_HI_X, ROAD_HI_Y,
     WORLD_W, WORLD_H, TIRE_BLOOD, TIRE_SKID,
+    DRIFT_MIN_SPEED, DRIFT_TURN_MIN_RATIO, SPEED_THRESHOLD_STEER,
+    REVERSE_SPEED_RATIO, DRIFT_ANGLE_ALIGN, NORMAL_ANGLE_ALIGN,
+    BUILDING_COLL_CHECK_DIST, PLAYER_BOUNDARY_MARGIN, PLAYER_PUSH_OFFSET,
+    DUAL_HIT_DAMAGE_THRESHOLD, DUAL_HIT_DAMAGE_FACTOR,
+    SINGLE_HIT_DAMAGE_THRESHOLD, SINGLE_HIT_DAMAGE_FACTOR, SINGLE_HIT_PERP_MIN,
+    CAR_IDLE_DECAY, ROADBLOCK_LANE_SPEED, COP_LANE_SPEED, LANE_CENTER_SPD,
+    COP_STEERING_DIV, COP_MIN_SPEED, COP_MAX_SPEED_BASE, COP_WANTED_SPEED_FACTOR,
+    COP_FULL_SPEED_DIST, COP_SPEED_GUESS_MIN, COP_SPEED_GUESS_OFFSET,
+    COP_STEER_ANG, COP_LOOKAHEAD_FACTOR, COP_BLOCKER_PADDING,
+    COP_ALT_STEER_BASE, COP_TURN_CD_MIN, COP_TURN_CD_MAX,
+    COP_TARGET_SLOW_SPD, COP_DEPLOY_MAX, COP_DEPLOY_DIST,
+    COP_DEPLOY_FWD_BASE, COP_DEPLOY_FWD_STEP, COP_DEPLOY_SIDE_MIN, COP_DEPLOY_SIDE_OFFSET,
+    AI_OBS_DIST_COP, AI_OBS_DIST_NORMAL,
+    ARC_SPD_MIN, ARC_SPD_MAX, ARC_TIGHT_R, ARC_TIGHT_SPD, ARC_ACCEL,
+    ARC_BLOCKER_DECEL, ARC_BLOCKER_YIELD,
+    INTERSECTION_AHEAD, BRAKE_DECAY, INTERSECTION_PERP_TOL,
+    INTERSECTION_ZONE_MIN, INTERSECTION_ZONE_MAX,
+    BRAKE_DECAY_BLOCKED, YIELD_TIMER_BLOCKED,
+    CAR_COLL_TURN_CD_MIN, CAR_COLL_TURN_CD_MAX,
 )
 from game2d.render.sprites import make_car_sprite, make_cop_car_sprite
 from game2d.state import current
@@ -1349,64 +1368,59 @@ class Car:
         s = current()
         controlled = (self is s.in_car)
         prev_spd = self.spd
+        dx, dy = self._apply_physics(dt, accel, steer, handbrake, controlled)
+        self._move_with_collision(dx, dy, prev_spd, controlled, dt)
+        self._clamp_world_bounds(controlled)
+        self._update_interactions(dt)
 
-        drift_active = handbrake and controlled and abs(self.spd) > 50
+    def _apply_physics(self, dt, accel, steer, handbrake, controlled):
+        drift_active = handbrake and controlled and abs(self.spd) > DRIFT_MIN_SPEED
         self._drifting = drift_active
-
         if drift_active:
-            # Handbremse: leichtes Abbremsen, damit Drift lang anhält
             self.spd *= max(0, 1 - self.drift_drag * dt)
-            if abs(self.spd) > 5:
-                self.angle += steer * self.drift_turn_rate * dt * max(0.4, abs(self.spd) / self.max_spd)
+            if abs(self.spd) > SPEED_THRESHOLD_STEER:
+                self.angle += steer * self.drift_turn_rate * dt * max(DRIFT_TURN_MIN_RATIO, abs(self.spd) / self.max_spd)
             self._leave_skid_trail(dt)
         else:
             if accel > 0:
                 self.spd = min(self.max_spd, self.spd + self.accel_rate * dt)
             elif accel < 0:
-                self.spd = max(-self.max_spd*0.5, self.spd - self.brake_rate * dt)
+                self.spd = max(-self.max_spd * REVERSE_SPEED_RATIO, self.spd - self.brake_rate * dt)
             else:
                 self.spd *= max(0, 1 - self.drag * dt)
-            if abs(self.spd) > 5:
-                self.angle += steer * self.turn_rate * dt * (self.spd/self.max_spd)
-
-        # Bewegungsrichtung: Spieler benutzt vel_angle (lags beim Driften)
+            if abs(self.spd) > SPEED_THRESHOLD_STEER:
+                self.angle += steer * self.turn_rate * dt * (self.spd / self.max_spd)
         if controlled:
-            if self._vel_angle is None or abs(self.spd) < 5:
+            if self._vel_angle is None or abs(self.spd) < SPEED_THRESHOLD_STEER:
                 self._vel_angle = self.angle
-            align = 1.5 if drift_active else 14.0
+            align = DRIFT_ANGLE_ALIGN if drift_active else NORMAL_ANGLE_ALIGN
             diff = ((self.angle - self._vel_angle + 180) % 360) - 180
             self._vel_angle += diff * min(1.0, align * dt)
             rad = math.radians(self._vel_angle)
         else:
             self._vel_angle = self.angle
             rad = math.radians(self.angle)
+        return math.sin(rad) * self.spd * dt, -math.cos(rad) * self.spd * dt
 
-        dx = math.sin(rad) * self.spd * dt
-        dy = -math.cos(rad) * self.spd * dt
+    def _move_with_collision(self, dx, dy, prev_spd, controlled, dt):
+        s = current()
         nx, ny = self.x + dx, self.y + dy
         tx = self.rect_at(nx, self.y)
         x_clear = self.cop_rect_clear(tx) if self.is_cop and not controlled else rect_on_road(tx)
-        
-        # Optimiert: Nur nahe Gebäude prüfen für X-Kollision
         hit_x = False
-        tx_center_x, tx_center_y = tx.centerx, tx.centery
         for b_rect, b_surf in s.buildings:
-            if abs(b_rect.centerx - tx_center_x) > 80 or abs(b_rect.centery - tx_center_y) > 80:
+            if abs(b_rect.centerx - tx.centerx) > BUILDING_COLL_CHECK_DIST or abs(b_rect.centery - tx.centery) > BUILDING_COLL_CHECK_DIST:
                 continue
             if tx.colliderect(b_rect):
                 hit_x = True
                 break
         if not hit_x:
             hit_x = (self.roadblock_at(tx) is not None or (not controlled and not x_clear))
-        
         ty = self.rect_at(self.x, ny)
         y_clear = self.cop_rect_clear(ty) if self.is_cop and not controlled else rect_on_road(ty)
-        
-        # Optimiert: Nur nahe Gebäude prüfen für Y-Kollision
         hit_y = False
-        ty_center_x, ty_center_y = ty.centerx, ty.centery
         for b_rect, b_surf in s.buildings:
-            if abs(b_rect.centerx - ty_center_x) > 80 or abs(b_rect.centery - ty_center_y) > 80:
+            if abs(b_rect.centerx - ty.centerx) > BUILDING_COLL_CHECK_DIST or abs(b_rect.centery - ty.centery) > BUILDING_COLL_CHECK_DIST:
                 continue
             if ty.colliderect(b_rect):
                 hit_y = True
@@ -1416,24 +1430,24 @@ class Car:
         mag = math.hypot(dx, dy) or 1
         if hit_x and hit_y:
             self.spd *= -0.2
-            if abs(prev_spd) > 60:
-                self.take_damage(abs(prev_spd) * 0.09, source_pos=(nx, ny))
+            if abs(prev_spd) > DUAL_HIT_DAMAGE_THRESHOLD:
+                self.take_damage(abs(prev_spd) * DUAL_HIT_DAMAGE_FACTOR, source_pos=(nx, ny))
         elif hit_x or hit_y:
             if hit_x:
-                perp, par = abs(dx) / mag, abs(dy) / mag
+                perp = abs(dx) / mag
                 self.y = ny
                 target = 0 if dy < 0 else 180
                 source_pos = (self.x + (1 if dx > 0 else -1) * self.w, self.y)
             else:
-                perp, par = abs(dy) / mag, abs(dx) / mag
+                perp = abs(dy) / mag
                 self.x = nx
                 target = 90 if dx > 0 else 270
                 source_pos = (self.x, self.y + (1 if dy > 0 else -1) * self.h)
             self.spd *= 1.0 - 0.43 * perp
             diff = ((target - self.angle + 180) % 360) - 180
             self.angle += diff * min(1.0, perp * 6 * dt)
-            if abs(prev_spd) > 80 and perp > 0.25:
-                self.take_damage(abs(prev_spd) * perp * 0.045, source_pos=source_pos)
+            if abs(prev_spd) > SINGLE_HIT_DAMAGE_THRESHOLD and perp > SINGLE_HIT_PERP_MIN:
+                self.take_damage(abs(prev_spd) * perp * SINGLE_HIT_DAMAGE_FACTOR, source_pos=source_pos)
         else:
             self.x, self.y = nx, ny
         for _ in range(4):
@@ -1445,14 +1459,17 @@ class Car:
         roadblock = self.roadblock_at(self.rect())
         if roadblock:
             self.resolve_roadblock_collision(roadblock, prev_spd)
+
+    def _clamp_world_bounds(self, controlled):
         if controlled:
-            self.x = max(40, min(WORLD_W-40, self.x))
-            self.y = max(40, min(WORLD_H-40, self.y))
+            self.x = max(PLAYER_BOUNDARY_MARGIN, min(WORLD_W - PLAYER_BOUNDARY_MARGIN, self.x))
+            self.y = max(PLAYER_BOUNDARY_MARGIN, min(WORLD_H - PLAYER_BOUNDARY_MARGIN, self.y))
         else:
             self.x = max(ROAD_LO, min(ROAD_HI_X, self.x))
             self.y = max(ROAD_LO, min(ROAD_HI_Y, self.y))
+
+    def _update_interactions(self, dt):
         self.hit_pedestrians(abs(self.spd))
-        # Spieler immer aus dem Auto-Rect herausschieben, unabhängig von Geschwindigkeit
         s = current()
         if s.in_car is not self and not self.dead:
             cr = self.rect()
@@ -1462,8 +1479,8 @@ class Car:
                 dy = s.player.y - self.y
                 nx = dx / (math.hypot(dx, dy) or 1)
                 ny = dy / (math.hypot(dx, dy) or 1)
-                ox = (cr.w / 2 + 12) - abs(dx)
-                oy = (cr.h / 2 + 12) - abs(dy)
+                ox = (cr.w / 2 + PLAYER_PUSH_OFFSET) - abs(dx)
+                oy = (cr.h / 2 + PLAYER_PUSH_OFFSET) - abs(dy)
                 if ox > 0 and oy > 0:
                     if ox < oy:
                         s.player.x += nx * (ox + 1)
@@ -1481,7 +1498,7 @@ class Car:
             self.ai_spd = 0
             return
         if self.driver is None:
-            self.spd *= max(0, 1 - 2.5 * dt)
+            self.spd *= max(0, 1 - CAR_IDLE_DECAY * dt)
             return
         self.yield_timer = max(0.0, self.yield_timer - dt)
         if self.is_roadblock_support:
@@ -1492,185 +1509,189 @@ class Car:
             self.spd = 0
             self.ai_spd = 0
             lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
-            self.x = move_toward(self.x, lane_x, 18 * dt)
-            self.y = move_toward(self.y, lane_y, 18 * dt)
+            self.x = move_toward(self.x, lane_x, ROADBLOCK_LANE_SPEED * dt)
+            self.y = move_toward(self.y, lane_y, ROADBLOCK_LANE_SPEED * dt)
             return
         if self.is_cop:
-            target = s.in_car if s.in_car else s.player
-            dx = target.x - self.x
-            dy = target.y - self.y
-            dist = math.hypot(dx, dy) or 1
-            lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
-            self.x = move_toward(self.x, lane_x, 22 * dt)
-            self.y = move_toward(self.y, lane_y, 22 * dt)
-            desired = math.degrees(math.atan2(dx, -dy))
-            diff = ((desired - self.angle + 180) % 360) - 180
-            steer = max(-1, min(1, diff / 35))
-            target_spd = max(155, min(self.max_spd, 175 + s.player.wanted * 34))
-            if s.in_car and dist < 220:
-                target_spd = self.max_spd
-            accel = 1 if abs(self.spd) < target_spd else 0
-            ahead = self.car_ahead()
-            if ahead and ahead is not s.in_car:
-                accel = -1
-                steer *= 0.45
-            if self.civilian_ahead():
-                accel = -1
-                steer *= 0.35
-            if self.yield_timer > 0:
-                accel = -1
-                steer *= 0.35
-            if abs(diff) > 115 and dist < 140:
-                accel = -1
-            speed_guess = max(105, abs(self.spd) + 70)
-            blocked = False
-            if accel >= 0:
-                forward_ang = self.angle + steer * 34
-                rad = math.radians(forward_ang)
-                nx = self.x + math.sin(rad) * speed_guess * dt * 1.2
-                ny = self.y - math.cos(rad) * speed_guess * dt * 1.2
-                test = self.rect_at(nx, ny)
-                blocked = not self.cop_rect_clear(test)
-                if not blocked:
-                    blocker = self.car_blocking_rect(test, padding=8)
-                    if blocker and not (blocker.is_cop and s.in_car and blocker is not s.in_car and math.hypot(blocker.x - target.x, blocker.y - target.y) < 90):
-                        blocked = True
-                if blocked:
-                    for alt in (-1.0, 1.0, -0.65, 0.65):
-                        ang2 = self.angle + alt * 52
-                        rad2 = math.radians(ang2)
-                        nx2 = self.x + math.sin(rad2) * speed_guess * dt
-                        ny2 = self.y - math.cos(rad2) * speed_guess * dt
-                        test2 = self.rect_at(nx2, ny2)
-                        clear = self.cop_rect_clear(test2)
-                        if clear:
-                            clear = self.car_blocking_rect(test2, padding=8) is None
-                        if clear:
-                            steer = alt
-                            blocked = False
-                            break
-                if blocked:
-                    accel = -1
-                    steer = -1 if diff > 0 else 1
-                    self.turn_cd = random.uniform(0.6, 1.2)
-            self.update(dt, accel, steer)
-            target_slow = (abs(s.in_car.spd) < 90) if s.in_car else True
-            max_active_by_wanted = {3: 12, 4: 16, 5: 20}
-            max_active_cops = max_active_by_wanted.get(s.player.wanted, max(2, s.player.wanted * 3))
-            if dist < 230 and target_slow and self.deployed_cops < self.deploy_count and len(s.cops) < max_active_cops:
-                for _ in range(10):
-                    if self.deployed_cops >= self.deploy_count or len(s.cops) >= max_active_cops:
-                        break
-                    side = -1 if self.deployed_cops % 2 == 0 else 1
-                    forward = -12 + self.deployed_cops * 24
-                    side_ang = math.radians(self.angle + 90 * side)
-                    forward_ang = math.radians(self.angle)
-                    side_dist = max(34, self.coll_w / 2 + 14)
-                    px = self.x + math.sin(side_ang) * side_dist + math.sin(forward_ang) * forward
-                    py = self.y - math.cos(side_ang) * side_dist - math.cos(forward_ang) * forward
-                    pr = pygame.Rect(px - 10, py - 10, 20, 20)
-                    # Optimiert: Nur nahe Obstacles prüfen (Gebäude in der Nähe)
-                    blocked = False
-                    for b_rect, b_surf in s.AI_OBSTACLES:
-                        if abs(b_rect.centerx - px) > 80 or abs(b_rect.centery - py) > 80:
-                            continue
-                        if pr.colliderect(b_rect):
-                            blocked = True
-                            break
-                    if not blocked:
-                        blocked = any(pr.colliderect(car.rect()) for car in s.cars if car is not self and not car.dead)
-                    if in_city(px, py, 8) and not blocked:
-                        cop = Ped(px, py, is_cop=True, cop_kind=self.kind)
-                        cop.shoot_tick = 0.25
-                        s.cops.append(cop)
-                        self.deployed_cops += 1
-                        self.spd *= 0.35
-                if self.deployed_cops >= self.deploy_count:
-                    self.driver = None
-                    self.spd = 0
+            self._ai_cop_pursuit(dt)
             return
         if self.arc is not None:
-            arc = self.arc
-            arc_spd = min(148.0, max(105.0, self.ai_spd * 0.82))
-            if arc["r"] < 48:
-                arc_spd = min(arc_spd, 122.0)
-            self.spd = move_toward(max(0.0, self.spd), arc_spd, 420 * dt)
-            theta_next = arc["theta"] + (self.spd / arc["r"]) * arc["omega"] * dt
-            if arc["omega"] > 0:
-                theta_next = min(theta_next, arc["theta_end"])
-                done = theta_next >= arc["theta_end"]
-            else:
-                theta_next = max(theta_next, arc["theta_end"])
-                done = theta_next <= arc["theta_end"]
-            if done:
-                next_x = arc["end_x"]
-                next_y = arc["end_y"]
-                next_angle = arc["target"]
-            else:
-                next_x, next_y, next_angle = self.arc_pose(arc, theta_next)
-            blocker = self.car_blocking_rect(self.rect_at_angle(next_x, next_y, next_angle), padding=10)
-            if blocker:
-                self.spd = move_toward(max(0.0, self.spd), 0.0, 560 * dt)
-                self.yield_timer = max(self.yield_timer, 0.16)
-                return
-            arc["theta"] = theta_next
-            if done:
-                self.angle = arc["target"]
-                self.x = next_x
-                self.y = next_y
-                self.arc = None
-                self.signal_dir = 0
-            else:
-                self.x = next_x
-                self.y = next_y
-                self.angle = next_angle
+            self._ai_arc_navigate(dt)
             return
+        self._ai_normal_drive(dt)
 
+    def _ai_cop_pursuit(self, dt):
+        s = current()
+        target = s.in_car if s.in_car else s.player
+        dx = target.x - self.x
+        dy = target.y - self.y
+        dist = math.hypot(dx, dy) or 1
         lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
-        self.x = move_toward(self.x, lane_x, 26 * dt)
-        self.y = move_toward(self.y, lane_y, 26 * dt)
+        self.x = move_toward(self.x, lane_x, COP_LANE_SPEED * dt)
+        self.y = move_toward(self.y, lane_y, COP_LANE_SPEED * dt)
+        desired = math.degrees(math.atan2(dx, -dy))
+        diff = ((desired - self.angle + 180) % 360) - 180
+        steer = max(-1, min(1, diff / COP_STEERING_DIV))
+        target_spd = max(COP_MIN_SPEED, min(self.max_spd, COP_MAX_SPEED_BASE + s.player.wanted * COP_WANTED_SPEED_FACTOR))
+        if s.in_car and dist < COP_FULL_SPEED_DIST:
+            target_spd = self.max_spd
+        accel = 1 if abs(self.spd) < target_spd else 0
+        ahead = self.car_ahead()
+        if ahead and ahead is not s.in_car:
+            accel = -1
+            steer *= 0.45
+        if self.civilian_ahead():
+            accel = -1
+            steer *= 0.35
+        if self.yield_timer > 0:
+            accel = -1
+            steer *= 0.35
+        if abs(diff) > 115 and dist < 140:
+            accel = -1
+        speed_guess = max(COP_SPEED_GUESS_MIN, abs(self.spd) + COP_SPEED_GUESS_OFFSET)
+        blocked = False
+        if accel >= 0:
+            forward_ang = self.angle + steer * COP_STEER_ANG
+            rad = math.radians(forward_ang)
+            nx = self.x + math.sin(rad) * speed_guess * dt * COP_LOOKAHEAD_FACTOR
+            ny = self.y - math.cos(rad) * speed_guess * dt * COP_LOOKAHEAD_FACTOR
+            test = self.rect_at(nx, ny)
+            blocked = not self.cop_rect_clear(test)
+            if not blocked:
+                blocker = self.car_blocking_rect(test, padding=COP_BLOCKER_PADDING)
+                if blocker and not (blocker.is_cop and s.in_car and blocker is not s.in_car and math.hypot(blocker.x - target.x, blocker.y - target.y) < 90):
+                    blocked = True
+            if blocked:
+                for alt in (-1.0, 1.0, -0.65, 0.65):
+                    ang2 = self.angle + alt * COP_ALT_STEER_BASE
+                    rad2 = math.radians(ang2)
+                    nx2 = self.x + math.sin(rad2) * speed_guess * dt
+                    ny2 = self.y - math.cos(rad2) * speed_guess * dt
+                    test2 = self.rect_at(nx2, ny2)
+                    clear = self.cop_rect_clear(test2)
+                    if clear:
+                        clear = self.car_blocking_rect(test2, padding=COP_BLOCKER_PADDING) is None
+                    if clear:
+                        steer = alt
+                        blocked = False
+                        break
+            if blocked:
+                accel = -1
+                steer = -1 if diff > 0 else 1
+                self.turn_cd = random.uniform(COP_TURN_CD_MIN, COP_TURN_CD_MAX)
+        self.update(dt, accel, steer)
+        target_slow = (abs(s.in_car.spd) < COP_TARGET_SLOW_SPD) if s.in_car else True
+        max_active_cops = COP_DEPLOY_MAX.get(s.player.wanted, max(2, s.player.wanted * 3))
+        if dist < COP_DEPLOY_DIST and target_slow and self.deployed_cops < self.deploy_count and len(s.cops) < max_active_cops:
+            for _ in range(10):
+                if self.deployed_cops >= self.deploy_count or len(s.cops) >= max_active_cops:
+                    break
+                side = -1 if self.deployed_cops % 2 == 0 else 1
+                forward = COP_DEPLOY_FWD_BASE + self.deployed_cops * COP_DEPLOY_FWD_STEP
+                side_ang = math.radians(self.angle + 90 * side)
+                forward_ang = math.radians(self.angle)
+                side_dist = max(COP_DEPLOY_SIDE_MIN, self.coll_w / 2 + COP_DEPLOY_SIDE_OFFSET)
+                px = self.x + math.sin(side_ang) * side_dist + math.sin(forward_ang) * forward
+                py = self.y - math.cos(side_ang) * side_dist - math.cos(forward_ang) * forward
+                pr = pygame.Rect(px - 10, py - 10, 20, 20)
+                blocked = False
+                for b_rect, b_surf in s.AI_OBSTACLES:
+                    if abs(b_rect.centerx - px) > AI_OBS_DIST_COP or abs(b_rect.centery - py) > AI_OBS_DIST_COP:
+                        continue
+                    if pr.colliderect(b_rect):
+                        blocked = True
+                        break
+                if not blocked:
+                    blocked = any(pr.colliderect(car.rect()) for car in s.cars if car is not self and not car.dead)
+                if in_city(px, py, 8) and not blocked:
+                    cop = Ped(px, py, is_cop=True, cop_kind=self.kind)
+                    cop.shoot_tick = 0.25
+                    s.cops.append(cop)
+                    self.deployed_cops += 1
+                    self.spd *= 0.35
+            if self.deployed_cops >= self.deploy_count:
+                self.driver = None
+                self.spd = 0
+
+    def _ai_arc_navigate(self, dt):
+        arc = self.arc
+        arc_spd = min(ARC_SPD_MAX, max(ARC_SPD_MIN, self.ai_spd * 0.82))
+        if arc["r"] < ARC_TIGHT_R:
+            arc_spd = min(arc_spd, ARC_TIGHT_SPD)
+        self.spd = move_toward(max(0.0, self.spd), arc_spd, ARC_ACCEL * dt)
+        theta_next = arc["theta"] + (self.spd / arc["r"]) * arc["omega"] * dt
+        if arc["omega"] > 0:
+            theta_next = min(theta_next, arc["theta_end"])
+            done = theta_next >= arc["theta_end"]
+        else:
+            theta_next = max(theta_next, arc["theta_end"])
+            done = theta_next <= arc["theta_end"]
+        if done:
+            next_x = arc["end_x"]
+            next_y = arc["end_y"]
+            next_angle = arc["target"]
+        else:
+            next_x, next_y, next_angle = self.arc_pose(arc, theta_next)
+        blocker = self.car_blocking_rect(self.rect_at_angle(next_x, next_y, next_angle), padding=10)
+        if blocker:
+            self.spd = move_toward(max(0.0, self.spd), 0.0, ARC_BLOCKER_DECEL * dt)
+            self.yield_timer = max(self.yield_timer, ARC_BLOCKER_YIELD)
+            return
+        arc["theta"] = theta_next
+        if done:
+            self.angle = arc["target"]
+            self.x = next_x
+            self.y = next_y
+            self.arc = None
+            self.signal_dir = 0
+        else:
+            self.x = next_x
+            self.y = next_y
+            self.angle = next_angle
+
+    def _ai_normal_drive(self, dt):
+        s = current()
+        lane_x, lane_y = lane_center_for_car(self.angle, self.x, self.y)
+        self.x = move_toward(self.x, lane_x, LANE_CENTER_SPD * dt)
+        self.y = move_toward(self.y, lane_y, LANE_CENTER_SPD * dt)
         self.turn_cd -= dt
-        if self.turn_cd <= 0 and self.upcoming_intersection(150):
+        if self.turn_cd <= 0 and self.upcoming_intersection(INTERSECTION_AHEAD):
             self.plan_intersection_turn(allow_reverse=self.near_road_end())
-        if not traffic_rule_allows(self, dt) or self.yield_timer > 0 or self.should_yield_at_intersection() or self.car_ahead() or not self.reserve_intersection():
-            self.spd *= max(0.0, 1 - 2.6 * dt)
+        if (not traffic_rule_allows(self, dt) or self.yield_timer > 0 or
+                self.should_yield_at_intersection() or self.car_ahead() or
+                not self.reserve_intersection()):
+            self.spd *= max(0.0, 1 - BRAKE_DECAY * dt)
             return
         rad = math.radians(self.angle)
         nx = self.x + math.sin(rad) * self.ai_spd * dt
         ny = self.y - math.cos(rad) * self.ai_spd * dt
         test = self.rect_at(nx, ny)
-        
-        # Optimiert: Nur nahe Gebäude prüfen (statt alle AI_OBSTACLES)
         blocked = False
-        test_center_x, test_center_y = test.centerx, test.centery
         for b_rect, b_surf in s.AI_OBSTACLES:
-            if abs(b_rect.centerx - test_center_x) > 120 or abs(b_rect.centery - test_center_y) > 120:
+            if abs(b_rect.centerx - test.centerx) > AI_OBS_DIST_NORMAL or abs(b_rect.centery - test.centery) > AI_OBS_DIST_NORMAL:
                 continue
             if test.colliderect(b_rect):
                 blocked = True
                 break
-        
         if not blocked:
             blocked = (any(test.colliderect(rb.rect) for rb in s.roadblocks) or
                        not rect_on_road(test))
         if not blocked and self.car_blocking_rect(test, padding=10):
             blocked = True
-        # Kreuzungserkennung: Abstand zur nächsten Kreuzung in Fahrtrichtung
-        _ix = nearest_road_x(self.x); _iy = nearest_road_y(self.y)
+        _ix = nearest_road_x(self.x)
+        _iy = nearest_road_y(self.y)
         _ar = math.radians(self.angle)
         _fwd_dist = ((_ix - self.x) * math.sin(_ar) + (_iy - self.y) * (-math.cos(_ar)))
-        _perp_on_road = (abs(self.x - _ix) < 34 if self.is_vertical() else abs(self.y - _iy) < 34)
-        at_intersection = _perp_on_road and 18 < _fwd_dist < 94
-        # T-Kreuzung / Strassenende: Abbiegen VOR dem blocked-Check
+        _perp_on_road = (abs(self.x - _ix) < INTERSECTION_PERP_TOL if self.is_vertical() else abs(self.y - _iy) < INTERSECTION_PERP_TOL)
+        at_intersection = _perp_on_road and INTERSECTION_ZONE_MIN < _fwd_dist < INTERSECTION_ZONE_MAX
         road_end = self.near_road_end()
         if at_intersection and road_end:
             self.choose_intersection_turn(allow_reverse=True)
         if blocked:
-            # Auch an internen T-Kreuzungen abbiegen wenn Weg vorne versperrt
             if at_intersection and self.arc is None:
                 self.choose_intersection_turn(allow_reverse=road_end)
-            self.spd *= max(0.0, 1 - 3.0 * dt)
-            self.yield_timer = max(self.yield_timer, 0.12)
+            self.spd *= max(0.0, 1 - BRAKE_DECAY_BLOCKED * dt)
+            self.yield_timer = max(self.yield_timer, YIELD_TIMER_BLOCKED)
             return
         if at_intersection and self.turn_cd <= 0 and not road_end:
             self.choose_intersection_turn(allow_reverse=False)
@@ -1680,7 +1701,7 @@ class Car:
             if not other:
                 break
             self.resolve_car_collision(other, False)
-            self.turn_cd = random.uniform(1.2, 2.6)
+            self.turn_cd = random.uniform(CAR_COLL_TURN_CD_MIN, CAR_COLL_TURN_CD_MAX)
             self.arc = None
             self.planned_turn = None
             self.signal_dir = 0
