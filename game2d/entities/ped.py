@@ -120,6 +120,10 @@ class Ped:
         self.frame_idx = 0
         self.last_x, self.last_y = x, y
         self.hp = COP_KIND_PROFILES[self.cop_kind]["hp"] if is_cop else 60
+        # Rect caching
+        self._cached_rect = None
+        self._cached_rect_x = None
+        self._cached_rect_y = None
         self.armor = 0
         self.cop_speed = COP_KIND_PROFILES[self.cop_kind]["speed"] if is_cop else 0
         self.angle = random.uniform(0, 360)
@@ -150,7 +154,16 @@ class Ped:
         self.sprite = frames[self.frame_idx]
 
     def rect(self):
-        return pygame.Rect(self.x-10, self.y-10, 20, 20)
+        """Gibt das aktuelle Rect des Ped zurück. Nutzt Caching für Performance."""
+        if (self._cached_rect is not None and 
+            self._cached_rect_x == self.x and 
+            self._cached_rect_y == self.y):
+            return self._cached_rect
+        new_rect = pygame.Rect(self.x-10, self.y-10, 20, 20)
+        self._cached_rect = new_rect
+        self._cached_rect_x = self.x
+        self._cached_rect_y = self.y
+        return new_rect
 
     def try_move(self, nx, ny):
         """Optimiert: Nutzt Spatial Grid für schnellere Obstacle-Checks."""

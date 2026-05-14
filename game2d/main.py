@@ -53,6 +53,7 @@ from game2d.systems.pooling import (
 from game2d.systems.spatial import (
     init_spatial_grid, reset_spatial_grid,
     register_entity, update_entity_position, unregister_entity,
+    query_entities_radius, query_buildings_radius,
 )
 from game2d.systems.events import (
     emit_wanted_changed, emit_pickup_collected, emit_player_damaged,
@@ -620,26 +621,71 @@ def _update_player_and_wanted(state, dt):
                 state.cars.remove(c)
 
 
+def _is_in_update_range(entity, cam_x, cam_y, update_range):
+    """Check if entity is within the update range of the camera viewport.
+    
+    Args:
+        entity: Object with x, y attributes
+        cam_x: Camera x position
+        cam_y: Camera y position  
+        update_range: Distance from viewport edge to include (buffer)
+        
+    Returns:
+        True if entity should be fully updated
+    """
+    # Viewport boundaries with buffer
+    min_x = cam_x - update_range
+    max_x = cam_x + W + update_range
+    min_y = cam_y - update_range
+    max_y = cam_y + H + update_range
+    
+    return (min_x <= entity.x <= max_x and 
+            min_y <= entity.y <= max_y)
+
+
+# Update range buffer in world units (pixels)
+UPDATE_RANGE_BUFFER = 300
+
+
 @profile
 def _update_entities_and_physics(state, dt):
     player = state.player
     state.intersection_claims.clear()
+    
+    # Calculate camera viewport for culling
+    cam_x, cam_y = state.cam[0], state.cam[1]
+    
+    # Update Cars - only those in range get full AI update
     for c in state.cars:
         if c is state.in_car:
             continue
         if c in state.roadblocks:
             continue
-        c.ai_update(dt)
+        in_range = _is_in_update_range(c, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_range:
+            c.ai_update(dt)
+        # Always update position for spatial grid (entities can move even when frozen)
         update_entity_position(c)  # Spatial Grid Position update
+    
     player.animate(dt)
+    
+    # Update Peds - only those in range
     for p in state.peds:
-        p.update(dt, player)
-        p.animate(dt)
+        in_range = _is_in_update_range(p, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_range:
+            p.update(dt, player)
+            p.animate(dt)
         update_entity_position(p)  # Spatial Grid Position update
+    
+    # Update Cats - only those in range
     for cat in state.cats:
-        cat.update(dt, player)
-        cat.animate(dt)
+        in_range = _is_in_update_range(cat, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_range:
+            cat.update(dt, player)
+            cat.animate(dt)
         update_entity_position(cat)  # Spatial Grid Position update
+    
+    # Update Cops - always update (high priority for gameplay)
     for c in list(state.cops):
         wants_shoot = c.update(dt, player)
         c.animate(dt)
@@ -666,7 +712,6 @@ def _update_entities_and_physics(state, dt):
         bx, by = b[0], b[1]
         bullet_hit_building = False
         # Use spatial grid for optimized building collision
-        from game2d.systems.spatial import query_buildings_radius
         nearby_buildings = query_buildings_radius(bx, by, 50)
         for bd_rect in nearby_buildings:
             if br.colliderect(bd_rect):
@@ -676,6 +721,7 @@ def _update_entities_and_physics(state, dt):
             state.bullets.remove(b)
             continue
         if b[5]:
+            # Cop bullet - check player and player car
             if state.in_car:
                 car_rect = state.in_car.rect()
                 if abs(car_rect.centerx - bx) < 30 and abs(car_rect.centery - by) < 30 and br.colliderect(car_rect):
@@ -703,86 +749,80 @@ def _update_entities_and_physics(state, dt):
                     trigger_game_over()
                 continue
         else:
-            hit_any = False
-            for c in state.cars:
-                if c is state.in_car or c.dead:
-                    continue
-                if abs(c.x - bx) > 40 or abs(c.y - by) > 40:
-                    continue
-                if br.colliderect(c.rect()):
-                    c.take_damage(b[6] * 0.5, world_pos=(b[0], b[1]))
-                    audio.play('hit_metal', volume=0.55, pos=(b[0], b[1]))
-                    state.bullets.remove(b)
-                    hit_any = True
-                    break
-            if hit_any:
-                continue
-            for p in list(state.peds):
-                if abs(p.x - bx) > 30 or abs(p.y - by) > 30:
-                    continue
-                if br.colliderect(p.rect()):
-                    p.hp -= b[6]
-                    p.state = 'flee'
-                    spawn_blood(p.x, p.y, 4)
-                    audio.play('hit_flesh', pos=(p.x, p.y))
-                    audio.play('scream', pos=(p.x, p.y))
-                    if p.hp <= 0:
-                        unregister_entity(p)
-                        state.peds.remove(p)
-                        state.corpses.append((make_corpse(p), p.x, p.y, p.angle))
-                        spawn_blood(p.x, p.y, 20)
-                        add_money(player, random.randint(15, 60))
-                        on_kill(state, p, is_cop=False)
-                        _spawn_ped_replacement(state, player)
-                    release_bullet(b)
-                    state.bullets.remove(b)
-                    hit_any = True
-                    break
-            if hit_any:
-                continue
-            for cat in list(state.cats):
-                if abs(cat.x - bx) > 30 or abs(cat.y - by) > 30:
-                    continue
-                if br.colliderect(cat.rect()):
-                    cat.hp -= b[6]
-                    spawn_blood(cat.x, cat.y, 3)
-                    audio.play('hit_flesh', pos=(cat.x, cat.y))
-                    audio.play('scream', pos=(cat.x, cat.y))
-                    if cat.hp <= 0:
-                        unregister_entity(cat)
-                        state.cats.remove(cat)
-                        state.corpses.append((cat.sprite.copy(), cat.x, cat.y, cat.angle))
-                        spawn_blood(cat.x, cat.y, 10)
-                        player.wanted = 5
-                        player.crime_timer = 30
-                        state.wanted_heat = 5 * 100
-                        add_money(player, random.randint(50, 100))
-                    release_bullet(b)
-                    state.bullets.remove(b)
-                    hit_any = True
-                    break
-            if hit_any:
-                continue
-            for c in list(state.cops):
-                if abs(c.x - bx) > 30 or abs(c.y - by) > 30:
-                    continue
-                if br.colliderect(c.rect()):
-                    c.hp -= b[6]
-                    spawn_blood(c.x, c.y, 5)
-                    audio.play('hit_flesh', pos=(c.x, c.y))
-                    audio.play('scream', pos=(c.x, c.y))
-                    if c.hp <= 0:
-                        if c._siren_channel is not None:
-                            audio.stop_loop(c._siren_channel)
-                            c._siren_channel = None
-                        unregister_entity(c)
-                        state.cops.remove(c)
-                        state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
-                        spawn_blood(c.x, c.y, 24)
-                        on_kill(state, c, is_cop=True)
-                    release_bullet(b)
-                    state.bullets.remove(b)
-                    break
+            # Player bullet - check all entities using spatial grid
+            # Query radius of 50 covers all max distances (40 for cars, 30 for others)
+            nearby_entities = query_entities_radius(bx, by, 50)
+            for entity in nearby_entities:
+                if isinstance(entity, Car):
+                    if entity is state.in_car or entity.dead:
+                        continue
+                    if abs(entity.x - bx) > 40 or abs(entity.y - by) > 40:
+                        continue
+                    if br.colliderect(entity.rect()):
+                        entity.take_damage(b[6] * 0.5, world_pos=(b[0], b[1]))
+                        audio.play('hit_metal', volume=0.55, pos=(b[0], b[1]))
+                        state.bullets.remove(b)
+                        break
+                elif isinstance(entity, Ped):
+                    # Handle both cops and regular peds - cops first for priority
+                    if abs(entity.x - bx) > 30 or abs(entity.y - by) > 30:
+                        continue
+                    if not br.colliderect(entity.rect()):
+                        continue
+                    if entity.is_cop:
+                        entity.hp -= b[6]
+                        spawn_blood(entity.x, entity.y, 5)
+                        audio.play('hit_flesh', pos=(entity.x, entity.y))
+                        audio.play('scream', pos=(entity.x, entity.y))
+                        if entity.hp <= 0:
+                            if entity._siren_channel is not None:
+                                audio.stop_loop(entity._siren_channel)
+                                entity._siren_channel = None
+                            unregister_entity(entity)
+                            state.cops.remove(entity)
+                            state.corpses.append((make_corpse(entity), entity.x, entity.y, entity.angle))
+                            spawn_blood(entity.x, entity.y, 24)
+                            on_kill(state, entity, is_cop=True)
+                        release_bullet(b)
+                        state.bullets.remove(b)
+                        break
+                    else:
+                        entity.hp -= b[6]
+                        entity.state = 'flee'
+                        spawn_blood(entity.x, entity.y, 4)
+                        audio.play('hit_flesh', pos=(entity.x, entity.y))
+                        audio.play('scream', pos=(entity.x, entity.y))
+                        if entity.hp <= 0:
+                            unregister_entity(entity)
+                            state.peds.remove(entity)
+                            state.corpses.append((make_corpse(entity), entity.x, entity.y, entity.angle))
+                            spawn_blood(entity.x, entity.y, 20)
+                            add_money(player, random.randint(15, 60))
+                            on_kill(state, entity, is_cop=False)
+                            _spawn_ped_replacement(state, player)
+                        release_bullet(b)
+                        state.bullets.remove(b)
+                        break
+                elif isinstance(entity, Cat):
+                    if abs(entity.x - bx) > 30 or abs(entity.y - by) > 30:
+                        continue
+                    if br.colliderect(entity.rect()):
+                        entity.hp -= b[6]
+                        spawn_blood(entity.x, entity.y, 3)
+                        audio.play('hit_flesh', pos=(entity.x, entity.y))
+                        audio.play('scream', pos=(entity.x, entity.y))
+                        if entity.hp <= 0:
+                            unregister_entity(entity)
+                            state.cats.remove(entity)
+                            state.corpses.append((entity.sprite.copy(), entity.x, entity.y, entity.angle))
+                            spawn_blood(entity.x, entity.y, 10)
+                            player.wanted = 5
+                            player.crime_timer = 30
+                            state.wanted_heat = 5 * 100
+                            add_money(player, random.randint(50, 100))
+                        release_bullet(b)
+                        state.bullets.remove(b)
+                        break
     for c in list(state.cars):
         c.update_fx(dt)
         if c.dead:
@@ -839,25 +879,31 @@ def _update_entities_and_physics(state, dt):
         r[4] -= dt
         hit = r[4] <= 0
         rr = pygame.Rect(r[0] - 5, r[1] - 5, 10, 10)
-        if not hit and any(rr.colliderect(b[0]) for b in state.buildings):
-            hit = True
+        rx, ry = r[0], r[1]
         if not hit:
-            for c in state.cars:
-                if c is not state.in_car and not c.dead and rr.colliderect(c.rect()):
+            # Use spatial grid for building collision
+            nearby_buildings = query_buildings_radius(rx, ry, 50)
+            for bd_rect in nearby_buildings:
+                if rr.colliderect(bd_rect):
                     hit = True
                     break
-            for p in state.peds:
-                if rr.colliderect(p.rect()):
-                    hit = True
-                    break
-            for c in state.cops:
-                if rr.colliderect(c.rect()):
-                    hit = True
-                    break
-            for cat in state.cats:
-                if rr.colliderect(cat.rect()):
-                    hit = True
-                    break
+        if not hit:
+            # Use spatial grid for entity collision - radius 50 covers rocket size + entity sizes
+            nearby_entities = query_entities_radius(rx, ry, 50)
+            for entity in nearby_entities:
+                if isinstance(entity, Car):
+                    if entity is not state.in_car and not entity.dead and rr.colliderect(entity.rect()):
+                        hit = True
+                        break
+                elif isinstance(entity, Ped):
+                    # Both regular peds and cops (which are Ped instances with is_cop=True)
+                    if rr.colliderect(entity.rect()):
+                        hit = True
+                        break
+                elif isinstance(entity, Cat):
+                    if rr.colliderect(entity.rect()):
+                        hit = True
+                        break
         if hit:
             audio.stop_loop(r[5])
             do_explosion(r[0], r[1])

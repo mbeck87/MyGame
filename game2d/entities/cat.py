@@ -226,9 +226,22 @@ class Cat:
         self.meow_timer = random.uniform(5.0, 15.0)
 
         self.last_x, self.last_y = x, y
+        # Rect caching
+        self._cached_rect = None
+        self._cached_rect_x = None
+        self._cached_rect_y = None
 
     def rect(self):
-        return pygame.Rect(self.x - 26, self.y - 18, 52, 36)
+        """Gibt das aktuelle Rect der Katze zurück. Nutzt Caching für Performance."""
+        if (self._cached_rect is not None and 
+            self._cached_rect_x == self.x and 
+            self._cached_rect_y == self.y):
+            return self._cached_rect
+        new_rect = pygame.Rect(self.x - 26, self.y - 18, 52, 36)
+        self._cached_rect = new_rect
+        self._cached_rect_x = self.x
+        self._cached_rect_y = self.y
+        return new_rect
 
     def plan_route(self):
         start_idx = nearest_pedestrian_node(self.x, self.y)
