@@ -370,6 +370,11 @@ class Car:
         self._rotated_sprite_cache = {}
         self._last_rotated_angle = None
         self._last_rotated_sprite = None
+        # Rect Caching für Performance
+        self._cached_rect = None
+        self._cached_rect_x = None
+        self._cached_rect_y = None
+        self._cached_rect_angle = None
         self.accel_rate = self.profile["accel"]
         self.brake_rate = self.profile["brake"]
         self.turn_rate = self.profile["turn"]
@@ -713,7 +718,21 @@ class Car:
         return self.rect_at_angle(x, y, self.angle)
 
     def rect(self):
-        return self.rect_at(self.x, self.y)
+        """Gibt das aktuelle Rect des Autos zurück. Nutzt Caching für Performance."""
+        # Cache prüfen
+        if (self._cached_rect is not None and 
+            self._cached_rect_x == self.x and 
+            self._cached_rect_y == self.y and
+            self._cached_rect_angle == self.angle):
+            return self._cached_rect
+        
+        # Neu berechnen
+        new_rect = self.rect_at(self.x, self.y)
+        self._cached_rect = new_rect
+        self._cached_rect_x = self.x
+        self._cached_rect_y = self.y
+        self._cached_rect_angle = self.angle
+        return new_rect
 
     def look_rect(self, distance=None, width=None):
         distance = self.look_distance if distance is None else distance
@@ -806,21 +825,18 @@ class Car:
             return overlap_x * overlap_y
 
         def total_overlap(rect):
-            # Nur Gebäude in der Nähe prüfen
-            nearby = [building_rect for building_rect, _surf in s.buildings 
-                     if abs(building_rect.centerx - rect.centerx) < 200 
-                     and abs(building_rect.centery - rect.centery) < 200
-                     and rect.colliderect(building_rect)]
-            return sum(overlap_area(rect, br) for br in nearby)
+            # Use spatial grid for building collision
+            from game2d.systems.spatial import query_buildings_radius
+            nearby = query_buildings_radius(rect.centerx, rect.centery, 200)
+            return sum(overlap_area(rect, br) for br in nearby if rect.colliderect(br))
 
         # Maximal 4 Iterationen statt 8 - reicht meist aus
+        from game2d.systems.spatial import query_buildings_radius
         for _ in range(4):
             own = self.rect()
-            # Schnell prüfen: Nur Gebäude in der Nähe
-            nearby_buildings = [building_rect for building_rect, _surf in s.buildings
-                              if abs(building_rect.centerx - own.centerx) < 150
-                              and abs(building_rect.centery - own.centery) < 150
-                              and own.colliderect(building_rect)]
+            # Use spatial grid for building collision
+            nearby_buildings = query_buildings_radius(own.centerx, own.centery, 150)
+            nearby_buildings = [br for br in nearby_buildings if own.colliderect(br)]
             
             if not nearby_buildings:
                 break
@@ -1366,37 +1382,36 @@ class Car:
         return True
 
     def hit_pedestrians(self, speed_mag):
-        """Optimiert: Nutzt räumliche Nähe für schnellere Suche nach Entitäten."""
+        """Optimiert: Nutzt Spatial Grid für schnelle Suche nach Entitäten."""
         if speed_mag < 85 or self.dead:
             return
         s = current()
         dmg = max(18, min(120, int(speed_mag * 0.45)))
         
         # Such-Radius basierend auf Geschwindigkeit und Collider-Größe
-        search_radius_sq = (speed_mag * 0.5 + 60) ** 2
+        search_radius = speed_mag * 0.5 + 60
         
-        if not self.is_cop:
-            for p in list(s.peds):
-                # Schnell prüfen: Ist der Ped in der Nähe?
-                dx = p.x - self.x
-                dy = p.y - self.y
-                if dx * dx + dy * dy > search_radius_sq:
-                    continue
-                self._run_over_ped(p, s.peds, dmg, is_cop=False)
-            
-            for cat in list(s.cats):
-                dx = cat.x - self.x
-                dy = cat.y - self.y
-                if dx * dx + dy * dy > search_radius_sq:
-                    continue
-                self._run_over_cat(cat, s.cats, dmg)
+        # Use spatial grid to get all nearby entities
+        from game2d.systems.spatial import query_entities_radius
+        nearby_entities = query_entities_radius(self.x, self.y, search_radius)
         
-        for c in list(s.cops):
-            dx = c.x - self.x
-            dy = c.y - self.y
-            if dx * dx + dy * dy > search_radius_sq:
+        for entity in nearby_entities:
+            if entity is self:
                 continue
-            self._run_over_ped(c, s.cops, dmg + 12, is_cop=True)
+            # Check if entity is Ped
+            if hasattr(entity, 'hp') and not getattr(entity, 'dead', False):
+                if isinstance(entity, Ped) and entity in s.peds:
+                    if not self.is_cop:
+                        self._run_over_ped(entity, s.peds, dmg, is_cop=False)
+                elif hasattr(entity, 'is_cop') and entity.is_cop and entity in s.cops:
+                    self._run_over_ped(entity, s.cops, dmg + 12, is_cop=True)
+                elif hasattr(entity, 'hp') and not entity.is_cop and entity not in s.peds:
+                    # Cats and other entities
+                    if not self.is_cop:
+                        # Try to handle as cat
+                        from game2d.entities.cat import Cat
+                        if isinstance(entity, Cat) and entity in s.cats:
+                            self._run_over_cat(entity, s.cats, dmg)
         
         self._run_over_player(dmg + 10)
 
@@ -1443,13 +1458,16 @@ class Car:
 
     def _move_with_collision(self, dx, dy, prev_spd, controlled, dt):
         s = current()
+        from game2d.config import BUILDING_COLL_CHECK_DIST
+        from game2d.systems.spatial import query_buildings_radius
+        
         nx, ny = self.x + dx, self.y + dy
         tx = self.rect_at(nx, self.y)
         x_clear = self.cop_rect_clear(tx) if self.is_cop and not controlled else rect_on_road(tx)
         hit_x = False
-        for b_rect, b_surf in s.buildings:
-            if abs(b_rect.centerx - tx.centerx) > BUILDING_COLL_CHECK_DIST or abs(b_rect.centery - tx.centery) > BUILDING_COLL_CHECK_DIST:
-                continue
+        # Use spatial grid for building collision
+        nearby_x = query_buildings_radius(tx.centerx, tx.centery, BUILDING_COLL_CHECK_DIST)
+        for b_rect in nearby_x:
             if tx.colliderect(b_rect):
                 hit_x = True
                 break
@@ -1458,9 +1476,9 @@ class Car:
         ty = self.rect_at(self.x, ny)
         y_clear = self.cop_rect_clear(ty) if self.is_cop and not controlled else rect_on_road(ty)
         hit_y = False
-        for b_rect, b_surf in s.buildings:
-            if abs(b_rect.centerx - ty.centerx) > BUILDING_COLL_CHECK_DIST or abs(b_rect.centery - ty.centery) > BUILDING_COLL_CHECK_DIST:
-                continue
+        # Use spatial grid for building collision
+        nearby_y = query_buildings_radius(ty.centerx, ty.centery, BUILDING_COLL_CHECK_DIST)
+        for b_rect in nearby_y:
             if ty.colliderect(b_rect):
                 hit_y = True
                 break

@@ -80,14 +80,21 @@ def do_explosion(x, y, radius=175, dmg=500):
         else:
             return max(30, int(530 - 500 * ((ratio - 0.2) / 0.8)))
     
+    radius_sq = radius * radius
     for c in list(state.cars):
         if c.dead: continue
-        dist = math.hypot(c.x-x, c.y-y)
-        if dist < radius:
+        dx = c.x - x
+        dy = c.y - y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq < radius_sq:
+            dist = math.sqrt(dist_sq)
             c.take_damage(calc_damage(dist, radius), source_pos=(x, y))
     for p in list(state.peds):
-        dist = math.hypot(p.x-x, p.y-y)
-        if dist < radius:
+        dx = p.x - x
+        dy = p.y - y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq < radius_sq:
+            dist = math.sqrt(dist_sq)
             p.hp -= calc_damage(dist, radius)
             if p.hp <= 0:
                 unregister_entity(p)
@@ -103,18 +110,23 @@ def do_explosion(x, y, radius=175, dmg=500):
                 from game2d.systems.events import emit_entity_spawned
                 min_dist = 500
                 player = state.player
+                min_dist_sq = min_dist * min_dist
                 for _ in range(30):
                     nx, ny = pedestrian_spawn()
-                    dist = math.hypot(nx - player.x, ny - player.y)
-                    if dist >= min_dist:
+                    dx2 = nx - player.x
+                    dy2 = ny - player.y
+                    if dx2 * dx2 + dy2 * dy2 >= min_dist_sq:
                         break
                 ped = Ped(nx, ny)
                 state.peds.append(ped)
                 register_entity(ped)
                 emit_entity_spawned(ped, "ped")
     for cat in list(state.cats):
-        dist = math.hypot(cat.x-x, cat.y-y)
-        if dist < radius:
+        dx = cat.x - x
+        dy = cat.y - y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq < radius_sq:
+            dist = math.sqrt(dist_sq)
             cat.hp -= calc_damage(dist, radius)
             if cat.hp <= 0:
                 unregister_entity(cat)
@@ -129,8 +141,11 @@ def do_explosion(x, y, radius=175, dmg=500):
                 state.wanted_heat = 5 * 100
                 add_money(state.player, random.randint(50, 100))
     for c in list(state.cops):
-        dist = math.hypot(c.x-x, c.y-y)
-        if dist < radius:
+        dx = c.x - x
+        dy = c.y - y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq < radius_sq:
+            dist = math.sqrt(dist_sq)
             c.hp -= calc_damage(dist, radius)
             if c.hp <= 0:
                 if c._siren_channel is not None:
@@ -142,8 +157,11 @@ def do_explosion(x, y, radius=175, dmg=500):
                 spawn_blood(c.x, c.y, 24)
                 add_money(state.player, random.randint(50, 100))
                 on_kill(state, c, is_cop=True)
-    dist = math.hypot(state.player.x-x, state.player.y-y)
-    if dist < radius and not state.game_over:
+    dx = state.player.x - x
+    dy = state.player.y - y
+    dist_sq = dx * dx + dy * dy
+    if dist_sq < radius_sq and not state.game_over:
+        dist = math.sqrt(dist_sq)
         damage = calc_damage(dist, radius)
         if state.player.armor > 0:
             armor_dmg = min(state.player.armor, damage)

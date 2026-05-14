@@ -14,7 +14,6 @@ from game2d.config import (
 from game2d.persistence import name_input_screen
 from game2d.render.hud import draw_hud_text, draw_star
 from game2d.render.menus import draw_hint, draw_overlay_menu, draw_service_markers
-from game2d.render.minimap import draw_minimap
 from game2d.render.sprites import make_ped_frames, make_swim_frames, get_pickup_icon
 from game2d.render.world_bg import draw_world_bg
 from game2d.state import GameState, init as state_init
@@ -256,6 +255,9 @@ def reset_game(state):
     reset_pools()
     # Zurücksetzen des Spatial Grids
     reset_spatial_grid()
+    # Zurücksetzen des Building Grids
+    from game2d.systems.spatial import reset_building_grid
+    reset_building_grid()
     # Zurücksetzen des EventBus
     from game2d.systems.events import EventBus as _EventBus
     _EventBus.reset()
@@ -438,7 +440,9 @@ def _handle_events(state, menu_ctrl, dt):
                             break
             if e.key == pygame.K_f and not state.in_car and not state.game_over:
                 for p in state.peds:
-                    if math.hypot(p.x - player.x, p.y - player.y) < 35:
+                    dx = p.x - player.x
+                    dy = p.y - player.y
+                    if dx * dx + dy * dy < 1225:  # 35^2 = 1225
                         add_money(player, random.randint(15, 50))
                         p.state = 'flee'
                         add_wanted_heat(state, "robbery")
@@ -661,9 +665,10 @@ def _update_entities_and_physics(state, dt):
         br = pygame.Rect(b[0] - 3, b[1] - 3, 6, 6)
         bx, by = b[0], b[1]
         bullet_hit_building = False
-        for bd_rect, bd_surf in state.buildings:
-            if abs(bd_rect.centerx - bx) > 50 or abs(bd_rect.centery - by) > 50:
-                continue
+        # Use spatial grid for optimized building collision
+        from game2d.systems.spatial import query_buildings_radius
+        nearby_buildings = query_buildings_radius(bx, by, 50)
+        for bd_rect in nearby_buildings:
             if br.colliderect(bd_rect):
                 bullet_hit_building = True
                 break
@@ -865,7 +870,9 @@ def _update_entities_and_physics(state, dt):
         if pk[3] > 0:
             pk[3] = max(0.0, pk[3] - dt)
             continue
-        if math.hypot(player.x - pk[0], player.y - pk[1]) < 22:
+        dx = player.x - pk[0]
+        dy = player.y - pk[1]
+        if dx * dx + dy * dy < 484:  # 22^2 = 484
             kind = pk[2]
             if kind == 'hp':
                 player.hp = min(100, player.hp + 30)
@@ -899,7 +906,7 @@ def _update_entities_and_physics(state, dt):
 
 
 @profile
-def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=None, dt=0.0, fps_val=None):
+def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=None, dt=0.0, fps_val=None, minimap_static=None, minimap_dynamic=None):
     player = state.player
     icam = (int(state.cam[0]), int(state.cam[1]))
     draw_world_bg(screen, icam)
@@ -922,11 +929,15 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
             rot = pygame.transform.rotate(cs, -ca)
             r = rot.get_rect(center=(cx - icam[0], cy - icam[1]))
             screen.blit(rot, r)
-    for rect, surf in state.buildings:
-        if surf is None:
-            continue
-        if view.colliderect(rect):
-            screen.blit(surf, (rect.x - icam[0], rect.y - icam[1]))
+    # Visibility-Culling: nur sichtbare Gebäude zeichnen
+    visible_buildings = [
+        (rect, surf) for rect, surf in state.buildings
+        if surf is not None and view.colliderect(rect)
+    ]
+    # Sortieren nach Y-Position für korrektes Overlap-Rendering
+    visible_buildings.sort(key=lambda x: x[0].y)
+    for rect, surf in visible_buildings:
+        screen.blit(surf, (rect.x - icam[0], rect.y - icam[1]))
     draw_service_markers(screen, state, icam, FONT)
     for ws, wx, wy, wa, wd in state.wrecks:
         if view.collidepoint(wx, wy):
@@ -1002,9 +1013,9 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         sy = int(r[1] - icam[1])
         if -20 < sx < W + 20 and -20 < sy < H + 20:
             ang_r = math.degrees(math.atan2(r[2], -r[3]))
-            rsurf = pygame.Surface((18, 8), pygame.SRCALPHA)
-            pygame.draw.ellipse(rsurf, (255, 140, 30), (0, 0, 18, 8))
-            pygame.draw.ellipse(rsurf, (255, 240, 100), (0, 1, 10, 6))
+            # Use cached rocket sprite
+            from game2d.render.sprites import get_rocket_sprite
+            rsurf = get_rocket_sprite()
             rot = pygame.transform.rotate(rsurf, -ang_r)
             screen.blit(rot, rot.get_rect(center=(sx, sy)))
     has_particles = (len(state.fire_particles) + len(state.smoke_particles) + len(state.explosions)) > 0
@@ -1028,9 +1039,8 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
                 alpha = int(200 * t)
                 r = max(1, int(sp_[6] * (1.4 - 0.4 * t)))
                 if r > 0:
-                    smoke_srf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-                    pygame.draw.circle(smoke_srf, (gv, gv, gv, alpha), (r, r), r)
-                    particle_batch.blit(smoke_srf, (sx - r, sy - r))
+                    # Draw directly on particle_batch instead of creating temp surface
+                    pygame.draw.circle(particle_batch, (gv, gv, gv, alpha), (sx, sy), r)
         for ex in state.explosions:
             sx = int(ex[0] - icam[0])
             sy = int(ex[1] - icam[1])
@@ -1039,10 +1049,9 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
                 t = ex[2] / ex[3]
                 r = int(ex[4] * (0.3 + 0.7 * t))
                 a = int(220 * (1 - t))
-                exp_srf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-                pygame.draw.circle(exp_srf, (255, 200, 80, a), (r, r), r)
-                pygame.draw.circle(exp_srf, (255, 240, 180, min(255, a + 30)), (r, r), int(r * 0.6))
-                particle_batch.blit(exp_srf, (sx - r, sy - r))
+                # Draw directly on particle_batch instead of creating temp surface
+                pygame.draw.circle(particle_batch, (255, 200, 80, a), (sx, sy), r)
+                pygame.draw.circle(particle_batch, (255, 240, 180, min(255, a + 30)), (sx, sy), int(r * 0.6))
         screen.blit(particle_batch, (0, 0))
     service = nearby_service(state)
     hud_panel = pygame.Surface((246, 236), pygame.SRCALPHA)
@@ -1058,7 +1067,8 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         pygame.draw.rect(screen, hp_col, (bar_x, hp_y, fill_w, 22), border_radius=4)
     pygame.draw.rect(screen, (100, 100, 100), (bar_x, hp_y, bar_w, 22), 1, border_radius=4)
     draw_hud_text(screen, FONT, "HP", (bar_x + 6, hp_y + 2), (255, 255, 255))
-    hp_surf = FONT.render(str(int(player.hp)), 1, (255, 255, 255))
+    from game2d.render.hud import cached_render
+    hp_surf = cached_render(FONT, str(int(player.hp)), (255, 255, 255))
     screen.blit(hp_surf, (bar_x + bar_w - hp_surf.get_width() - 6, hp_y + 2))
     arm_y = hp_y + 28
     pygame.draw.rect(screen, (14, 14, 30), (bar_x, arm_y, bar_w, 22), border_radius=4)
@@ -1067,7 +1077,7 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         pygame.draw.rect(screen, (130, 155, 215), (bar_x, arm_y, arm_fill, 22), border_radius=4)
     pygame.draw.rect(screen, (90, 95, 115), (bar_x, arm_y, bar_w, 22), 1, border_radius=4)
     draw_hud_text(screen, FONT, "ARMOR", (bar_x + 6, arm_y + 2), (195, 210, 255))
-    arm_surf = FONT.render(str(int(player.armor)), 1, (195, 210, 255))
+    arm_surf = cached_render(FONT, str(int(player.armor)), (195, 210, 255))
     screen.blit(arm_surf, (bar_x + bar_w - arm_surf.get_width() - 6, arm_y + 2))
     money_y = arm_y + 25
     draw_hud_text(screen, FONT, f"$ {player.money:,}", (bar_x + 6, money_y), (68, 228, 105))
@@ -1093,12 +1103,14 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         draw_hud_text(screen, FONT, label, (10, wy), col)
     for i in range(player.wanted):
         draw_star(screen, W // 2 - 36 + i * 20, 23, 9, (255, 200, 40))
-    screen.blit(FONT.render(
+    controls_surf = cached_render(FONT,
         "WASD | Maus/LMB | E Auto | F Aktion/Shop/Garage | SPACE Handbremse | "
         "P Pause | 1-6 Waffe | F12 Profiling",
-        1, (230, 230, 230)
-    ), (10, H - 26))
-    draw_minimap(screen, state, FONT)
+        (230, 230, 230))
+    screen.blit(controls_surf, (10, H - 26))
+    # Minimap mit Cache-Panels zeichnen (optimiert: statisch einmal, dynamisch alle 3 Frames)
+    from game2d.render.minimap import draw_minimap
+    draw_minimap(screen, state, FONT, minimap_static, minimap_dynamic)
 
     # FPS und Profiling-Infos anzeigen (fps_val wird aus Hauptloop übergeben)
     if profiler_obj and profiler_obj.enabled:
@@ -1277,6 +1289,10 @@ def main():
     FONT = pygame.font.SysFont("arial", 20, bold=True)
     BIG = pygame.font.SysFont("arial", 64, bold=True)
     MED = pygame.font.SysFont("arial", 32, bold=True)
+    # Minimap-Optimierung: Separate Surfaces für statische und dynamische Elemente
+    minimap_static = None  # Wird einmalig erstellt (Straßen, Gebäude, etc.)
+    minimap_dynamic = None  # Wird alle 3 Frames aktualisiert (Cars, Player, etc.)
+    frame_counter = 0  # Counter für Minimap-Update-Rhythmus
 
     player_name = name_input_screen(screen, W, H, BIG, MED, FONT)
 
@@ -1286,6 +1302,9 @@ def main():
     provider.install(state)
     build_world(state)
     init_services(state)
+    # Initialize building spatial grid for optimized collision detection
+    from game2d.systems.spatial import init_and_populate_building_grid
+    init_and_populate_building_grid(state.buildings)
     menu_ctrl = MenuController(W, H, settings)
 
     # EventBus Handler registrieren
@@ -1294,8 +1313,22 @@ def main():
     _spawn_traffic_and_player(state)
     while state.running:
         dt = clock.tick(60) / 1000
+        frame_counter += 1
         # FPS einmal pro Frame berechnen (dieselbe Variable für beide Anzeigen)
         fps_val = int(1.0 / max(dt, 0.0001))
+        
+        # Minimap: Statisches Surface einmalig erstellen (nachdem die Welt gebaut ist)
+        if minimap_static is None:
+            from game2d.render.minimap import create_minimap_static
+            minimap_static = create_minimap_static(state)
+        
+        # Minimap: Dynamisches Surface alle 3 Frames aktualisieren
+        if frame_counter % 3 == 0:
+            from game2d.render.minimap import update_minimap_dynamic
+            if minimap_dynamic is None:
+                minimap_dynamic = pygame.Surface((216, 216), pygame.SRCALPHA)
+            minimap_dynamic.blit(minimap_static, (0, 0))
+            update_minimap_dynamic(minimap_dynamic, state)
         
         # Profiling: Nur aktiv wenn enabled - Entity Counts nur alle 10 Frames berechnen
         entity_counts = None
@@ -1333,9 +1366,9 @@ def main():
         # Render - mit Profiling nur wenn enabled, FPS immer gleich
         if profiler.enabled:
             with timed("render"):
-                _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val)
+                _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val, minimap_static, minimap_dynamic)
         else:
-            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val)
+            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val, minimap_static, minimap_dynamic)
 
         # Profiling: Frame end markieren
         if profiler.enabled and entity_counts is not None:

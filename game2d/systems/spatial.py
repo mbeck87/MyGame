@@ -342,3 +342,121 @@ def query_entities_rect(rect) -> List[Any]:
         List of entities in overlapping cells
     """
     return get_spatial_grid().query_rect(rect)
+
+
+# =============================================================================
+# Building Grid Functions
+# =============================================================================
+
+
+class SpatialRect:
+    """Wrapper for pygame.Rect that allows spatial grid attributes.
+    
+    pygame.Rect objects use __slots__ and cannot have arbitrary attributes set.
+    This wrapper allows the spatial grid to store metadata on the rect.
+    """
+    __slots__ = ('rect', '_spatial_x', '_spatial_y', '_spatial_radius', '_spatial_id')
+    
+    def __init__(self, rect):
+        self.rect = rect
+        self._spatial_x = None
+        self._spatial_y = None
+        self._spatial_radius = None
+        self._spatial_id = None
+    
+    def __getattr__(self, name):
+        """Forward attribute access to the underlying rect."""
+        return getattr(self.rect, name)
+
+
+# Global building grid for static collision detection
+_building_grid: Optional[SpatialGrid] = None
+
+
+def init_building_grid():
+    """Initialize the global building grid for static collision detection."""
+    global _building_grid
+    if _building_grid is None:
+        from game2d.config import WORLD_W, WORLD_H
+        _building_grid = SpatialGrid(world_w=WORLD_W, world_h=WORLD_H, cell_size=300)
+    return _building_grid
+
+
+def get_building_grid() -> Optional[SpatialGrid]:
+    """Get the global building grid instance."""
+    return _building_grid
+
+
+def register_building(rect, x=None, y=None, radius=None) -> int:
+    """Register a building with the building spatial grid.
+    
+    Args:
+        rect: Building rectangle (pygame.Rect)
+        x: Optional X coordinate (uses rect.centerx if not provided)
+        y: Optional Y coordinate (uses rect.centery if not provided)
+        radius: Optional radius (uses max(rect.w, rect.h)/2 if not provided)
+        
+    Returns:
+        Spatial grid ID for the building
+    """
+    grid = init_building_grid()
+    if x is None:
+        x = rect.centerx
+    if y is None:
+        y = rect.centery
+    if radius is None:
+        radius = max(rect.w, rect.h) / 2
+    return grid.add(SpatialRect(rect), x, y, radius)
+
+
+def query_buildings_radius(x: float, y: float, radius: float) -> List[Any]:
+    """Query all buildings within a radius.
+    
+    Args:
+        x: Center X coordinate
+        y: Center Y coordinate
+        radius: Search radius
+        
+    Returns:
+        List of building rects within the radius
+    """
+    grid = get_building_grid()
+    if grid is None:
+        return []
+    return grid.query_radius(x, y, radius)
+
+
+def query_buildings_rect(rect) -> List[Any]:
+    """Query all buildings that might intersect with a rectangle.
+    
+    Args:
+        rect: pygame.Rect or similar with x, y, w, h attributes
+        
+    Returns:
+        List of building rects in overlapping cells
+    """
+    grid = get_building_grid()
+    if grid is None:
+        return []
+    return grid.query_rect(rect)
+
+
+def reset_building_grid() -> None:
+    """Reset/clear the building spatial grid."""
+    global _building_grid
+    if _building_grid is not None:
+        _building_grid.clear()
+    _building_grid = None
+
+
+def init_and_populate_building_grid(buildings) -> None:
+    """Initialize building grid and populate with all buildings.
+    
+    Args:
+        buildings: List of (rect, surf) tuples
+    """
+    reset_building_grid()
+    grid = init_building_grid()
+    for rect, surf in buildings:
+        if surf is not None:
+            register_building(rect)

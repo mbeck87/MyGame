@@ -29,6 +29,19 @@ _cop_car_sprite_cache: dict = {}
 # Cache für Gebäude: (w_cells, h_cells, seed, kind) -> Surface
 _building_cache: dict = {}
 
+# Cache für Rocket-Sprite
+_rocket_sprite: pygame.Surface = None
+
+
+def get_rocket_sprite() -> pygame.Surface:
+    """Gibt das gecachte Rocket-Sprite zurueck oder erstellt es neu."""
+    global _rocket_sprite
+    if _rocket_sprite is None:
+        _rocket_sprite = pygame.Surface((18, 8), pygame.SRCALPHA)
+        pygame.draw.ellipse(_rocket_sprite, (255, 140, 30), (0, 0, 18, 8))
+        pygame.draw.ellipse(_rocket_sprite, (255, 240, 100), (0, 1, 10, 6))
+    return _rocket_sprite
+
 
 def _shade(col, delta):
     return tuple(max(0, min(255, c + delta)) for c in col)

@@ -46,19 +46,21 @@ def _lightsaber_swing() -> None:
         if car.dead or car is s.in_car:
             continue
         dx, dy = car.x - p.x, car.y - p.y
-        dist = math.hypot(dx, dy)
-        if dist <= swing_range + 12 and angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
+        dist_sq = dx * dx + dy * dy
+        swing_range_check = (swing_range + 12) ** 2
+        if dist_sq <= swing_range_check and angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
             car.take_damage(WPN_DMG[LIGHTSABER_IDX], source_pos=(p.x, p.y))
             audio.play('hit_metal', volume=0.7, pos=(car.x, car.y))
             add_wanted_heat(s, "assault")
 
+    swing_range_sq = swing_range * swing_range
     for ped, group, reward in (
         *((ped, s.peds, (15, 45)) for ped in list(s.peds)),
         *((cop, s.cops, (50, 90)) for cop in list(s.cops)),
     ):
         dx, dy = ped.x - p.x, ped.y - p.y
-        dist = math.hypot(dx, dy)
-        if dist > swing_range or angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) > swing_arc * 0.5:
+        dist_sq = dx * dx + dy * dy
+        if dist_sq > swing_range_sq or angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) > swing_arc * 0.5:
             continue
         from game2d.systems.effects import make_corpse, spawn_blood
         from game2d.systems.services import add_money
@@ -80,10 +82,12 @@ def _lightsaber_swing() -> None:
                 from game2d.systems.spatial import register_entity
                 from game2d.systems.events import emit_entity_spawned
                 min_dist = 500
+                min_dist_sq = min_dist * min_dist
                 for _ in range(30):
                     nx, ny = pedestrian_spawn()
-                    dist = math.hypot(nx - p.x, ny - p.y)
-                    if dist >= min_dist:
+                    dx = nx - p.x
+                    dy = ny - p.y
+                    if dx * dx + dy * dy >= min_dist_sq:
                         break
                 new_ped = Ped(nx, ny)
                 s.peds.append(new_ped)

@@ -352,7 +352,27 @@ def _draw_ducks(surf, cam):
     ducks = []
     hens = {}
     duck_entries = []
+    # View boundaries für schnellen Visibility-Check
+    view_left = cam[0] - 50
+    view_right = cam[0] + W + 50
+    view_top = cam[1] - 50
+    view_bottom = cam[1] + H + 50
+    
     for kind, family, follow_slot, base_x, base_y, rx, ry, speed, phase in s.park_ducks:
+        # Schnelle Visibility-Prüfung VOR teuren Sin/Cos-Berechnungen
+        # Bounding Box der Duck (max Position = base + rx/ry)
+        duck_min_x = base_x - abs(rx)
+        duck_max_x = base_x + abs(rx)
+        duck_min_y = base_y - abs(ry)
+        duck_max_y = base_y + abs(ry)
+        
+        # Wenn Bounding Box nicht mit View überlappt: überspringen
+        if duck_max_x < view_left or duck_min_x > view_right:
+            continue
+        if duck_max_y < view_top or duck_min_y > view_bottom:
+            continue
+        
+        # Nur jetzt genaue Position berechnen (teuer!)
         t = s.traffic_time * speed + phase
         x = base_x + math.cos(t) * rx
         y = base_y + math.sin(t * 0.92) * ry

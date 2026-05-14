@@ -153,33 +153,20 @@ class Ped:
         return pygame.Rect(self.x-10, self.y-10, 20, 20)
 
     def try_move(self, nx, ny):
-        """Optimiert: Nutzt räumliche Nähe für schnellere Obstacle-Checks."""
-        s = current()
-        obstacles = s.AI_OBSTACLES
+        """Optimiert: Nutzt Spatial Grid für schnellere Obstacle-Checks."""
+        from game2d.systems.spatial import query_buildings_rect
         
-        # X-Move check - nur nahe Gebäude prüfen
+        # X-Move check - nutze Spatial Grid
         rx = pygame.Rect(nx-10, self.y-10, 20, 20)
-        rx_center_x, rx_center_y = rx.centerx, rx.centery
-        x_blocked = False
-        for b_rect, b_surf in obstacles:
-            if abs(b_rect.centerx - rx_center_x) > 60 or abs(b_rect.centery - rx_center_y) > 60:
-                continue
-            if rx.colliderect(b_rect):
-                x_blocked = True
-                break
+        nearby_buildings = query_buildings_rect(rx)
+        x_blocked = any(rx.colliderect(b_rect) for b_rect in nearby_buildings)
         if not x_blocked:
             self.x = nx
         
-        # Y-Move check - nur nahe Gebäude prüfen
+        # Y-Move check - nutze Spatial Grid
         ry = pygame.Rect(self.x-10, ny-10, 20, 20)
-        ry_center_x, ry_center_y = ry.centerx, ry.centery
-        y_blocked = False
-        for b_rect, b_surf in obstacles:
-            if abs(b_rect.centerx - ry_center_x) > 60 or abs(b_rect.centery - ry_center_y) > 60:
-                continue
-            if ry.colliderect(b_rect):
-                y_blocked = True
-                break
+        nearby_buildings = query_buildings_rect(ry)
+        y_blocked = any(ry.colliderect(b_rect) for b_rect in nearby_buildings)
         if not y_blocked:
             self.y = ny
 
