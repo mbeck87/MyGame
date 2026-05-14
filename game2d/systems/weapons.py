@@ -1,18 +1,19 @@
 """Waffenlogik: Schießen und Maus-Zielwinkel."""
 import math
 import random
+from typing import Optional, Tuple
 import pygame
 
 from game2d.config import WPN_RATE, WPN_DMG, WPN_PEL, WPN_SPRD
-from game2d.state import current
+from game2d.state import current, GameState
 from game2d.systems import audio
-from game2d.systems.services import add_wanted_heat, on_kill
+from game2d.systems.utils import angle_diff
 
 
-LIGHTSABER_IDX = 0
+LIGHTSABER_IDX: int = 0
 
 
-_SHOT_SOUND = {
+_SHOT_SOUND: dict[int, str] = {
     1: 'shoot_pistol',
     2: 'shoot_smg',
     3: 'shoot_shotgun',
@@ -20,7 +21,7 @@ _SHOT_SOUND = {
 }
 
 
-def aim_to_mouse():
+def aim_to_mouse() -> float:
     """Maus → Spielwelt-Winkel (Grad). Spieler-zentriert."""
     s = current()
     mx, my = pygame.mouse.get_pos()
@@ -29,11 +30,8 @@ def aim_to_mouse():
     return math.degrees(math.atan2(mx - cx, -(my - cy)))
 
 
-def _angle_diff(a, b):
-    return abs(((a - b + 180) % 360) - 180)
-
-
-def _lightsaber_swing():
+def _lightsaber_swing() -> None:
+    from game2d.systems.services import add_wanted_heat, on_kill
     s = current()
     if s.in_car:
         return
@@ -48,7 +46,7 @@ def _lightsaber_swing():
             continue
         dx, dy = car.x - p.x, car.y - p.y
         dist = math.hypot(dx, dy)
-        if dist <= swing_range + 12 and _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
+        if dist <= swing_range + 12 and angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) <= swing_arc * 0.5:
             car.take_damage(WPN_DMG[LIGHTSABER_IDX], source_pos=(p.x, p.y))
             audio.play('hit_metal', volume=0.7, pos=(car.x, car.y))
             add_wanted_heat(s, "assault")
@@ -59,7 +57,7 @@ def _lightsaber_swing():
     ):
         dx, dy = ped.x - p.x, ped.y - p.y
         dist = math.hypot(dx, dy)
-        if dist > swing_range or _angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) > swing_arc * 0.5:
+        if dist > swing_range or angle_diff(math.degrees(math.atan2(dx, -dy)), p.aim_angle) > swing_arc * 0.5:
             continue
         from game2d.systems.effects import make_corpse, spawn_blood
         from game2d.systems.services import add_money
@@ -76,7 +74,7 @@ def _lightsaber_swing():
             on_kill(s, ped, is_cop=ped.is_cop)
 
 
-def fire():
+def fire() -> None:
     """Aktuelle Waffe abfeuern (state.weapon). Setzt state.fire_cd."""
     s = current()
     weapon = s.weapon

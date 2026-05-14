@@ -6,6 +6,8 @@ Defaults aufgefüllt. Korrupte/fehlende Datei → Defaults.
 import json
 import os
 
+from game2d.systems.validation import validate_settings, ValidationError
+
 
 SETTINGS_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -30,16 +32,26 @@ def parse_resolution(value):
 
 
 def load():
-    """Settings aus Datei lesen und mit Defaults mergen."""
+    """Settings aus Datei lesen und mit Defaults mergen.
+    
+    Führt JSON-Schema-Validierung durch und korrigiert ungültige Werte.
+    """
     out = dict(DEFAULTS)
     try:
         with open(SETTINGS_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        for k, v in data.items():
+        # Validierung durchführen und Defaults anwenden
+        validated, errors = validate_settings(data)
+        for k, v in validated.items():
             if k in DEFAULTS:
                 out[k] = v
+        # Logge Validierungsfehler (optional: könnte geloggt werden)
+        if errors:
+            pass  # Fehlermeldungen könnten hier geloggt werden
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         pass
+    
+    # Fallback: manuelle Validierung wenn etwas schief ging
     out['sfx_volume'] = max(0.0, min(1.0, float(out['sfx_volume'])))
     if out['resolution'] not in RESOLUTIONS:
         out['resolution'] = DEFAULTS['resolution']
@@ -47,11 +59,17 @@ def load():
 
 
 def save(settings):
-    """Settings atomisch nach SETTINGS_PATH schreiben."""
+    """Settings atomisch nach SETTINGS_PATH schreiben.
+    
+    Validiert die Settings vor dem Speichern.
+    """
+    # Validierung vor dem Speichern
+    validated, errors = validate_settings(settings)
+    
     tmp = SETTINGS_PATH + '.tmp'
     try:
         with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(settings, f, indent=2)
+            json.dump(validated, f, indent=2)
         os.replace(tmp, SETTINGS_PATH)
     except OSError:
         pass

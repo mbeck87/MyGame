@@ -6,7 +6,6 @@ import pygame
 from game2d.state import current
 from game2d.persistence import save_score
 from game2d.systems import audio
-from game2d.systems.services import add_money, add_wanted_heat, on_kill
 
 
 def make_corpse(ped):
@@ -61,6 +60,7 @@ def trigger_game_over():
 
 
 def do_explosion(x, y, radius=175, dmg=500):
+    from game2d.systems.services import add_money, add_wanted_heat, on_kill
     state = current()
     state.explosions.append([x, y, 0, 0.5, radius])
     audio.play('explosion', pos=(x, y))
@@ -108,6 +108,9 @@ def do_explosion(x, y, radius=175, dmg=500):
         if dist < radius:
             c.hp -= calc_damage(dist, radius)
             if c.hp <= 0:
+                if c._siren_channel is not None:
+                    audio.stop_loop(c._siren_channel)
+                    c._siren_channel = None
                 state.cops.remove(c)
                 state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                 spawn_blood(c.x, c.y, 24)

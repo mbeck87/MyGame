@@ -44,6 +44,7 @@ from game2d.systems.services import (
 )
 from game2d.systems.weapons import fire, aim_to_mouse
 from game2d.systems import audio
+from game2d.systems.pooling import init_pools, reset_pools
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
 
@@ -200,6 +201,8 @@ def _spawn_traffic_and_player(state):
 
 
 def reset_game(state):
+    # Zurücksetzen der Object Pools
+    reset_pools()
     # Stop alle Loop-Sounds von allen Cars
     for car in list(state.cops) + list(state.cars):
         for attr in ['_siren_channel', '_engine_channel', '_squeal_channel']:
@@ -232,6 +235,7 @@ def reset_game(state):
     state.last_wanted_level = 0
     state.roadblock_wanted_level = 0
     state.roadblocks_cleared_on_drop = False
+    state.traffic_time = 0.0
     state.duck_easter_timer = 0.0
     state.duck_easter_done = False
     state.duck_easter_duck = None
@@ -656,6 +660,9 @@ def _update_entities_and_physics(state, dt):
                     audio.play('hit_flesh', pos=(c.x, c.y))
                     audio.play('scream', pos=(c.x, c.y))
                     if c.hp <= 0:
+                        if c._siren_channel is not None:
+                            audio.stop_loop(c._siren_channel)
+                            c._siren_channel = None
                         state.cops.remove(c)
                         state.corpses.append((make_corpse(c), c.x, c.y, c.angle))
                         spawn_blood(c.x, c.y, 24)
@@ -665,6 +672,9 @@ def _update_entities_and_physics(state, dt):
     for c in list(state.cars):
         c.update_fx(dt)
         if c.dead:
+            if c._siren_channel is not None:
+                audio.stop_loop(c._siren_channel)
+                c._siren_channel = None
             state.cars.remove(c)
             if not c.is_cop:
                 kind = random_car_kind()
@@ -1015,6 +1025,8 @@ def main():
     audio.init()
     settings = settings_mod.load()
     audio.MASTER_VOL = settings['sfx_volume']
+    # Initialisiere Object Pools für Performance-Optimierung
+    init_pools()
     screen = pygame.display.set_mode((W, H))
     pygame.display.set_caption("Mini GTA 2D")
     pygame.mouse.set_visible(False)

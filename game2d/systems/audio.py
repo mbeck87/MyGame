@@ -33,8 +33,10 @@ import io as _io
 import math
 import os
 import random
+from typing import Optional, Tuple
 import wave as _wave
 import pygame
+import pygame.mixer
 
 from game2d.state import current
 
@@ -47,19 +49,19 @@ MAX_HEARING_DIST = 1400.0
 # (game2d/settings.py + ui/menu.py) zur Laufzeit überschrieben.
 MASTER_VOL = 0.5
 
-_sounds = {}        # str -> list[pygame.mixer.Sound]
-_initialized = False
+_sounds: dict[str, list[pygame.mixer.Sound]] = {}        # str -> list[pygame.mixer.Sound]
+_initialized: bool = False
 
 # Motor: 4 RPM-Bänder (Leerlauf → Vollgas).
 # Dateien: engine_band_0.wav (Idle) … engine_band_3.wav (Vollgas), CC0 von
 # OpenGameArt (https://opengameart.org/content/racing-car-engine-sound-loops).
-_ENGINE_SOUNDS  = [None, None, None, None]
-_ENGINE_CHANS   = [None, None, None, None]
-_engine_rpm     = 0.0   # 0..1
-_engine_last_tick = 0   # ms
+_ENGINE_SOUNDS: list[Optional[pygame.mixer.Sound]] = [None, None, None, None]
+_ENGINE_CHANS: list[Optional[pygame.mixer.Channel]] = [None, None, None, None]
+_engine_rpm: float = 0.0   # 0..1
+_engine_last_tick: int = 0   # ms
 
 
-def init():
+def init() -> None:
     """Mixer hochfahren und alle SFX in ``_sounds`` einlesen."""
     global _initialized
     if _initialized:
@@ -95,7 +97,7 @@ def init():
     _initialized = True
 
 
-def _biquad_bp(freq, Q, sr):
+def _biquad_bp(freq: float, Q: float, sr: int) -> Tuple[float, float, float, float]:
     """Biquad-Bandpass-Koeffizienten (b0, b2, a1, a2) – normalisiert auf a0=1."""
     w0 = math.tau * freq / sr
     alpha = math.sin(w0) / (2.0 * Q)
@@ -104,7 +106,7 @@ def _biquad_bp(freq, Q, sr):
             -2.0 * math.cos(w0) / a0, (1.0 - alpha) / a0)
 
 
-def _make_squeal_sound():
+def _make_squeal_sound() -> Optional[pygame.mixer.Sound]:
     """Reifenquietschen: weißes Rauschen durch Resonanzfilter.
 
     Echtes Reifenquietschen ist Reibungsrauschen, das durch die
@@ -155,7 +157,7 @@ def _make_squeal_sound():
         return None
 
 
-def _volume_for(pos, base, max_dist=None):
+def _volume_for(pos: Optional[Tuple[float, float]], base: float, max_dist: Optional[float] = None) -> float:
     """Distanz-Falloff zum Spieler. ``pos=None`` → keine Abschwächung.
 
     ``max_dist`` überschreibt den globalen Hörradius pro Aufruf — z.B.
@@ -177,7 +179,7 @@ def _volume_for(pos, base, max_dist=None):
     return max(0.0, min(1.0, base * falloff))
 
 
-def play(category, volume=1.0, pos=None, max_dist=None):
+def play(category: str, volume: float = 1.0, pos: Optional[Tuple[float, float]] = None, max_dist: Optional[float] = None) -> None:
     """One-shot abspielen.
 
     Parameter:
@@ -205,7 +207,7 @@ def play(category, volume=1.0, pos=None, max_dist=None):
     ch.set_volume(vol)
 
 
-def start_loop(category, pos=None, volume=1.0, max_dist=None):
+def start_loop(category: str, pos: Optional[Tuple[float, float]] = None, volume: float = 1.0, max_dist: Optional[float] = None) -> Optional[pygame.mixer.Channel]:
     """Sound als Loop starten und ``Channel`` zurückgeben."""
     if not _initialized:
         return None
@@ -222,7 +224,7 @@ def start_loop(category, pos=None, volume=1.0, max_dist=None):
     return ch
 
 
-def update_loop(channel, pos=None, volume=1.0, max_dist=None):
+def update_loop(channel: Optional[pygame.mixer.Channel], pos: Optional[Tuple[float, float]] = None, volume: float = 1.0, max_dist: Optional[float] = None) -> None:
     """Lautstärke eines laufenden Loops aktualisieren."""
     if channel is None or not _initialized:
         return
@@ -230,7 +232,7 @@ def update_loop(channel, pos=None, volume=1.0, max_dist=None):
     channel.set_volume(vol)
 
 
-def stop_loop(channel):
+def stop_loop(channel: Optional[pygame.mixer.Channel]) -> None:
     """Loop-Channel sauber beenden."""
     if channel is None:
         return
@@ -240,7 +242,7 @@ def stop_loop(channel):
         pass
 
 
-def set_engine(active, throttle=0.0, speed_norm=0.0):
+def set_engine(active: bool, throttle: float = 0.0, speed_norm: float = 0.0) -> None:
     """Auto-Motor steuern (4-Band-Crossfade mit Tonhöhenänderung).
 
     Jedes Band hat eine eigene Grundfrequenz; durch den Crossfade entsteht
