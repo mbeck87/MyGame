@@ -96,6 +96,22 @@ def do_explosion(x, y, radius=175, dmg=500):
                 spawn_blood(p.x, p.y, 20)
                 add_money(state.player, random.randint(20, 55))
                 on_kill(state, p, is_cop=False)
+                # Nachspawnen eines Ersatz-Passanten
+                from game2d.entities.ped import Ped
+                from game2d.world.spawning import pedestrian_spawn
+                from game2d.systems.spatial import register_entity
+                from game2d.systems.events import emit_entity_spawned
+                min_dist = 500
+                player = state.player
+                for _ in range(30):
+                    nx, ny = pedestrian_spawn()
+                    dist = math.hypot(nx - player.x, ny - player.y)
+                    if dist >= min_dist:
+                        break
+                ped = Ped(nx, ny)
+                state.peds.append(ped)
+                register_entity(ped)
+                emit_entity_spawned(ped, "ped")
     for cat in list(state.cats):
         dist = math.hypot(cat.x-x, cat.y-y)
         if dist < radius:

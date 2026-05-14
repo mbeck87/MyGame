@@ -539,6 +539,21 @@ class Car:
                     s.peds.remove(p)
                     s.corpses.append((make_corpse(p), p.x, p.y, p.angle))
                     spawn_blood(p.x, p.y, 18)
+                    # Nachspawnen eines Ersatz-Passanten
+                    from game2d.entities.ped import Ped
+                    from game2d.world.spawning import pedestrian_spawn
+                    from game2d.systems.spatial import register_entity
+                    from game2d.systems.events import emit_entity_spawned
+                    min_dist = 500
+                    for _ in range(30):
+                        nx, ny = pedestrian_spawn()
+                        dist = math.hypot(nx - s.player.x, ny - s.player.y)
+                        if dist >= min_dist:
+                            break
+                    new_ped = Ped(nx, ny)
+                    s.peds.append(new_ped)
+                    register_entity(new_ped)
+                    emit_entity_spawned(new_ped, "ped")
         for c in list(s.cops):
             dist = math.hypot(c.x-self.x, c.y-self.y)
             if dist < R:
@@ -1283,6 +1298,22 @@ class Car:
                 on_kill(s, ped, is_cop=is_cop)
                 if not is_cop:
                     s.player.money += random.randint(10, 35)
+            # Nachspawnen wenn es ein normaler Passant war
+            if group is s.peds:
+                from game2d.entities.ped import Ped as _Ped
+                from game2d.world.spawning import pedestrian_spawn
+                from game2d.systems.spatial import register_entity
+                from game2d.systems.events import emit_entity_spawned
+                min_dist = 500
+                for _ in range(30):
+                    nx, ny = pedestrian_spawn()
+                    dist = math.hypot(nx - s.player.x, ny - s.player.y)
+                    if dist >= min_dist:
+                        break
+                new_ped = _Ped(nx, ny)
+                s.peds.append(new_ped)
+                register_entity(new_ped)
+                emit_entity_spawned(new_ped, "ped")
         return True
 
     def _run_over_cat(self, cat, group, damage):

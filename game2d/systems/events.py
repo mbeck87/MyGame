@@ -312,9 +312,9 @@ class EventBus:
                 try:
                     handler(event)
                 except Exception as e:
-                    import logging as std_logging
-                    std_logging.getLogger("game2d.events").exception(
-                        f"Error in wildcard handler for {event.event_type}: {e}"
+                    from game2d.systems.logging import get_logger
+                    get_logger("events").exception(
+                        f"Error in wildcard handler for {event.event_type}: {e}", e
                     )
                 if once:
                     self.unsubscribe_wildcard(handler)
@@ -325,9 +325,9 @@ class EventBus:
                     try:
                         handler(event)
                     except Exception as e:
-                        import logging as std_logging
-                        std_logging.getLogger("game2d.events").exception(
-                            f"Error in handler for {event.event_type}: {e}"
+                        from game2d.systems.logging import get_logger
+                        get_logger("events").exception(
+                            f"Error in handler for {event.event_type}: {e}", e
                         )
                     if once:
                         self.unsubscribe(event.event_type, handler)

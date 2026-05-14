@@ -61,6 +61,8 @@ from game2d.systems.events import (
 )
 from game2d.systems.profiling import profiler, timed, profile
 from game2d.systems.di import provider
+from game2d.systems.logging import get_logger
+logger = get_logger('main')
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
 
@@ -138,7 +140,7 @@ def _update_duck_easter(state, dt, moved):
 def _spawn_traffic_and_player(state):
     # Reduzierte Start-Anzahl für bessere Performance
     NUM_START_CARS = 50
-    NUM_START_PEDS = 40
+    NUM_START_PEDS = 100
     NUM_AMUSEMENT_PEDS = 20
 
     for _ in range(NUM_START_CARS):
@@ -235,6 +237,20 @@ def _spawn_traffic_and_player(state):
         emit_entity_spawned(ped, "ped")
 
 
+def _spawn_ped_replacement(state, player):
+    """Spawn einen Ersatz-Passanten mit Mindestabstand zum Spieler."""
+    min_dist = 500
+    for _ in range(30):
+        nx, ny = pedestrian_spawn()
+        dist = math.hypot(nx - player.x, ny - player.y)
+        if dist >= min_dist:
+            break
+    ped = Ped(nx, ny)
+    state.peds.append(ped)
+    register_entity(ped)
+    emit_entity_spawned(ped, "ped")
+
+
 def reset_game(state):
     # Zurücksetzen der Object Pools
     reset_pools()
@@ -313,7 +329,7 @@ def _handle_events(state, menu_ctrl, dt):
         if e.type == pygame.KEYDOWN and e.key == pygame.K_F12 and not state.game_over:
             from game2d.systems.profiling import profiler
             profiler.enabled = not profiler.enabled
-            print(f"[PROFILING] {'AKTIVIERT' if profiler.enabled else 'DEAKTIVIERT'}")
+            logger.info(f"[PROFILING] {'AKTIVIERT' if profiler.enabled else 'DEAKTIVIERT'}")
             continue
         if state.menu in ("pause", "options"):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p):
@@ -712,6 +728,7 @@ def _update_entities_and_physics(state, dt):
                         spawn_blood(p.x, p.y, 20)
                         add_money(player, random.randint(15, 60))
                         on_kill(state, p, is_cop=False)
+                        _spawn_ped_replacement(state, player)
                     release_bullet(b)
                     state.bullets.remove(b)
                     hit_any = True
@@ -1202,10 +1219,10 @@ def _setup_event_handlers(state):
     """Registriere Event-Handler für das EventBus-System."""
     from game2d.systems.events import EventBus as _EventBus, EventType as _EventType
     bus = _EventBus()
+    event_logger = get_logger('events')
 
     # Debug-Handler: Logge wichtige Events (kann später entfernt werden)
     def debug_event_logger(event):
-        import logging as std_logging
         # Nur wichtige Events loggen, nicht alle
         important_types = {
             _EventType.KILL, _EventType.PLAYER_DIED, _EventType.GAME_OVER,
@@ -1213,9 +1230,7 @@ def _setup_event_handlers(state):
             _EventType.PLAYER_DAMAGED, _EventType.ENTITY_SPAWNED
         }
         if event.event_type in important_types:
-            std_logging.getLogger("game2d.events").info(
-                f"[EVENT] {event.event_type.name}: {event.data}"
-            )
+            event_logger.info(f"[EVENT] {event.event_type.name}: {event.data}")
 
     # Registriere Debug-Logger für alle Events (niedrige Priorität)
     bus.subscribe_wildcard(debug_event_logger, priority=-10, once=False)

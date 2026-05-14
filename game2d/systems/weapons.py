@@ -73,6 +73,22 @@ def _lightsaber_swing() -> None:
             spawn_blood(ped.x, ped.y, 20)
             add_money(p, random.randint(*reward))
             on_kill(s, ped, is_cop=ped.is_cop)
+            # Nachspawnen wenn es ein normaler Passant war
+            if group is s.peds:
+                from game2d.entities.ped import Ped
+                from game2d.world.spawning import pedestrian_spawn
+                from game2d.systems.spatial import register_entity
+                from game2d.systems.events import emit_entity_spawned
+                min_dist = 500
+                for _ in range(30):
+                    nx, ny = pedestrian_spawn()
+                    dist = math.hypot(nx - p.x, ny - p.y)
+                    if dist >= min_dist:
+                        break
+                new_ped = Ped(nx, ny)
+                s.peds.append(new_ped)
+                register_entity(new_ped)
+                emit_entity_spawned(new_ped, "ped")
 
 
 def fire() -> None:
