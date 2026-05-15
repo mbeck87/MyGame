@@ -643,8 +643,8 @@ def _is_in_update_range(entity, cam_x, cam_y, update_range):
             min_y <= entity.y <= max_y)
 
 
-# Update range buffer in world units (pixels)
-UPDATE_RANGE_BUFFER = 300
+# Update range buffer in world units (pixels) - scales with resolution
+UPDATE_RANGE_BUFFER = max(300, W // 4)
 
 
 @profile
