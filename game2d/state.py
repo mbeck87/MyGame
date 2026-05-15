@@ -22,6 +22,9 @@ class GameState:
     park_ducks: list = field(default_factory=list)       # [(kind, family, follow_slot, x, y, rx, ry, speed, phase), ...]
     amusement_parks: list = field(default_factory=list)  # [rect, ...]
     amusement_stands: list = field(default_factory=list) # [(x, y, kind), ...]
+    amusement_path_segments: list = field(default_factory=list)  # [((x,y), ...) for each park, ...]
+    amusement_park_sprites: list = field(default_factory=list)  # [surface for each park]
+    amusement_park_ride_sprites: dict = field(default_factory=dict)  # {ride_type: [frames]}
     airports: list = field(default_factory=list)         # [rect, ...]
     pedestrian_nodes: list = field(default_factory=list) # [(x, y), ...]
     pedestrian_edges: dict = field(default_factory=dict) # {node_idx: [neighbor_idx, ...]}

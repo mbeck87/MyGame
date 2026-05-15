@@ -1,0 +1,8 @@
+{
+  "ride": "claw_machine",
+  "frames": 36,
+  "frame_width": 150,
+  "frame_height": 150,
+  "type": "frames",
+  "speed": 7.2
+}

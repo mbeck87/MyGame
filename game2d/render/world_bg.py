@@ -1223,68 +1223,166 @@ def _draw_bumper_cars_dynamic(surf, rect, t):
 
 
 def _draw_amusement_static(surf, cam):
+    """Zeichne den statischen Teil des Vergnügungsparks mit geladenen Sprites."""
     s = current()
-    for park in s.amusement_parks:
+    for idx, park in enumerate(s.amusement_parks):
         rect = pygame.Rect(park.x - cam[0], park.y - cam[1], park.w, park.h)
         if rect.right < -120 or rect.left > W + 120 or rect.bottom < -120 or rect.top > H + 120:
             continue
-        pygame.draw.rect(surf, (52, 122, 78), rect)
-        pygame.draw.rect(surf, (174, 78, 92), rect, 5)
+        
+        # Use loaded static park sprite if available
+        # Note: Static sprites are not yet implemented as PNG files
+        # For now, we fall back to procedural rendering or use the pre-rendered surfaces
+        # The pre-rendered surfaces in state.amusement_park_sprites take precedence
+        if hasattr(s, 'amusement_park_sprites') and idx < len(s.amusement_park_sprites) and s.amusement_park_sprites[idx] is not None:
+            sprite = s.amusement_park_sprites[idx]
+            surf.blit(sprite, (park.x - cam[0] - 200, park.y - cam[1] - 200))
+        else:
+            # Fallback: render normally (shouldn't happen in normal gameplay)
+            pygame.draw.rect(surf, (52, 122, 78), rect)
+            pygame.draw.rect(surf, (174, 78, 92), rect, 5)
 
-        path_segments = [[(x - cam[0], y - cam[1]) for x, y in segment] for segment in _amusement_path_segments(park)]
-        for path in path_segments:
-            _draw_flat_path(surf, path, (128, 86, 52), 42)
-        for path in path_segments:
-            _draw_flat_path(surf, path, (214, 178, 118), 28)
-        for path in path_segments:
-            for idx, (x, y) in enumerate(path[::10]):
-                pygame.draw.circle(surf, (246, 216, 92), (int(x), int(y)), 4)
-                pygame.draw.circle(surf, (78, 54, 42), (int(x), int(y + 7)), 2)
+            if idx < len(s.amusement_path_segments):
+                cached_segments = s.amusement_path_segments[idx]
+                path_segments = [[(x - cam[0], y - cam[1]) for x, y in segment] for segment in cached_segments]
+            else:
+                path_segments = [[(x - cam[0], y - cam[1]) for x, y in segment] for segment in _amusement_path_segments(park)]
+            for path in path_segments:
+                _draw_flat_path(surf, path, (128, 86, 52), 42)
+            for path in path_segments:
+                _draw_flat_path(surf, path, (214, 178, 118), 28)
+            for path in path_segments:
+                for path_idx, (x, y) in enumerate(path[::10]):
+                    pygame.draw.circle(surf, (246, 216, 92), (int(x), int(y)), 4)
+                    pygame.draw.circle(surf, (78, 54, 42), (int(x), int(y + 7)), 2)
 
-        for x, y, kind in s.amusement_stands:
-            if park.collidepoint(x, y):
-                _draw_food_stand(surf, x - cam[0], y - cam[1], kind)
+            for x, y, kind in s.amusement_stands:
+                if park.collidepoint(x, y):
+                    _draw_food_stand(surf, x - cam[0], y - cam[1], kind)
 
-        outer_right = rect.right - int(rect.w * 0.12)
-        outer_bottom = rect.bottom - int(rect.h * 0.12)
-        outer_left = rect.left + int(rect.w * 0.12)
-        center_x = rect.centerx
-        center_y = rect.top + int(rect.h * 0.50)
-        _draw_park_gate(surf, outer_right, rect.bottom - 20)
-        _draw_ticket_building(surf, outer_right - int((outer_right - outer_left) * 0.25), outer_bottom - 42)
-        _draw_wc_building(surf, outer_right - int((outer_right - outer_left) * 0.50), outer_bottom - 42)
-        _draw_fountain(surf, center_x, center_y, current().traffic_time)
-        layout = _amusement_new_layout(rect)
-        pygame.draw.rect(surf, (42, 104, 64), layout['coaster_area'].inflate(16, 16), border_radius=10)
-        _draw_lottery_stand(surf, *layout['lottery_stand'])
-        _draw_claw_machine_base(surf, *layout['claw_machine'])
-        _draw_strongman_base(surf, layout['strongman'][0], layout['strongman'][1])
-        _draw_pirate_ship_base(surf, layout['pirate_ship'][0], layout['pirate_ship'][1])
-        _draw_bumper_arena(surf, layout['bumper_arena'])
-        _draw_swing_ride_base(surf, layout['swing'][0], layout['swing'][1])
-        for px, py, color, style, flower in layout['planters']:
-            _draw_planter(surf, px, py, color, style, flower)
-        for bx, by, vertical in layout['benches']:
-            _draw_bench(surf, bx, by, vertical=vertical)
+            outer_right = rect.right - int(rect.w * 0.12)
+            outer_bottom = rect.bottom - int(rect.h * 0.12)
+            outer_left = rect.left + int(rect.w * 0.12)
+            center_x = rect.centerx
+            center_y = rect.top + int(rect.h * 0.50)
+            _draw_park_gate(surf, outer_right, rect.bottom - 20)
+            _draw_ticket_building(surf, outer_right - int((outer_right - outer_left) * 0.25), outer_bottom - 42)
+            _draw_wc_building(surf, outer_right - int((outer_right - outer_left) * 0.50), outer_bottom - 42)
+            _draw_fountain(surf, center_x, center_y, current().traffic_time)
+            layout = _amusement_new_layout(rect)
+            pygame.draw.rect(surf, (42, 104, 64), layout['coaster_area'].inflate(16, 16), border_radius=10)
+            _draw_lottery_stand(surf, *layout['lottery_stand'])
+            _draw_claw_machine_base(surf, *layout['claw_machine'])
+            _draw_strongman_base(surf, layout['strongman'][0], layout['strongman'][1])
+            _draw_pirate_ship_base(surf, layout['pirate_ship'][0], layout['pirate_ship'][1])
+            _draw_bumper_arena(surf, layout['bumper_arena'])
+            _draw_swing_ride_base(surf, layout['swing'][0], layout['swing'][1])
+            for px, py, color, style, flower in layout['planters']:
+                _draw_planter(surf, px, py, color, style, flower)
+            for bx, by, vertical in layout['benches']:
+                _draw_bench(surf, bx, by, vertical=vertical)
 
 
 def _draw_amusement_dynamic(surf, cam):
+    """Zeichne die dynamischen Fahrgeschäfte mit geladenen Sprite-Frames.
+    
+    PERFORMANCE-OPTIMIZATION: 
+    - Keine teuren prozeduralen Zeichnfunktionen mehr
+    - Nur vorgerenderte Sprites verwenden
+    - Roller Coaster deaktiviert (zu komplex für Echtzeit)
+    """
+    import math
     s = current()
-    for park in s.amusement_parks:
+    # Quick exit if no amusement parks or no sprites loaded
+    if not s.amusement_parks:
+        return
+    
+    ride_sprites = s.amusement_sprites.get('rides', {}) if hasattr(s, 'amusement_sprites') else {}
+    if not ride_sprites or len(ride_sprites) == 0:
+        return
+    
+    for idx, park in enumerate(s.amusement_parks):
         rect = pygame.Rect(park.x - cam[0], park.y - cam[1], park.w, park.h)
         if rect.right < -120 or rect.left > W + 120 or rect.bottom < -120 or rect.top > H + 120:
             continue
         layout = _amusement_new_layout(rect)
         t = s.traffic_time
-        _draw_new_roller_coaster(surf, layout['coaster_area'], t)
-        _draw_strongman_dynamic(surf, layout['strongman'][0], layout['strongman'][1], t)
-        _draw_carousel(surf, layout['carousel'][0], layout['carousel'][1], t)
-        _draw_ferris_wheel(surf, layout['ferris'][0], layout['ferris'][1], t)
-        _draw_pirate_ship_dynamic(surf, layout['pirate_ship'][0], layout['pirate_ship'][1], t)
-        _draw_bumper_cars_dynamic(surf, layout['bumper_arena'], t)
-        _draw_swing_ride_dynamic(surf, layout['swing'][0], layout['swing'][1], t)
-        claw_x, claw_y, claw_w, claw_h = layout['claw_machine']
-        _draw_claw_machine_dynamic(surf, claw_x, claw_y, claw_w, claw_h, t)
+        
+        # Get park-specific layout positions
+        fw_x, fw_y = layout['ferris']
+        car_x, car_y = layout['carousel']
+        sw_x, sw_y = layout['swing']
+        sm_x, sm_y = layout['strongman']
+        ps_x, ps_y = layout['pirate_ship']
+        ba = layout['bumper_arena']
+        cm_x, cm_y, cm_w, cm_h = layout['claw_machine']
+        
+        # Helper function to get frame index
+        def get_frame_idx(ride_data, t):
+            """Get frame index for a ride based on its animation speed."""
+            if ride_data and isinstance(ride_data, dict) and 'frames' in ride_data:
+                speed = ride_data.get('speed', 0.1)
+                num_frames = len(ride_data['frames'])
+                return int((t * speed) % num_frames)
+            return 0
+        
+        # Draw each ride using loaded frames ONLY (no expensive fallback drawing)
+        # Ferris Wheel
+        if 'ferris_wheel' in ride_sprites:
+            fw_data = ride_sprites['ferris_wheel']
+            frame_idx = get_frame_idx(fw_data, t)
+            if frame_idx < len(fw_data['frames']):
+                surf.blit(fw_data['frames'][frame_idx], (fw_x - 100, fw_y - 100))
+        
+        # Carousel
+        if 'carousel' in ride_sprites:
+            car_data = ride_sprites['carousel']
+            frame_idx = get_frame_idx(car_data, t)
+            if frame_idx < len(car_data['frames']):
+                surf.blit(car_data['frames'][frame_idx], (car_x - 100, car_y - 100))
+        
+        # Swing Ride
+        if 'swing' in ride_sprites:
+            swing_data = ride_sprites['swing']
+            frame_idx = get_frame_idx(swing_data, t)
+            if frame_idx < len(swing_data['frames']):
+                surf.blit(swing_data['frames'][frame_idx], (sw_x - 100, sw_y - 100))
+        
+        # Strongman
+        if 'strongman' in ride_sprites:
+            sm_data = ride_sprites['strongman']
+            frame_idx = get_frame_idx(sm_data, t)
+            if frame_idx < len(sm_data['frames']):
+                surf.blit(sm_data['frames'][frame_idx], (sm_x - 100, sm_y - 100))
+        
+        # Pirate Ship
+        if 'pirate_ship' in ride_sprites:
+            ps_data = ride_sprites['pirate_ship']
+            frame_idx = get_frame_idx(ps_data, t)
+            if frame_idx < len(ps_data['frames']):
+                surf.blit(ps_data['frames'][frame_idx], (ps_x - 100, ps_y - 100))
+        
+        # Bumper Cars (400x250, center at 0,0)
+        if 'bumper_cars' in ride_sprites:
+            ba_data = ride_sprites['bumper_cars']
+            frame_idx = get_frame_idx(ba_data, t)
+            if frame_idx < len(ba_data['frames']):
+                surf.blit(ba_data['frames'][frame_idx], (ba.x, ba.y - 25))
+        
+        # Claw Machine (150x150, center at 75,75)
+        if 'claw_machine' in ride_sprites:
+            cm_data = ride_sprites['claw_machine']
+            frame_idx = get_frame_idx(cm_data, t)
+            if frame_idx < len(cm_data['frames']):
+                surf.blit(cm_data['frames'][frame_idx], (cm_x - 75, cm_y - 75))
+        
+        # Roller Coaster (500x200, centered at 0,0)
+        if 'roller_coaster' in ride_sprites:
+            rc_data = ride_sprites['roller_coaster']
+            rc_rect = layout['coaster_area']
+            frame_idx = get_frame_idx(rc_data, t)
+            if frame_idx < len(rc_data['frames']):
+                surf.blit(rc_data['frames'][frame_idx], (rc_rect.x, rc_rect.y - 20))
 
 
 def draw_park_street_closures(surf, cam):

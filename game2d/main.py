@@ -3,6 +3,7 @@ import math
 import os
 import random
 import sys
+import time
 
 import pygame
 
@@ -16,7 +17,7 @@ from game2d.render.hud import draw_hud_text, draw_star
 from game2d.render.menus import draw_hint, draw_overlay_menu, draw_service_markers
 from game2d.render.sprites import make_ped_frames, make_swim_frames, get_pickup_icon
 from game2d.render.world_bg import draw_world_bg
-from game2d.state import GameState, init as state_init
+from game2d.state import GameState, init as state_init, current
 from game2d.world.generation import build_world
 from game2d.world.geometry import in_city, in_water, point_in_polygon, rect_hits_amusement_stand
 from game2d.world.spawning import (
@@ -663,9 +664,10 @@ def _background_move_entity(entity, dt):
     """Simple position update for background entities: movement + building collision + road constraints.
     
     This keeps the world alive outside the viewport without expensive AI.
+    Uses fast approximate road checks instead of full rect_on_road() for performance.
     """
     from game2d.systems.spatial import query_buildings_radius
-    from game2d.world.geometry import rect_on_road
+    from game2d.config import ROAD_W, ROAD_LO, ROAD_HI_X, ROAD_HI_Y
     
     if isinstance(entity, Car):
         if entity.dead or entity.sunk or entity.driver is None:
@@ -674,6 +676,19 @@ def _background_move_entity(entity, dt):
         rad = math.radians(entity.angle)
         new_x = entity.x + entity.spd * math.cos(rad) * dt
         new_y = entity.y + entity.spd * math.sin(rad) * dt
+        
+        # Fast approximate road check: check distance to nearest road center
+        # Horizontal roads are at y positions, vertical at x positions
+        # Get state for road data access
+        s = current()
+        half_road = ROAD_W // 2 + 15  # margin
+        
+        # Check if near any horizontal or vertical road
+        nearest_v = min(s.roads_v, key=lambda rx: abs(rx - new_x)) if s.roads_v else new_x
+        nearest_h = min(s.roads_h, key=lambda ry: abs(ry - new_y)) if s.roads_h else new_y
+        on_road = (abs(new_x - nearest_v) < half_road or abs(new_y - nearest_h) < half_road)
+        # Also check we're within road bounds
+        on_road = on_road and (ROAD_LO - 20 <= new_x <= ROAD_HI_X + 20) and (ROAD_LO - 20 <= new_y <= ROAD_HI_Y + 20)
         
         # Check building collision using spatial grid
         test_rect = pygame.Rect(new_x - 20, new_y - 20, 40, 40)
@@ -684,26 +699,31 @@ def _background_move_entity(entity, dt):
                 building_collision = True
                 break
         
-        # Check if new position is on road
-        on_road = rect_on_road(test_rect, margin=15)
-        
         if not building_collision and on_road:
             entity.x, entity.y = new_x, new_y
             # Decay speed slightly to avoid infinite movement
             entity.spd *= max(0, 1 - 0.3 * dt)
         else:
-            # If hitting building or not on road, try to find road center
-            from game2d.world.geometry import lane_center_for_car
-            lx, ly = lane_center_for_car(entity.angle, entity.x, entity.y)
-            if lx is not None and ly is not None:
-                # Move towards road center
-                dx = lx - entity.x
-                dy = ly - entity.y
-                dist = math.hypot(dx, dy)
-                if dist > 1:
-                    step = min(dist, abs(entity.spd) * dt * 0.5)
-                    entity.x += dx / dist * step
-                    entity.y += dy / dist * step
+            # If hitting building or not on road, move towards nearest road center
+            nearest_v = min(s.roads_v, key=lambda rx: abs(rx - entity.x)) if s.roads_v else entity.x
+            nearest_h = min(s.roads_h, key=lambda ry: abs(ry - entity.y)) if s.roads_h else entity.y
+            # Determine which direction to move based on angle
+            heading = int(round(entity.angle / 90.0)) * 90 % 360
+            if heading in (0, 180):
+                # Moving horizontally - align to vertical road
+                target_x = nearest_v + (28 if heading == 0 else -28)
+                target_y = entity.y
+            else:
+                # Moving vertically - align to horizontal road  
+                target_x = entity.x
+                target_y = nearest_h + (28 if heading == 90 else -28)
+            dx = target_x - entity.x
+            dy = target_y - entity.y
+            dist = math.hypot(dx, dy)
+            if dist > 1:
+                step = min(dist, abs(entity.spd) * dt * 0.5)
+                entity.x += dx / dist * step
+                entity.y += dy / dist * step
             entity.spd *= max(0, 1 - 0.5 * dt)
     
     elif isinstance(entity, (Ped, Cat)):
@@ -734,84 +754,54 @@ BACKGROUND_RANGE = UPDATE_RANGE_BUFFER * 2
 def _capture_state_snapshot(state):
     """Erstellt einen Snapshot des aktuellen Zustands für Interpolation.
     
-    Speichert Positionen und Winkel aller beweglichen Entities.
-    Rückgabe: dict mit allen relevanten Positionsdaten.
+    Speichert nur Positionen und Winkel (keine komplexen Datenstrukturen).
+    Rückgabe: dict mit Tuples für schnellen Zugriff.
+    Optimiert für Performance - keine Dicts, nur Tuples.
     """
-    snapshot = {}
-    
-    # Player
+    # Player: (x, y, angle)
     p = state.player
-    snapshot['player'] = {
-        'x': p.x, 'y': p.y, 'angle': p.angle,
-        'in_car': state.in_car is not None
-    }
+    player_in_car = state.in_car is not None
     
-    # Player Car
+    # Player Car: (x, y, angle) oder None
     if state.in_car:
         c = state.in_car
-        snapshot['player_car'] = {
-            'x': c.x, 'y': c.y, 'angle': c.angle,
-            'dents': list(c.dents) if hasattr(c, 'dents') else []
-        }
+        player_car_snap = (c.x, c.y, c.angle)
     else:
-        snapshot['player_car'] = None
+        player_car_snap = None
     
-    # Cars
-    snapshot['cars'] = []
-    for c in state.cars:
-        if c is state.in_car:
-            continue  # Wird separat behandelt
-        snapshot['cars'].append({
-            'entity': c,
-            'x': c.x, 'y': c.y, 'angle': c.angle,
-            'dents': list(c.dents) if hasattr(c, 'dents') else []
-        })
+    # Schnellere Version: nutze List Comprehensions mit Tuples
+    # Cars: Liste von (entity, x, y, angle)
+    cars_snap = [(c, c.x, c.y, c.angle) for c in state.cars if c is not state.in_car]
     
-    # Peds
-    snapshot['peds'] = []
-    for p in state.peds:
-        snapshot['peds'].append({
-            'entity': p,
-            'x': p.x, 'y': p.y, 'angle': p.angle,
-            'frame_idx': p.frame_idx if hasattr(p, 'frame_idx') else 0
-        })
+    # Peds: Liste von (entity, x, y, angle)
+    peds_snap = [(p, p.x, p.y, p.angle) for p in state.peds]
     
-    # Cats
-    snapshot['cats'] = []
-    for cat in state.cats:
-        snapshot['cats'].append({
-            'entity': cat,
-            'x': cat.x, 'y': cat.y, 'angle': cat.angle,
-            'frame_idx': cat.frame_idx if hasattr(cat, 'frame_idx') else 0
-        })
+    # Cats: Liste von (entity, x, y, angle)
+    cats_snap = [(cat, cat.x, cat.y, cat.angle) for cat in state.cats]
     
-    # Cops
-    snapshot['cops'] = []
-    for c in state.cops:
-        snapshot['cops'].append({
-            'entity': c,
-            'x': c.x, 'y': c.y, 'angle': c.angle,
-            'frame_idx': c.frame_idx if hasattr(c, 'frame_idx') else 0
-        })
+    # Cops: Liste von (entity, x, y, angle)
+    cops_snap = [(c, c.x, c.y, c.angle) for c in state.cops]
     
-    # Bullets
-    snapshot['bullets'] = []
-    for b in state.bullets:
-        snapshot['bullets'].append({
-            'x': b[0], 'y': b[1]
-        })
+    # Bullets: Liste von (x, y)
+    bullets_snap = [(b[0], b[1]) for b in state.bullets]
     
-    # Rockets
-    snapshot['rockets'] = []
-    for r in state.rockets:
-        snapshot['rockets'].append({
-            'x': r[0], 'y': r[1], 'angle': r[2] if len(r) > 2 else 0
-        })
+    # Rockets: Liste von (x, y)
+    rockets_snap = [(r[0], r[1]) for r in state.rockets]
     
-    # Camera
-    snapshot['cam'] = (state.cam[0], state.cam[1])
+    # Camera: (x, y)
+    cam_snap = (state.cam[0], state.cam[1])
     
-    return snapshot
+    return {
+        'player': (p.x, p.y, p.angle, player_in_car),
+        'player_car': player_car_snap,
+        'cars': cars_snap,
+        'peds': peds_snap,
+        'cats': cats_snap,
+        'cops': cops_snap,
+        'bullets': bullets_snap,
+        'rockets': rockets_snap,
+        'cam': cam_snap,
+    }
 
 
 @profile
@@ -859,12 +849,16 @@ def _update_entities_and_physics(state, dt):
             _background_move_entity(cat, dt)
         update_entity_position(cat)  # Spatial Grid Position update
     
-    # Update Cops - always full update (high priority for gameplay)
+    # Update Cops - full update in range, simplified background movement
     for c in list(state.cops):
-        wants_shoot = c.update(dt, player)
-        c.animate(dt)
+        in_full_range = _is_in_update_range(c, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_full_range:
+            wants_shoot = c.update(dt, player)
+            c.animate(dt)
+        else:
+            _background_move_entity(c, dt)  # Simplified movement for background cops
         update_entity_position(c)  # Spatial Grid Position update
-        if wants_shoot:
+        if in_full_range and wants_shoot:
             profile = cop_weapon_profile(getattr(c, "cop_kind", "cop"), player.wanted)
             c.shoot_tick = profile["rate"]
             dx, dy = player.x - c.x, player.y - c.y
@@ -1133,7 +1127,7 @@ def _get_interpolated_entity(snapshot_list, entity, alpha):
     """Finde eine Entity im Snapshot und gib interpolierte Position/Winkel zurück.
     
     Args:
-        snapshot_list: Liste der Entity-Snapshots (z.B. snapshot['cars'])
+        snapshot_list: Liste der Entity-Snapshots als (entity, x, y, angle) Tuples
         entity: Die aktuelle Entity
         alpha: Interpolationsfaktor
         
@@ -1141,33 +1135,42 @@ def _get_interpolated_entity(snapshot_list, entity, alpha):
         (x, y, angle) oder (entity.x, entity.y, entity.angle) wenn nicht gefunden
     """
     for snap in snapshot_list:
-        if snap.get('entity') is entity:
-            x = snap['x'] + (entity.x - snap['x']) * alpha
-            y = snap['y'] + (entity.y - snap['y']) * alpha
-            angle = snap['angle'] + (entity.angle - snap['angle']) * alpha
+        # snap = (entity, x, y, angle)
+        if snap[0] is entity:
+            x = snap[1] + (entity.x - snap[1]) * alpha
+            y = snap[2] + (entity.y - snap[2]) * alpha
+            angle = snap[3] + (entity.angle - snap[3]) * alpha
             return x, y, angle
     return entity.x, entity.y, entity.angle
 
 
 def _get_interpolated_player(snapshot, player, alpha):
-    """Gib interpolierte Player-Position zurück."""
+    """Gib interpolierte Player-Position zurück.
+    
+    Snapshot-Format: 'player': (x, y, angle, in_car)
+    """
     if not snapshot or not snapshot.get('player'):
         return player.x, player.y, player.angle
     prev = snapshot['player']
-    x = prev['x'] + (player.x - prev['x']) * alpha
-    y = prev['y'] + (player.y - prev['y']) * alpha
-    angle = prev['angle'] + (player.angle - prev['angle']) * alpha
+    # prev = (x, y, angle, in_car)
+    x = prev[0] + (player.x - prev[0]) * alpha
+    y = prev[1] + (player.y - prev[1]) * alpha
+    angle = prev[2] + (player.angle - prev[2]) * alpha
     return x, y, angle
 
 
 def _get_interpolated_player_car(snapshot, car, alpha):
-    """Gib interpolierte Player-Car-Position zurück."""
+    """Gib interpolierte Player-Car-Position zurück.
+    
+    Snapshot-Format: 'player_car': (x, y, angle) oder None
+    """
     if not snapshot or not snapshot.get('player_car'):
         return car.x, car.y, car.angle
     prev = snapshot['player_car']
-    x = prev['x'] + (car.x - prev['x']) * alpha
-    y = prev['y'] + (car.y - prev['y']) * alpha
-    angle = prev['angle'] + (car.angle - prev['angle']) * alpha
+    # prev = (x, y, angle)
+    x = prev[0] + (car.x - prev[0]) * alpha
+    y = prev[1] + (car.y - prev[1]) * alpha
+    angle = prev[2] + (car.angle - prev[2]) * alpha
     return x, y, angle
 
 
@@ -1375,26 +1378,28 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         if -10 < sx < W + 10 and -10 < sy < H + 10:
             pygame.draw.circle(screen, (180, 0, 0), (sx, sy), bp[5])
     # Bullets - mit Interpolation (Index-basiert)
+    # Snapshot-Format: bullets = [(x, y), ...]
     bullet_snapshots = prev_snapshot.get('bullets', []) if prev_snapshot else []
     for i, b in enumerate(state.bullets):
         bx, by = b[0], b[1]
         if prev_snapshot and alpha > 0 and alpha < 1 and i < len(bullet_snapshots):
             b_snap = bullet_snapshots[i]
-            bx = b_snap['x'] + (bx - b_snap['x']) * alpha
-            by = b_snap['y'] + (by - b_snap['y']) * alpha
+            bx = b_snap[0] + (bx - b_snap[0]) * alpha
+            by = b_snap[1] + (by - b_snap[1]) * alpha
         sx = int(bx - icam[0])
         sy = int(by - icam[1])
         if -10 < sx < W + 10 and -10 < sy < H + 10:
             pygame.draw.circle(screen, (255, 230, 80), (sx, sy), 3)
     
     # Rockets - mit Interpolation (Index-basiert)
+    # Snapshot-Format: rockets = [(x, y), ...]
     rocket_snapshots = prev_snapshot.get('rockets', []) if prev_snapshot else []
     for i, r in enumerate(state.rockets):
         rx, ry = r[0], r[1]
         if prev_snapshot and alpha > 0 and alpha < 1 and i < len(rocket_snapshots):
             r_snap = rocket_snapshots[i]
-            rx = r_snap['x'] + (rx - r_snap['x']) * alpha
-            ry = r_snap['y'] + (ry - r_snap['y']) * alpha
+            rx = r_snap[0] + (rx - r_snap[0]) * alpha
+            ry = r_snap[1] + (ry - r_snap[1]) * alpha
         sx = int(rx - icam[0])
         sy = int(ry - icam[1])
         if -20 < sx < W + 20 and -20 < sy < H + 20:
@@ -1687,6 +1692,7 @@ def main():
     # Physik läuft bei festen 60Hz, Rendering so schnell wie möglich
     PHYSICS_RATE = 60  # Physik: 60 Updates pro Sekunde
     physics_dt = 1.0 / PHYSICS_RATE  # Fixed timestep für Physik
+    MAX_PHYSICS_UPDATES_PER_FRAME = 5  # Max Physik-Updates pro Frame (verhindert Spikes)
     physics_accumulator = 0.0  # Akkumuliert Zeit für Physik-Updates
     physics_frame_count = 0  # Zählt Physik-Updates für FPS-Berechnung
     physics_fps = PHYSICS_RATE  # Ziel-Physik-FPS
@@ -1695,6 +1701,9 @@ def main():
     # Timer für Physik-FPS-Berechnung
     physics_fps_timer = 0.0
     physics_fps_count = 0
+    # Für Player-Positions-Logging
+    last_player_x, last_player_y = 0, 0
+    last_player_move_frame = 0
 
     player_name = name_input_screen(screen, W, H, BIG, MED, FONT)
 
@@ -1704,6 +1713,16 @@ def main():
     provider.install(state)
     build_world(state)
     init_services(state)
+    
+    # Lade Amusement-Park Sprites
+    from game2d.render.amusement_sprites import load_amusement_sprites
+    try:
+        state.amusement_sprites = load_amusement_sprites()
+    except Exception as e:
+        import sys
+        print(f"[WARNING] Konnte Amusement-Sprites nicht laden: {e}", file=sys.stderr)
+        state.amusement_sprites = {'static': None, 'rides': {}}
+    
     # Initialize building spatial grid for optimized collision detection
     from game2d.systems.spatial import init_and_populate_building_grid, init_and_populate_park_grid
     init_and_populate_building_grid(state.buildings)
@@ -1717,23 +1736,26 @@ def main():
 
     _spawn_traffic_and_player(state)
     while state.running:
-        # Kein FPS-Limit für Rendering - läuft so schnell wie GPU kann
-        raw_dt = clock.tick(0) / 1000
+        # FPS-Limit für Rendering auf 200Hz (verhindert extreme Spikes bei Start/Respawn)
+        raw_dt = clock.tick(200) / 1000
         frame_counter += 1
         
         # Physik-Akkumulator aktualisieren
         physics_accumulator += raw_dt
         
         # --- Fester Physik-Timestep: UPDATE so oft wie nötig ---
-        # Speichere State-Snapshot VOR Physik-Updates für Interpolation
+        # Begrenze auf max 5 Physik-Updates pro Frame, um Spikes beim Start/Respawn zu vermeiden
+        # (z.B. wenn raw_dt sehr groß ist nach Ladezeit oder Pause)
         physics_updates_this_frame = 0
-        while physics_accumulator >= physics_dt:
-            # State-Snapshot für Interpolation (nur erste Iteration)
+        phys_logic_time_total = 0.0  # Gesamtzeit für update_logic + _update_entities_and_physics
+        while physics_accumulator >= physics_dt and physics_updates_this_frame < MAX_PHYSICS_UPDATES_PER_FRAME:
+            # State-Snapshot für Interpolation (nur erste Iteration pro Frame)
             if physics_updates_this_frame == 0:
                 prev_state_snapshot = _capture_state_snapshot(state)
             
             # Physik-Update mit festem Timestep
             if not state.game_over and not state.menu:
+                t0 = time.perf_counter()
                 if profiler.enabled:
                     with timed("update_logic"):
                         _update_player_and_wanted(state, physics_dt)
@@ -1741,14 +1763,23 @@ def main():
                 else:
                     _update_player_and_wanted(state, physics_dt)
                     _update_entities_and_physics(state, physics_dt)
+                phys_logic_time_total += time.perf_counter() - t0
             
             physics_accumulator -= physics_dt
             physics_updates_this_frame += 1
             physics_frame_count += 1
         
+        # Begrenze physics_accumulator VOR Alpha-Berechnung, um alpha im Bereich [0, 1] zu halten
+        # (verhindert Explosion von alpha bei großem raw_dt z.B. nach Ladezeit/Respawn)
+        max_accumulator = physics_dt * MAX_PHYSICS_UPDATES_PER_FRAME
+        if physics_accumulator > max_accumulator:
+            physics_accumulator = max_accumulator
+        
         # --- Interpolationsfaktor berechnen ---
         # alpha = wie weit wir zwischen prev_state und current_state sind (0 = prev, 1 = current)
         interpolation_alpha = physics_accumulator / physics_dt if physics_dt > 0 else 0.0
+        # Clamp alpha auf [0, 1] für sichere Interpolation (verhindert Extrapolation)
+        interpolation_alpha = min(1.0, max(0.0, interpolation_alpha))
         
         # FPS berechnen: Render-FPS von Pygame Clock, Physik-FPS separat
         # Physik-FPS: wir wissen, dass wir PHYSICS_RATE anstreben, aber wir tracken es für Genauigkeit
@@ -1768,13 +1799,16 @@ def main():
         else:
             fps_val = int(1.0 / max(raw_dt, 0.0001))
         
+        # Berechne durchschnittliche Physik-Update-Zeit (für späteres Logging)
+        avg_phys_ms = (phys_logic_time_total / physics_updates_this_frame * 1000) if physics_updates_this_frame > 0 else 0.0
+        
         # Minimap: Statisches Surface einmalig erstellen (nachdem die Welt gebaut ist)
         if minimap_static is None:
             from game2d.render.minimap import create_minimap_static
             minimap_static = create_minimap_static(state)
         
-        # Minimap: Dynamisches Surface alle 3 Frames aktualisieren
-        if frame_counter % 3 == 0:
+        # Minimap: Dynamisches Surface alle 15 Frames aktualisieren (Performance-Optimierung)
+        if frame_counter % 15 == 0:
             from game2d.render.minimap import update_minimap_dynamic
             if minimap_dynamic is None:
                 minimap_dynamic = pygame.Surface((216, 216), pygame.SRCALPHA)
@@ -1792,11 +1826,21 @@ def main():
         if profiler.enabled:
             profiler.start_frame()
         
-        # Non-physics updates: nutzen raw_dt (reale Zeit seit letztem Frame)
+        # Non-physics updates: nutzen geclamptes raw_dt (verhindert Sprünge nach Respawn/Pause)
+        effective_dt = min(raw_dt, 0.05)  # Max 50ms für Nicht-Physik-Updates
         if state.message_timer > 0:
-            state.message_timer = max(0.0, state.message_timer - raw_dt)
+            state.message_timer = max(0.0, state.message_timer - effective_dt)
         if not state.menu:
-            state.traffic_time += raw_dt
+            state.traffic_time += effective_dt
+        
+        # Player-Positions-Logging (nur wenn sich Position signifikant ändert)
+        player = state.player
+        player_moved = False
+        if abs(player.x - last_player_x) > 5 or abs(player.y - last_player_y) > 5:
+            last_player_x, last_player_y = player.x, player.y
+            logger.info(f"[MOVE] frame={frame_counter} pos=({player.x:.0f},{player.y:.0f}) "
+                       f"in_car={'Yes' if state.in_car else 'No'}")
+            last_player_move_frame = frame_counter
         
         # Event Handling - mit Profiling nur wenn enabled
         if profiler.enabled:
@@ -1805,13 +1849,22 @@ def main():
         else:
             _handle_events(state, menu_ctrl, raw_dt)
         
-        # Render - mit Profiling nur wenn enabled, FPS immer gleich
+        # Render - mit Timing für Performance-Analyse
         # Übergebe prev_state_snapshot, interpolation_alpha und physics_fps für glattes Rendering
+        t0 = time.perf_counter()
         if profiler.enabled:
             with timed("render"):
                 _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, raw_dt, fps_val, minimap_static, minimap_dynamic, prev_state_snapshot, interpolation_alpha, physics_fps)
         else:
             _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, raw_dt, fps_val, minimap_static, minimap_dynamic, prev_state_snapshot, interpolation_alpha, physics_fps)
+        render_time = time.perf_counter() - t0
+        
+        # Frame Logging via existing logger (aktivierbar mit -log Flag)
+        render_ms = render_time * 1000  # Render-Zeit in ms
+        if frame_counter % 10 == 0:
+            logger.info(f"Frame {frame_counter:5d} | dt={raw_dt*1000:7.2f}ms | phys={physics_updates_this_frame} | "
+                       f"phys_avg={avg_phys_ms:6.2f}ms | render={render_ms:6.2f}ms | "
+                       f"E:{len(state.cars)}/{len(state.peds)}/{len(state.cops)} | fps={fps_val} | alpha={interpolation_alpha:.3f}")
 
         # Profiling: Frame end markieren
         if profiler.enabled and entity_counts is not None:

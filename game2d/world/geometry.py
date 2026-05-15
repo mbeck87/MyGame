@@ -330,17 +330,22 @@ def _dist_to_segment_sq(px, py, ax, ay, bx, by):
 
 
 def point_on_amusement_path(x, y, radius=24):
+    """Check if point (x,y) is on or near an amusement park path.
+    Uses cached segments from state.amusement_path_segments for performance.
+    """
     s = current()
-    for park in s.amusement_parks:
+    # Use cached path segments
+    park_segments = zip(s.amusement_parks, s.amusement_path_segments)
+    limit = radius * radius
+    for park, segments in park_segments:
         if not park.collidepoint(x, y):
             continue
-        limit = radius * radius
-        for points in amusement_path_segments(park):
+        for points in segments:
             for a, b in zip(points, points[1:]):
                 if _dist_to_segment_sq(x, y, a[0], a[1], b[0], b[1]) <= limit:
                     return True
-        return False
-    return True
+    # Point is not in any amusement park, or not on path - not allowed
+    return False
 
 
 def _ped_probe_rect(ax, ay, bx=None, by=None, radius=12):
@@ -521,9 +526,14 @@ def rebuild_pedestrian_graph(state):
                     edges[candidate].add(endpoint)
                     break
 
-    for park in state.amusement_parks:
+    for idx, park in enumerate(state.amusement_parks):
         endpoint_ids = []
-        for segment in amusement_path_segments(park):
+        # Use cached path segments if available, otherwise compute
+        if idx < len(state.amusement_path_segments):
+            segments = state.amusement_path_segments[idx]
+        else:
+            segments = amusement_path_segments(park)
+        for segment in segments:
             sampled = segment[::3] + ([segment[-1]] if segment[-1] != segment[::3][-1] else [])
             path_ids = [add_node(x, y, is_park=True) for x, y in sampled]
             path_ids = [idx for idx in path_ids if idx is not None]

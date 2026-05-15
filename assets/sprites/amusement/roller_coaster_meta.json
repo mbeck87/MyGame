@@ -1,0 +1,8 @@
+{
+  "ride": "roller_coaster",
+  "frames": 36,
+  "frame_width": 500,
+  "frame_height": 200,
+  "type": "frames",
+  "speed": 6.0
+}

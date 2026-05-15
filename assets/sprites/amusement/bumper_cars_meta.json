@@ -1,0 +1,8 @@
+{
+  "ride": "bumper_cars",
+  "frames": 36,
+  "frame_width": 400,
+  "frame_height": 250,
+  "type": "frames",
+  "speed": 4.5
+}

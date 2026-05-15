@@ -54,6 +54,8 @@ source venv/bin/activate
 python game2d.py
 ```
 
+The `tools/render_amusement_sprites.py` script pre-renders amusement park ride animations as individual PNG frames with accompanying metadata (speed, dimensions). Pre-rendered sprites in `assets/sprites/amusement/` replace procedural drawing for better performance. Run with `python tools/render_amusement_sprites.py --ride alle` to regenerate all ride sprites, or target a specific ride with `--ride roller_coaster`.
+
 For a quick syntax check:
 
 ```bash

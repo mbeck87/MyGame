@@ -1,0 +1,8 @@
+{
+  "ride": "swing",
+  "frames": 36,
+  "frame_width": 200,
+  "frame_height": 200,
+  "type": "frames",
+  "speed": 3.6
+}

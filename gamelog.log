@@ -1,0 +1,1620 @@
+pygame-ce 2.5.7 (SDL 2.32.10, Python 3.14.4)
+[32m[2026-05-15 04:50:50.248] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283380>, 'entity_type': 'car', 'position': (2107, 602)}[0m
+[32m[2026-05-15 04:50:50.248] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe2834d0>, 'entity_type': 'car', 'position': (658, 3124)}[0m
+[32m[2026-05-15 04:50:50.248] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283620>, 'entity_type': 'car', 'position': (5398, 4479)}[0m
+[32m[2026-05-15 04:50:50.248] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283770>, 'entity_type': 'car', 'position': (4461, 3628)}[0m
+[32m[2026-05-15 04:50:50.249] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe2838c0>, 'entity_type': 'car', 'position': (4828, 4033)}[0m
+[32m[2026-05-15 04:50:50.249] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283a10>, 'entity_type': 'car', 'position': (2428, 1001)}[0m
+[32m[2026-05-15 04:50:50.249] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283b60>, 'entity_type': 'car', 'position': (3986, 2372)}[0m
+[32m[2026-05-15 04:50:50.249] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283cb0>, 'entity_type': 'car', 'position': (2372, 4530)}[0m
+[32m[2026-05-15 04:50:50.249] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65fe283e00>, 'entity_type': 'car', 'position': (3436, 658)}[0m
+[32m[2026-05-15 04:50:50.249] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0050>, 'entity_type': 'car', 'position': (3712, 1228)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c01a0>, 'entity_type': 'car', 'position': (3028, 3086)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c02f0>, 'entity_type': 'car', 'position': (2372, 4260)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0440>, 'entity_type': 'car', 'position': (3238, 5398)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0590>, 'entity_type': 'car', 'position': (1228, 4023)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c06e0>, 'entity_type': 'car', 'position': (3284, 1172)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0830>, 'entity_type': 'car', 'position': (1130, 3028)}[0m
+[32m[2026-05-15 04:50:50.250] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0980>, 'entity_type': 'car', 'position': (3572, 3233)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0ad0>, 'entity_type': 'car', 'position': (3083, 1172)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0c20>, 'entity_type': 'car', 'position': (3073, 602)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0d70>, 'entity_type': 'car', 'position': (2428, 3887)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0ec0>, 'entity_type': 'car', 'position': (1773, 1828)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1010>, 'entity_type': 'car', 'position': (1508, 3028)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1160>, 'entity_type': 'car', 'position': (1020, 4228)}[0m
+[32m[2026-05-15 04:50:50.251] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c12b0>, 'entity_type': 'car', 'position': (2428, 4224)}[0m
+[32m[2026-05-15 04:50:50.252] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1400>, 'entity_type': 'car', 'position': (1114, 2372)}[0m
+[32m[2026-05-15 04:50:50.252] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1550>, 'entity_type': 'car', 'position': (4172, 3166)}[0m
+[32m[2026-05-15 04:50:50.252] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c16a0>, 'entity_type': 'car', 'position': (1828, 3844)}[0m
+[32m[2026-05-15 04:50:50.252] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c17f0>, 'entity_type': 'car', 'position': (4220, 4172)}[0m
+[32m[2026-05-15 04:50:50.252] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1940>, 'entity_type': 'car', 'position': (4228, 3012)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1a90>, 'entity_type': 'car', 'position': (1230, 3572)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1be0>, 'entity_type': 'car', 'position': (1172, 5187)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1d30>, 'entity_type': 'car', 'position': (2972, 4673)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1e80>, 'entity_type': 'car', 'position': (3125, 4772)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c1fd0>, 'entity_type': 'car', 'position': (1708, 2372)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2120>, 'entity_type': 'car', 'position': (778, 658)}[0m
+[32m[2026-05-15 04:50:50.253] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2270>, 'entity_type': 'car', 'position': (1566, 4172)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c23c0>, 'entity_type': 'car', 'position': (1228, 1004)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2510>, 'entity_type': 'car', 'position': (3381, 1772)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2660>, 'entity_type': 'car', 'position': (2169, 3628)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c27b0>, 'entity_type': 'car', 'position': (3979, 1172)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2900>, 'entity_type': 'car', 'position': (4784, 2972)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2a50>, 'entity_type': 'car', 'position': (1228, 4374)}[0m
+[32m[2026-05-15 04:50:50.254] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2ba0>, 'entity_type': 'car', 'position': (918, 3028)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2cf0>, 'entity_type': 'car', 'position': (3542, 1772)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2e40>, 'entity_type': 'car', 'position': (2428, 1658)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c2f90>, 'entity_type': 'car', 'position': (4052, 4772)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c30e0>, 'entity_type': 'car', 'position': (3028, 2488)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c3230>, 'entity_type': 'car', 'position': (2709, 4228)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c3380>, 'entity_type': 'car', 'position': (3379, 4828)}[0m
+[32m[2026-05-15 04:50:50.255] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c34d0>, 'entity_type': 'car', 'position': (2972, 2281)}[0m
+[32m[2026-05-15 04:50:50.256] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3620>, 'entity_type': 'ped', 'position': (5505, 1542)}[0m
+[32m[2026-05-15 04:50:50.256] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3770>, 'entity_type': 'ped', 'position': (2816, 2421)}[0m
+[32m[2026-05-15 04:50:50.256] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c38c0>, 'entity_type': 'ped', 'position': (4461, 1496)}[0m
+[32m[2026-05-15 04:50:50.256] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3a10>, 'entity_type': 'ped', 'position': (5294, 2924)}[0m
+[32m[2026-05-15 04:50:50.257] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3b60>, 'entity_type': 'ped', 'position': (3524, 3524)}[0m
+[32m[2026-05-15 04:50:50.257] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3cb0>, 'entity_type': 'ped', 'position': (5505, 1542)}[0m
+[32m[2026-05-15 04:50:50.257] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3e00>, 'entity_type': 'ped', 'position': (4276, 4124)}[0m
+[32m[2026-05-15 04:50:50.257] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c050>, 'entity_type': 'ped', 'position': (2694, 2477)}[0m
+[32m[2026-05-15 04:50:50.257] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c1a0>, 'entity_type': 'ped', 'position': (4938, 757)}[0m
+[32m[2026-05-15 04:50:50.258] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c2f0>, 'entity_type': 'ped', 'position': (2924, 4276)}[0m
+[32m[2026-05-15 04:50:50.258] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c440>, 'entity_type': 'ped', 'position': (1724, 5294)}[0m
+[32m[2026-05-15 04:50:50.258] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c590>, 'entity_type': 'ped', 'position': (4837, 760)}[0m
+[32m[2026-05-15 04:50:50.258] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c6e0>, 'entity_type': 'ped', 'position': (4504, 498)}[0m
+[32m[2026-05-15 04:50:50.259] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c830>, 'entity_type': 'ped', 'position': (3524, 5446)}[0m
+[32m[2026-05-15 04:50:50.259] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062c980>, 'entity_type': 'ped', 'position': (5294, 706)}[0m
+[32m[2026-05-15 04:50:50.259] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062cad0>, 'entity_type': 'ped', 'position': (5502, 541)}[0m
+[32m[2026-05-15 04:50:50.259] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062cc20>, 'entity_type': 'ped', 'position': (5294, 5294)}[0m
+[32m[2026-05-15 04:50:50.260] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062cd70>, 'entity_type': 'ped', 'position': (5243, 1018)}[0m
+[32m[2026-05-15 04:50:50.260] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062cec0>, 'entity_type': 'ped', 'position': (1276, 2924)}[0m
+[32m[2026-05-15 04:50:50.260] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d010>, 'entity_type': 'ped', 'position': (4720, 1018)}[0m
+[32m[2026-05-15 04:50:50.260] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d160>, 'entity_type': 'ped', 'position': (4724, 1724)}[0m
+[32m[2026-05-15 04:50:50.261] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d2b0>, 'entity_type': 'ped', 'position': (5294, 5446)}[0m
+[32m[2026-05-15 04:50:50.261] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d400>, 'entity_type': 'ped', 'position': (2301, 2828)}[0m
+[32m[2026-05-15 04:50:50.261] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d550>, 'entity_type': 'ped', 'position': (4461, 1496)}[0m
+[32m[2026-05-15 04:50:50.261] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d6a0>, 'entity_type': 'ped', 'position': (4724, 4124)}[0m
+[32m[2026-05-15 04:50:50.261] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d7f0>, 'entity_type': 'ped', 'position': (4724, 2476)}[0m
+[32m[2026-05-15 04:50:50.262] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062d940>, 'entity_type': 'ped', 'position': (5505, 1725)}[0m
+[32m[2026-05-15 04:50:50.262] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062da90>, 'entity_type': 'ped', 'position': (1876, 4724)}[0m
+[32m[2026-05-15 04:50:50.262] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062dbe0>, 'entity_type': 'ped', 'position': (5505, 1725)}[0m
+[32m[2026-05-15 04:50:50.262] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062dd30>, 'entity_type': 'ped', 'position': (2096, 3157)}[0m
+[32m[2026-05-15 04:50:50.263] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062de80>, 'entity_type': 'ped', 'position': (4276, 2324)}[0m
+[32m[2026-05-15 04:50:50.263] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062dfd0>, 'entity_type': 'ped', 'position': (5446, 4724)}[0m
+[32m[2026-05-15 04:50:50.263] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e120>, 'entity_type': 'ped', 'position': (2324, 3676)}[0m
+[32m[2026-05-15 04:50:50.263] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e270>, 'entity_type': 'ped', 'position': (3676, 3524)}[0m
+[32m[2026-05-15 04:50:50.264] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e3c0>, 'entity_type': 'ped', 'position': (4938, 757)}[0m
+[32m[2026-05-15 04:50:50.264] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e510>, 'entity_type': 'ped', 'position': (2476, 3076)}[0m
+[32m[2026-05-15 04:50:50.264] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e660>, 'entity_type': 'ped', 'position': (1124, 5446)}[0m
+[32m[2026-05-15 04:50:50.264] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e7b0>, 'entity_type': 'ped', 'position': (2476, 5446)}[0m
+[32m[2026-05-15 04:50:50.264] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062e900>, 'entity_type': 'ped', 'position': (1124, 554)}[0m
+[32m[2026-05-15 04:50:50.265] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062ea50>, 'entity_type': 'ped', 'position': (4276, 4124)}[0m
+[32m[2026-05-15 04:50:50.265] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062eba0>, 'entity_type': 'ped', 'position': (3676, 4724)}[0m
+[32m[2026-05-15 04:50:50.265] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062ecf0>, 'entity_type': 'ped', 'position': (4524, 1541)}[0m
+[32m[2026-05-15 04:50:50.265] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062ee40>, 'entity_type': 'ped', 'position': (5505, 1018)}[0m
+[32m[2026-05-15 04:50:50.266] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062ef90>, 'entity_type': 'ped', 'position': (3524, 706)}[0m
+[32m[2026-05-15 04:50:50.266] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f0e0>, 'entity_type': 'ped', 'position': (4738, 810)}[0m
+[32m[2026-05-15 04:50:50.266] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f230>, 'entity_type': 'ped', 'position': (5294, 1724)}[0m
+[32m[2026-05-15 04:50:50.266] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f380>, 'entity_type': 'ped', 'position': (4578, 495)}[0m
+[32m[2026-05-15 04:50:50.267] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f4d0>, 'entity_type': 'ped', 'position': (1276, 5294)}[0m
+[32m[2026-05-15 04:50:50.267] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f620>, 'entity_type': 'ped', 'position': (4504, 498)}[0m
+[32m[2026-05-15 04:50:50.267] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f770>, 'entity_type': 'ped', 'position': (4720, 1018)}[0m
+[32m[2026-05-15 04:50:50.267] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062f8c0>, 'entity_type': 'ped', 'position': (5446, 1724)}[0m
+[32m[2026-05-15 04:50:50.267] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062fa10>, 'entity_type': 'ped', 'position': (5485, 507)}[0m
+[32m[2026-05-15 04:50:50.268] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062fb60>, 'entity_type': 'ped', 'position': (4720, 1100)}[0m
+[32m[2026-05-15 04:50:50.268] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062fcb0>, 'entity_type': 'ped', 'position': (2476, 3076)}[0m
+[32m[2026-05-15 04:50:50.268] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062fe00>, 'entity_type': 'ped', 'position': (1876, 554)}[0m
+[32m[2026-05-15 04:50:50.268] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658050>, 'entity_type': 'ped', 'position': (4738, 810)}[0m
+[32m[2026-05-15 04:50:50.269] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f06581a0>, 'entity_type': 'ped', 'position': (1724, 3524)}[0m
+[32m[2026-05-15 04:50:50.269] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f06582f0>, 'entity_type': 'ped', 'position': (4876, 4124)}[0m
+[32m[2026-05-15 04:50:50.269] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658440>, 'entity_type': 'ped', 'position': (5485, 507)}[0m
+[32m[2026-05-15 04:50:50.269] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658590>, 'entity_type': 'ped', 'position': (2324, 3524)}[0m
+[32m[2026-05-15 04:50:50.270] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f06586e0>, 'entity_type': 'ped', 'position': (4791, 1269)}[0m
+[32m[2026-05-15 04:50:50.270] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658830>, 'entity_type': 'ped', 'position': (4747, 1241)}[0m
+[32m[2026-05-15 04:50:50.270] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658980>, 'entity_type': 'ped', 'position': (5505, 615)}[0m
+[32m[2026-05-15 04:50:50.270] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658ad0>, 'entity_type': 'ped', 'position': (2429, 2687)}[0m
+[32m[2026-05-15 04:50:50.270] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658c20>, 'entity_type': 'ped', 'position': (4866, 1279)}[0m
+[32m[2026-05-15 04:50:50.270] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658d70>, 'entity_type': 'ped', 'position': (2476, 4276)}[0m
+[32m[2026-05-15 04:50:50.271] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658ec0>, 'entity_type': 'ped', 'position': (4723, 874)}[0m
+[32m[2026-05-15 04:50:50.271] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659010>, 'entity_type': 'ped', 'position': (706, 3076)}[0m
+[32m[2026-05-15 04:50:50.271] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659160>, 'entity_type': 'ped', 'position': (2324, 1124)}[0m
+[32m[2026-05-15 04:50:50.271] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f06592b0>, 'entity_type': 'ped', 'position': (4724, 554)}[0m
+[32m[2026-05-15 04:50:50.272] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659400>, 'entity_type': 'ped', 'position': (4459, 561)}[0m
+[32m[2026-05-15 04:50:50.272] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659550>, 'entity_type': 'ped', 'position': (1876, 554)}[0m
+[32m[2026-05-15 04:50:50.272] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f06596a0>, 'entity_type': 'ped', 'position': (4276, 5446)}[0m
+[32m[2026-05-15 04:50:50.272] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f06597f0>, 'entity_type': 'ped', 'position': (3076, 2476)}[0m
+[32m[2026-05-15 04:50:50.273] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659940>, 'entity_type': 'ped', 'position': (1276, 1124)}[0m
+[32m[2026-05-15 04:50:50.273] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659a90>, 'entity_type': 'ped', 'position': (4459, 561)}[0m
+[32m[2026-05-15 04:50:50.273] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659be0>, 'entity_type': 'ped', 'position': (4504, 498)}[0m
+[32m[2026-05-15 04:50:50.273] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659d30>, 'entity_type': 'ped', 'position': (4524, 1541)}[0m
+[32m[2026-05-15 04:50:50.273] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659e80>, 'entity_type': 'ped', 'position': (2924, 5446)}[0m
+[32m[2026-05-15 04:50:50.274] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0659fd0>, 'entity_type': 'ped', 'position': (706, 1276)}[0m
+[32m[2026-05-15 04:50:50.274] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a120>, 'entity_type': 'ped', 'position': (3524, 1724)}[0m
+[32m[2026-05-15 04:50:50.274] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a270>, 'entity_type': 'ped', 'position': (5446, 706)}[0m
+[32m[2026-05-15 04:50:50.274] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a3c0>, 'entity_type': 'ped', 'position': (4773, 775)}[0m
+[32m[2026-05-15 04:50:50.274] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a510>, 'entity_type': 'ped', 'position': (1876, 1124)}[0m
+[32m[2026-05-15 04:50:50.275] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a660>, 'entity_type': 'ped', 'position': (3524, 4124)}[0m
+[32m[2026-05-15 04:50:50.275] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a7b0>, 'entity_type': 'ped', 'position': (4720, 1100)}[0m
+[32m[2026-05-15 04:50:50.275] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065a900>, 'entity_type': 'ped', 'position': (4459, 561)}[0m
+[32m[2026-05-15 04:50:50.275] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065aa50>, 'entity_type': 'ped', 'position': (4458, 1422)}[0m
+[32m[2026-05-15 04:50:50.275] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065aba0>, 'entity_type': 'ped', 'position': (4578, 495)}[0m
+[32m[2026-05-15 04:50:50.276] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065acf0>, 'entity_type': 'ped', 'position': (4124, 706)}[0m
+[32m[2026-05-15 04:50:50.276] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065ae40>, 'entity_type': 'ped', 'position': (2035, 3332)}[0m
+[32m[2026-05-15 04:50:50.276] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065af90>, 'entity_type': 'ped', 'position': (5294, 554)}[0m
+[32m[2026-05-15 04:50:50.276] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b0e0>, 'entity_type': 'ped', 'position': (5204, 784)}[0m
+[32m[2026-05-15 04:50:50.276] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b230>, 'entity_type': 'ped', 'position': (5151, 764)}[0m
+[32m[2026-05-15 04:50:50.277] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b380>, 'entity_type': 'ped', 'position': (4276, 706)}[0m
+[32m[2026-05-15 04:50:50.277] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b4d0>, 'entity_type': 'ped', 'position': (2324, 3524)}[0m
+[32m[2026-05-15 04:50:50.277] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b620>, 'entity_type': 'ped', 'position': (554, 706)}[0m
+[32m[2026-05-15 04:50:50.277] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b770>, 'entity_type': 'ped', 'position': (2924, 4276)}[0m
+[32m[2026-05-15 04:50:50.277] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065b8c0>, 'entity_type': 'ped', 'position': (4876, 3676)}[0m
+[32m[2026-05-15 04:50:50.278] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065ba10>, 'entity_type': 'ped', 'position': (5439, 496)}[0m
+[32m[2026-05-15 04:50:50.278] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.cat.Cat object at 0x7f65f065bb60>, 'entity_type': 'cat', 'position': (2262, 2880)}[0m
+[32m[2026-05-15 04:50:50.278] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065bcb0>, 'entity_type': 'player', 'position': (1025, 3076)}[0m
+[32m[2026-05-15 04:50:50.284] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065be00>, 'entity_type': 'ped', 'position': (5142.352843256135, 773.0283250160412)}[0m
+[32m[2026-05-15 04:50:50.284] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c050>, 'entity_type': 'ped', 'position': (4717.077203702638, 868.0642702665502)}[0m
+[32m[2026-05-15 04:50:50.284] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c1a0>, 'entity_type': 'ped', 'position': (5508.4770363152675, 1479.4991696102425)}[0m
+[32m[2026-05-15 04:50:50.284] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c2f0>, 'entity_type': 'ped', 'position': (5508.177605693573, 1471.1517967441991)}[0m
+[32m[2026-05-15 04:50:50.284] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c440>, 'entity_type': 'ped', 'position': (5208.38715281397, 780.1913324761247)}[0m
+[32m[2026-05-15 04:50:50.284] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c590>, 'entity_type': 'ped', 'position': (5154.883847459196, 757.9631212449749)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c6e0>, 'entity_type': 'ped', 'position': (5054.458687080556, 756.7983176034612)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c830>, 'entity_type': 'ped', 'position': (5506.575754571648, 1471.9972822714453)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067c980>, 'entity_type': 'ped', 'position': (5477.192964522202, 513.6405292299736)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067cad0>, 'entity_type': 'ped', 'position': (4502.306520071326, 504.74380411995514)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067cc20>, 'entity_type': 'ped', 'position': (4451.13070897446, 555.7743933077262)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067cd70>, 'entity_type': 'ped', 'position': (4728.1058385973365, 1197.760770369636)}[0m
+[32m[2026-05-15 04:50:50.285] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067cec0>, 'entity_type': 'ped', 'position': (5496.74080830068, 1469.4255495896425)}[0m
+[32m[2026-05-15 04:50:50.286] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d010>, 'entity_type': 'ped', 'position': (4942.215801629297, 748.2427703770051)}[0m
+[32m[2026-05-15 04:50:50.286] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d160>, 'entity_type': 'ped', 'position': (5250.416916606248, 893.2153160151062)}[0m
+[32m[2026-05-15 04:50:50.286] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d2b0>, 'entity_type': 'ped', 'position': (5508.7207252280505, 1480.1719558799234)}[0m
+[32m[2026-05-15 04:50:50.286] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d400>, 'entity_type': 'ped', 'position': (4796.732340724968, 1260.8477291838744)}[0m
+[32m[2026-05-15 04:50:50.286] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d550>, 'entity_type': 'ped', 'position': (4717.716494623597, 977.7952445722268)}[0m
+[32m[2026-05-15 04:50:50.286] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d6a0>, 'entity_type': 'ped', 'position': (4475.840262154283, 1535.67683330101)}[0m
+[32m[2026-05-15 04:50:50.287] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d7f0>, 'entity_type': 'ped', 'position': (5232.327071391193, 1126.2119429526035)}[0m
+[32m[2026-05-15 04:50:50.317] [INFO] [main] [MOVE] frame=1 pos=(1025,3076) in_car=No[0m
+[32m[2026-05-15 04:50:50.560] [INFO] [main] Frame    10 | dt=  16.00ms | phys=1 | phys_avg=  5.38ms | render=  9.68ms | E:50/120/0 | fps=62 | alpha=0.540[0m
+[32m[2026-05-15 04:50:50.709] [INFO] [main] Frame    20 | dt=  15.00ms | phys=1 | phys_avg=  6.27ms | render=  9.44ms | E:50/120/0 | fps=36 | alpha=0.420[0m
+[32m[2026-05-15 04:50:50.863] [INFO] [main] Frame    30 | dt=  17.00ms | phys=1 | phys_avg=  5.77ms | render=  9.38ms | E:50/120/0 | fps=67 | alpha=0.600[0m
+[32m[2026-05-15 04:50:51.021] [INFO] [main] Frame    40 | dt=  16.00ms | phys=1 | phys_avg=  6.02ms | render=  9.46ms | E:50/120/0 | fps=65 | alpha=0.140[0m
+[32m[2026-05-15 04:50:51.174] [INFO] [main] Frame    50 | dt=  16.00ms | phys=1 | phys_avg=  5.84ms | render=  9.86ms | E:50/120/0 | fps=63 | alpha=0.260[0m
+[32m[2026-05-15 04:50:51.326] [INFO] [main] Frame    60 | dt=  16.00ms | phys=1 | phys_avg=  5.66ms | render=  9.54ms | E:50/120/0 | fps=65 | alpha=0.440[0m
+[32m[2026-05-15 04:50:51.479] [INFO] [main] Frame    70 | dt=  17.00ms | phys=1 | phys_avg=  6.12ms | render=  9.69ms | E:50/120/0 | fps=65 | alpha=0.560[0m
+[32m[2026-05-15 04:50:51.639] [INFO] [main] Frame    80 | dt=  15.00ms | phys=1 | phys_avg=  5.65ms | render=  9.11ms | E:50/120/0 | fps=65 | alpha=0.280[0m
+[32m[2026-05-15 04:50:51.807] [INFO] [main] Frame    90 | dt=  18.00ms | phys=1 | phys_avg=  6.72ms | render=  9.56ms | E:50/120/0 | fps=62 | alpha=0.240[0m
+[32m[2026-05-15 04:50:51.963] [INFO] [main] Frame   100 | dt=  16.00ms | phys=0 | phys_avg=  0.00ms | render= 10.06ms | E:50/120/0 | fps=59 | alpha=0.960[0m
+[32m[2026-05-15 04:50:51.984] [INFO] [main] [MOVE] frame=102 pos=(1025,3083) in_car=No[0m
+[32m[2026-05-15 04:50:52.015] [INFO] [main] [MOVE] frame=104 pos=(1025,3091) in_car=No[0m
+[32m[2026-05-15 04:50:52.046] [INFO] [main] [MOVE] frame=106 pos=(1025,3098) in_car=No[0m
+[32m[2026-05-15 04:50:52.077] [INFO] [main] [MOVE] frame=108 pos=(1025,3105) in_car=No[0m
+[32m[2026-05-15 04:50:52.111] [INFO] [main] [MOVE] frame=110 pos=(1025,3113) in_car=No[0m
+[32m[2026-05-15 04:50:52.120] [INFO] [main] Frame   110 | dt=  17.00ms | phys=1 | phys_avg=  7.29ms | render=  9.31ms | E:50/120/0 | fps=64 | alpha=0.020[0m
+[32m[2026-05-15 04:50:52.142] [INFO] [main] [MOVE] frame=112 pos=(1030,3118) in_car=No[0m
+[32m[2026-05-15 04:50:52.184] [INFO] [main] [MOVE] frame=115 pos=(1035,3123) in_car=No[0m
+[32m[2026-05-15 04:50:52.215] [INFO] [main] [MOVE] frame=117 pos=(1041,3128) in_car=No[0m
+[32m[2026-05-15 04:50:52.245] [INFO] [main] [MOVE] frame=119 pos=(1046,3133) in_car=No[0m
+[32m[2026-05-15 04:50:52.271] [INFO] [main] Frame   120 | dt=  15.00ms | phys=1 | phys_avg=  4.82ms | render= 10.37ms | E:50/120/0 | fps=63 | alpha=0.080[0m
+[32m[2026-05-15 04:50:52.276] [INFO] [main] [MOVE] frame=121 pos=(1051,3139) in_car=No[0m
+[32m[2026-05-15 04:50:52.319] [INFO] [main] [MOVE] frame=124 pos=(1056,3144) in_car=No[0m
+[32m[2026-05-15 04:50:52.349] [INFO] [main] [MOVE] frame=126 pos=(1061,3149) in_car=No[0m
+[32m[2026-05-15 04:50:52.380] [INFO] [main] [MOVE] frame=128 pos=(1066,3154) in_car=No[0m
+[32m[2026-05-15 04:50:52.409] [INFO] [main] [MOVE] frame=130 pos=(1072,3159) in_car=No[0m
+[32m[2026-05-15 04:50:52.419] [INFO] [main] Frame   130 | dt=  15.00ms | phys=1 | phys_avg=  5.47ms | render=  9.34ms | E:50/120/0 | fps=66 | alpha=0.020[0m
+[32m[2026-05-15 04:50:52.451] [INFO] [main] [MOVE] frame=133 pos=(1077,3165) in_car=No[0m
+[32m[2026-05-15 04:50:52.481] [INFO] [main] [MOVE] frame=135 pos=(1082,3170) in_car=No[0m
+[32m[2026-05-15 04:50:52.511] [INFO] [main] [MOVE] frame=137 pos=(1087,3175) in_car=No[0m
+[32m[2026-05-15 04:50:52.552] [INFO] [main] [MOVE] frame=140 pos=(1092,3180) in_car=No[0m
+[32m[2026-05-15 04:50:52.562] [INFO] [main] Frame   140 | dt=  11.00ms | phys=1 | phys_avg=  5.67ms | render=  9.68ms | E:50/120/0 | fps=67 | alpha=0.600[0m
+[32m[2026-05-15 04:50:52.583] [INFO] [main] [MOVE] frame=142 pos=(1095,3186) in_car=No[0m
+[32m[2026-05-15 04:50:52.613] [INFO] [main] [MOVE] frame=144 pos=(1095,3194) in_car=No[0m
+[32m[2026-05-15 04:50:52.643] [INFO] [main] [MOVE] frame=146 pos=(1095,3201) in_car=No[0m
+[32m[2026-05-15 04:50:52.684] [INFO] [main] [MOVE] frame=149 pos=(1095,3208) in_car=No[0m
+[32m[2026-05-15 04:50:52.709] [INFO] [main] Frame   150 | dt=  16.00ms | phys=1 | phys_avg=  6.30ms | render=  8.80ms | E:50/120/0 | fps=69 | alpha=0.480[0m
+[32m[2026-05-15 04:50:52.716] [INFO] [main] [MOVE] frame=151 pos=(1095,3216) in_car=No[0m
+[32m[2026-05-15 04:50:52.747] [INFO] [main] [MOVE] frame=153 pos=(1095,3223) in_car=No[0m
+[32m[2026-05-15 04:50:52.777] [INFO] [main] [MOVE] frame=155 pos=(1095,3230) in_car=No[0m
+[32m[2026-05-15 04:50:52.818] [INFO] [main] [MOVE] frame=158 pos=(1095,3238) in_car=No[0m
+[32m[2026-05-15 04:50:52.851] [INFO] [main] [MOVE] frame=160 pos=(1095,3245) in_car=No[0m
+[32m[2026-05-15 04:50:52.861] [INFO] [main] Frame   160 | dt=  17.00ms | phys=1 | phys_avg=  5.71ms | render=  9.40ms | E:50/120/0 | fps=68 | alpha=0.480[0m
+[32m[2026-05-15 04:50:52.882] [INFO] [main] [MOVE] frame=162 pos=(1095,3252) in_car=No[0m
+[32m[2026-05-15 04:50:52.916] [INFO] [main] [MOVE] frame=164 pos=(1095,3260) in_car=No[0m
+[32m[2026-05-15 04:50:52.948] [INFO] [main] [MOVE] frame=166 pos=(1095,3267) in_car=No[0m
+[32m[2026-05-15 04:50:52.982] [INFO] [main] [MOVE] frame=168 pos=(1095,3274) in_car=No[0m
+[32m[2026-05-15 04:50:53.015] [INFO] [main] [MOVE] frame=170 pos=(1095,3282) in_car=No[0m
+[32m[2026-05-15 04:50:53.025] [INFO] [main] Frame   170 | dt=  16.00ms | phys=1 | phys_avg=  7.16ms | render=  9.42ms | E:50/120/0 | fps=66 | alpha=0.260[0m
+[32m[2026-05-15 04:50:53.049] [INFO] [main] [MOVE] frame=172 pos=(1095,3289) in_car=No[0m
+[32m[2026-05-15 04:50:53.083] [INFO] [main] [MOVE] frame=174 pos=(1095,3296) in_car=No[0m
+[32m[2026-05-15 04:50:53.118] [INFO] [main] [MOVE] frame=176 pos=(1095,3304) in_car=No[0m
+[32m[2026-05-15 04:50:53.152] [INFO] [main] [MOVE] frame=178 pos=(1095,3311) in_car=No[0m
+[32m[2026-05-15 04:50:53.187] [INFO] [main] [MOVE] frame=180 pos=(1095,3318) in_car=No[0m
+[32m[2026-05-15 04:50:53.197] [INFO] [main] Frame   180 | dt=  17.00ms | phys=1 | phys_avg=  7.41ms | render= 10.11ms | E:50/120/0 | fps=60 | alpha=0.520[0m
+[32m[2026-05-15 04:50:53.222] [INFO] [main] [MOVE] frame=182 pos=(1095,3326) in_car=No[0m
+[32m[2026-05-15 04:50:53.256] [INFO] [main] [MOVE] frame=184 pos=(1095,3333) in_car=No[0m
+[32m[2026-05-15 04:50:53.291] [INFO] [main] [MOVE] frame=186 pos=(1095,3340) in_car=No[0m
+[32m[2026-05-15 04:50:53.326] [INFO] [main] [MOVE] frame=188 pos=(1095,3348) in_car=No[0m
+[32m[2026-05-15 04:50:53.369] [INFO] [main] [MOVE] frame=190 pos=(1095,3359) in_car=No[0m
+[32m[2026-05-15 04:50:53.379] [INFO] [main] Frame   190 | dt=  18.00ms | phys=2 | phys_avg=  7.25ms | render= 10.00ms | E:50/120/0 | fps=58 | alpha=0.020[0m
+[32m[2026-05-15 04:50:53.404] [INFO] [main] [MOVE] frame=192 pos=(1095,3366) in_car=No[0m
+[32m[2026-05-15 04:50:53.439] [INFO] [main] [MOVE] frame=194 pos=(1095,3373) in_car=No[0m
+[32m[2026-05-15 04:50:53.473] [INFO] [main] [MOVE] frame=196 pos=(1095,3381) in_car=No[0m
+[32m[2026-05-15 04:50:53.507] [INFO] [main] [MOVE] frame=198 pos=(1095,3388) in_car=No[0m
+[32m[2026-05-15 04:50:53.542] [INFO] [main] [MOVE] frame=200 pos=(1095,3395) in_car=No[0m
+[32m[2026-05-15 04:50:53.552] [INFO] [main] Frame   200 | dt=  17.00ms | phys=1 | phys_avg=  8.05ms | render=  9.25ms | E:50/120/0 | fps=54 | alpha=0.820[0m
+[32m[2026-05-15 04:50:53.575] [INFO] [main] [MOVE] frame=202 pos=(1095,3403) in_car=No[0m
+[32m[2026-05-15 04:50:53.608] [INFO] [main] [MOVE] frame=204 pos=(1095,3410) in_car=No[0m
+[32m[2026-05-15 04:50:53.641] [INFO] [main] [MOVE] frame=206 pos=(1095,3417) in_car=No[0m
+[32m[2026-05-15 04:50:53.675] [INFO] [main] [MOVE] frame=208 pos=(1095,3425) in_car=No[0m
+[32m[2026-05-15 04:50:53.708] [INFO] [main] [MOVE] frame=210 pos=(1095,3432) in_car=No[0m
+[32m[2026-05-15 04:50:53.717] [INFO] [main] Frame   210 | dt=  17.00ms | phys=1 | phys_avg=  6.16ms | render=  9.58ms | E:50/120/0 | fps=57 | alpha=0.900[0m
+[32m[2026-05-15 04:50:53.740] [INFO] [main] [MOVE] frame=212 pos=(1095,3439) in_car=No[0m
+[32m[2026-05-15 04:50:53.772] [INFO] [main] [MOVE] frame=214 pos=(1095,3447) in_car=No[0m
+[32m[2026-05-15 04:50:53.804] [INFO] [main] [MOVE] frame=216 pos=(1095,3454) in_car=No[0m
+[32m[2026-05-15 04:50:53.837] [INFO] [main] [MOVE] frame=218 pos=(1095,3461) in_car=No[0m
+[32m[2026-05-15 04:50:53.869] [INFO] [main] [MOVE] frame=220 pos=(1095,3469) in_car=No[0m
+[32m[2026-05-15 04:50:53.879] [INFO] [main] Frame   220 | dt=  16.00ms | phys=1 | phys_avg=  6.21ms | render=  9.57ms | E:50/120/0 | fps=60 | alpha=0.560[0m
+[32m[2026-05-15 04:50:53.901] [INFO] [main] [MOVE] frame=222 pos=(1095,3476) in_car=No[0m
+[32m[2026-05-15 04:50:53.933] [INFO] [main] [MOVE] frame=224 pos=(1095,3483) in_car=No[0m
+[32m[2026-05-15 04:50:53.965] [INFO] [main] [MOVE] frame=226 pos=(1095,3491) in_car=No[0m
+[32m[2026-05-15 04:50:53.997] [INFO] [main] [MOVE] frame=228 pos=(1095,3498) in_car=No[0m
+[32m[2026-05-15 04:50:54.029] [INFO] [main] [MOVE] frame=230 pos=(1095,3505) in_car=No[0m
+[32m[2026-05-15 04:50:54.039] [INFO] [main] Frame   230 | dt=  15.00ms | phys=1 | phys_avg=  6.62ms | render=  9.44ms | E:50/120/0 | fps=62 | alpha=0.100[0m
+[32m[2026-05-15 04:50:54.061] [INFO] [main] [MOVE] frame=232 pos=(1095,3513) in_car=No[0m
+[32m[2026-05-15 04:50:54.093] [INFO] [main] [MOVE] frame=234 pos=(1095,3520) in_car=No[0m
+[32m[2026-05-15 04:50:54.136] [INFO] [main] [MOVE] frame=237 pos=(1095,3527) in_car=No[0m
+[32m[2026-05-15 04:50:54.168] [INFO] [main] [MOVE] frame=239 pos=(1095,3535) in_car=No[0m
+[32m[2026-05-15 04:50:54.194] [INFO] [main] Frame   240 | dt=  16.00ms | phys=1 | phys_avg=  6.43ms | render=  9.75ms | E:50/120/0 | fps=62 | alpha=0.460[0m
+[32m[2026-05-15 04:50:54.200] [INFO] [main] [MOVE] frame=241 pos=(1095,3542) in_car=No[0m
+[32m[2026-05-15 04:50:54.233] [INFO] [main] [MOVE] frame=243 pos=(1095,3549) in_car=No[0m
+[32m[2026-05-15 04:50:54.267] [INFO] [main] [MOVE] frame=245 pos=(1095,3557) in_car=No[0m
+[32m[2026-05-15 04:50:54.299] [INFO] [main] [MOVE] frame=247 pos=(1095,3564) in_car=No[0m
+[32m[2026-05-15 04:50:54.332] [INFO] [main] [MOVE] frame=249 pos=(1095,3571) in_car=No[0m
+[32m[2026-05-15 04:50:54.358] [INFO] [main] Frame   250 | dt=  17.00ms | phys=1 | phys_avg=  7.17ms | render=  9.45ms | E:50/120/0 | fps=64 | alpha=0.300[0m
+[32m[2026-05-15 04:50:54.366] [INFO] [main] [MOVE] frame=251 pos=(1095,3579) in_car=No[0m
+[32m[2026-05-15 04:50:54.400] [INFO] [main] [MOVE] frame=253 pos=(1095,3586) in_car=No[0m
+[32m[2026-05-15 04:50:54.433] [INFO] [main] [MOVE] frame=255 pos=(1095,3593) in_car=No[0m
+[32m[2026-05-15 04:50:54.466] [INFO] [main] [MOVE] frame=257 pos=(1095,3601) in_car=No[0m
+[32m[2026-05-15 04:50:54.500] [INFO] [main] [MOVE] frame=259 pos=(1095,3608) in_car=No[0m
+[32m[2026-05-15 04:50:54.526] [INFO] [main] Frame   260 | dt=  17.00ms | phys=1 | phys_avg=  7.05ms | render=  9.29ms | E:50/120/0 | fps=60 | alpha=0.380[0m
+[32m[2026-05-15 04:50:54.534] [INFO] [main] [MOVE] frame=261 pos=(1095,3615) in_car=No[0m
+[32m[2026-05-15 04:50:54.567] [INFO] [main] [MOVE] frame=263 pos=(1095,3623) in_car=No[0m
+[32m[2026-05-15 04:50:54.601] [INFO] [main] [MOVE] frame=265 pos=(1095,3630) in_car=No[0m
+[32m[2026-05-15 04:50:54.634] [INFO] [main] [MOVE] frame=267 pos=(1095,3637) in_car=No[0m
+[32m[2026-05-15 04:50:54.668] [INFO] [main] [MOVE] frame=269 pos=(1095,3645) in_car=No[0m
+[32m[2026-05-15 04:50:54.696] [INFO] [main] Frame   270 | dt=  18.00ms | phys=1 | phys_avg=  7.13ms | render=  9.72ms | E:50/120/0 | fps=59 | alpha=0.580[0m
+[32m[2026-05-15 04:50:54.704] [INFO] [main] [MOVE] frame=271 pos=(1095,3652) in_car=No[0m
+[32m[2026-05-15 04:50:54.738] [INFO] [main] [MOVE] frame=273 pos=(1095,3659) in_car=No[0m
+[32m[2026-05-15 04:50:54.773] [INFO] [main] [MOVE] frame=275 pos=(1095,3667) in_car=No[0m
+[32m[2026-05-15 04:50:54.800] [INFO] [main] [MOVE] frame=277 pos=(1095,3674) in_car=No[0m
+[32m[2026-05-15 04:50:54.830] [INFO] [main] [MOVE] frame=279 pos=(1095,3681) in_car=No[0m
+[32m[2026-05-15 04:50:54.853] [INFO] [main] Frame   280 | dt=  15.00ms | phys=1 | phys_avg=  8.06ms | render=  7.46ms | E:50/120/0 | fps=58 | alpha=0.000[0m
+[32m[2026-05-15 04:50:54.869] [INFO] [main] [MOVE] frame=282 pos=(1095,3689) in_car=No[0m
+[32m[2026-05-15 04:50:54.898] [INFO] [main] [MOVE] frame=284 pos=(1095,3696) in_car=No[0m
+[32m[2026-05-15 04:50:54.937] [INFO] [main] [MOVE] frame=286 pos=(1095,3703) in_car=No[0m
+[32m[2026-05-15 04:50:54.966] [INFO] [main] [MOVE] frame=288 pos=(1095,3711) in_car=No[0m
+[32m[2026-05-15 04:50:54.996] [INFO] [main] [MOVE] frame=290 pos=(1095,3718) in_car=No[0m
+[32m[2026-05-15 04:50:55.003] [INFO] [main] Frame   290 | dt=  15.00ms | phys=1 | phys_avg=  7.89ms | render=  6.79ms | E:50/120/0 | fps=64 | alpha=0.060[0m
+[32m[2026-05-15 04:50:55.033] [INFO] [main] [MOVE] frame=293 pos=(1095,3725) in_car=No[0m
+[32m[2026-05-15 04:50:55.063] [INFO] [main] [MOVE] frame=295 pos=(1095,3733) in_car=No[0m
+[32m[2026-05-15 04:50:55.100] [INFO] [main] [MOVE] frame=298 pos=(1095,3740) in_car=No[0m
+[32m[2026-05-15 04:50:55.129] [INFO] [main] [MOVE] frame=300 pos=(1095,3747) in_car=No[0m
+[32m[2026-05-15 04:50:55.136] [INFO] [main] Frame   300 | dt=  15.00ms | phys=1 | phys_avg=  7.31ms | render=  6.95ms | E:50/120/0 | fps=66 | alpha=0.100[0m
+[32m[2026-05-15 04:50:55.167] [INFO] [main] [MOVE] frame=303 pos=(1095,3755) in_car=No[0m
+[32m[2026-05-15 04:50:55.196] [INFO] [main] [MOVE] frame=305 pos=(1095,3762) in_car=No[0m
+[32m[2026-05-15 04:50:55.232] [INFO] [main] [MOVE] frame=308 pos=(1095,3769) in_car=No[0m
+[32m[2026-05-15 04:50:55.260] [INFO] [main] Frame   310 | dt=  15.00ms | phys=0 | phys_avg=  0.00ms | render=  7.21ms | E:50/120/0 | fps=74 | alpha=0.960[0m
+[32m[2026-05-15 04:50:55.267] [INFO] [main] [MOVE] frame=311 pos=(1095,3777) in_car=No[0m
+[32m[2026-05-15 04:50:55.297] [INFO] [main] [MOVE] frame=313 pos=(1095,3784) in_car=No[0m
+[32m[2026-05-15 04:50:55.334] [INFO] [main] [MOVE] frame=316 pos=(1095,3791) in_car=No[0m
+[32m[2026-05-15 04:50:55.363] [INFO] [main] [MOVE] frame=318 pos=(1095,3799) in_car=No[0m
+[32m[2026-05-15 04:50:55.392] [INFO] [main] Frame   320 | dt=   8.00ms | phys=1 | phys_avg=  7.12ms | render=  6.89ms | E:50/120/0 | fps=81 | alpha=0.460[0m
+[32m[2026-05-15 04:50:55.400] [INFO] [main] [MOVE] frame=321 pos=(1095,3806) in_car=No[0m
+[32m[2026-05-15 04:50:55.428] [INFO] [main] [MOVE] frame=323 pos=(1095,3813) in_car=No[0m
+[32m[2026-05-15 04:50:55.464] [INFO] [main] [MOVE] frame=326 pos=(1095,3821) in_car=No[0m
+[32m[2026-05-15 04:50:55.500] [INFO] [main] [MOVE] frame=329 pos=(1095,3828) in_car=No[0m
+[32m[2026-05-15 04:50:55.521] [INFO] [main] Frame   330 | dt=  14.00ms | phys=1 | phys_avg=  6.66ms | render=  7.67ms | E:50/120/0 | fps=75 | alpha=0.200[0m
+[32m[2026-05-15 04:50:55.529] [INFO] [main] [MOVE] frame=331 pos=(1095,3835) in_car=No[0m
+[32m[2026-05-15 04:50:55.565] [INFO] [main] [MOVE] frame=334 pos=(1095,3843) in_car=No[0m
+[32m[2026-05-15 04:50:55.595] [INFO] [main] [MOVE] frame=336 pos=(1095,3850) in_car=No[0m
+[32m[2026-05-15 04:50:55.632] [INFO] [main] [MOVE] frame=339 pos=(1095,3857) in_car=No[0m
+[32m[2026-05-15 04:50:55.653] [INFO] [main] Frame   340 | dt=  15.00ms | phys=1 | phys_avg=  7.07ms | render=  7.32ms | E:50/120/0 | fps=77 | alpha=0.180[0m
+[32m[2026-05-15 04:50:55.661] [INFO] [main] [MOVE] frame=341 pos=(1095,3865) in_car=No[0m
+[32m[2026-05-15 04:50:55.699] [INFO] [main] [MOVE] frame=344 pos=(1100,3870) in_car=No[0m
+[32m[2026-05-15 04:50:55.728] [INFO] [main] [MOVE] frame=346 pos=(1105,3875) in_car=No[0m
+[32m[2026-05-15 04:50:55.764] [INFO] [main] [MOVE] frame=349 pos=(1111,3880) in_car=No[0m
+[32m[2026-05-15 04:50:55.785] [INFO] [main] Frame   350 | dt=  14.00ms | phys=1 | phys_avg=  7.13ms | render=  7.17ms | E:50/120/0 | fps=75 | alpha=0.100[0m
+[32m[2026-05-15 04:50:55.799] [INFO] [main] [MOVE] frame=352 pos=(1116,3885) in_car=No[0m
+[32m[2026-05-15 04:50:55.836] [INFO] [main] [MOVE] frame=355 pos=(1121,3891) in_car=No[0m
+[32m[2026-05-15 04:50:55.864] [INFO] [main] [MOVE] frame=357 pos=(1126,3896) in_car=No[0m
+[32m[2026-05-15 04:50:55.901] [INFO] [main] [MOVE] frame=360 pos=(1131,3901) in_car=No[0m
+[32m[2026-05-15 04:50:55.907] [INFO] [main] Frame   360 | dt=   8.00ms | phys=1 | phys_avg=  6.75ms | render=  6.55ms | E:50/120/0 | fps=75 | alpha=0.420[0m
+[32m[2026-05-15 04:50:55.929] [INFO] [main] [MOVE] frame=362 pos=(1136,3906) in_car=No[0m
+[32m[2026-05-15 04:50:55.965] [INFO] [main] [MOVE] frame=365 pos=(1142,3911) in_car=No[0m
+[32m[2026-05-15 04:50:56.002] [INFO] [main] [MOVE] frame=368 pos=(1147,3917) in_car=No[0m
+[32m[2026-05-15 04:50:56.030] [INFO] [main] [MOVE] frame=370 pos=(1152,3922) in_car=No[0m
+[32m[2026-05-15 04:50:56.037] [INFO] [main] Frame   370 | dt=  14.00ms | phys=1 | phys_avg=  6.96ms | render=  7.35ms | E:50/120/0 | fps=82 | alpha=0.160[0m
+[32m[2026-05-15 04:50:56.067] [INFO] [main] [MOVE] frame=373 pos=(1152,3929) in_car=No[0m
+[32m[2026-05-15 04:50:56.094] [INFO] [main] [MOVE] frame=375 pos=(1152,3936) in_car=No[0m
+[32m[2026-05-15 04:50:56.128] [INFO] [main] [MOVE] frame=378 pos=(1152,3944) in_car=No[0m
+[32m[2026-05-15 04:50:56.156] [INFO] [main] Frame   380 | dt=   7.00ms | phys=1 | phys_avg=  6.58ms | render=  7.17ms | E:50/120/0 | fps=76 | alpha=0.300[0m
+[32m[2026-05-15 04:50:56.163] [INFO] [main] [MOVE] frame=381 pos=(1152,3951) in_car=No[0m
+[32m[2026-05-15 04:50:56.200] [INFO] [main] [MOVE] frame=384 pos=(1152,3958) in_car=No[0m
+[32m[2026-05-15 04:50:56.235] [INFO] [main] [MOVE] frame=387 pos=(1152,3966) in_car=No[0m
+[32m[2026-05-15 04:50:56.264] [INFO] [main] [MOVE] frame=389 pos=(1152,3973) in_car=No[0m
+[32m[2026-05-15 04:50:56.286] [INFO] [main] Frame   390 | dt=  14.00ms | phys=1 | phys_avg=  7.26ms | render=  7.22ms | E:50/120/0 | fps=84 | alpha=0.040[0m
+[32m[2026-05-15 04:50:56.301] [INFO] [main] [MOVE] frame=392 pos=(1155,3979) in_car=No[0m
+[32m[2026-05-15 04:50:56.330] [INFO] [main] [MOVE] frame=394 pos=(1160,3984) in_car=No[0m
+[32m[2026-05-15 04:50:56.366] [INFO] [main] [MOVE] frame=397 pos=(1165,3990) in_car=No[0m
+[32m[2026-05-15 04:50:56.396] [INFO] [main] [MOVE] frame=399 pos=(1170,3995) in_car=No[0m
+[32m[2026-05-15 04:50:56.418] [INFO] [main] Frame   400 | dt=  16.00ms | phys=1 | phys_avg=  7.25ms | render=  7.01ms | E:50/120/0 | fps=76 | alpha=0.020[0m
+[32m[2026-05-15 04:50:56.433] [INFO] [main] [MOVE] frame=402 pos=(1175,4000) in_car=No[0m
+[32m[2026-05-15 04:50:56.463] [INFO] [main] [MOVE] frame=404 pos=(1181,4005) in_car=No[0m
+[32m[2026-05-15 04:50:56.500] [INFO] [main] [MOVE] frame=407 pos=(1186,4010) in_car=No[0m
+[32m[2026-05-15 04:50:56.530] [INFO] [main] [MOVE] frame=409 pos=(1191,4016) in_car=No[0m
+[32m[2026-05-15 04:50:56.552] [INFO] [main] Frame   410 | dt=  15.00ms | phys=1 | phys_avg=  6.74ms | render=  6.92ms | E:50/120/0 | fps=75 | alpha=0.060[0m
+[32m[2026-05-15 04:50:56.566] [INFO] [main] [MOVE] frame=412 pos=(1196,4021) in_car=No[0m
+[32m[2026-05-15 04:50:56.594] [INFO] [main] [MOVE] frame=414 pos=(1201,4026) in_car=No[0m
+[32m[2026-05-15 04:50:56.675] [INFO] [main] Frame   420 | dt=   8.00ms | phys=1 | phys_avg=  7.84ms | render=  7.10ms | E:50/120/0 | fps=74 | alpha=0.440[0m
+[32m[2026-05-15 04:50:56.781] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067d940>, 'entity_type': 'ped', 'position': (1188.0, 4002.97487248963)}[0m
+[32m[2026-05-15 04:50:56.797] [INFO] [main] [MOVE] frame=430 pos=(1228,4003) in_car=Yes[0m
+[32m[2026-05-15 04:50:56.804] [INFO] [main] Frame   430 | dt=  13.00ms | phys=1 | phys_avg=  8.72ms | render=  6.88ms | E:50/121/0 | fps=81 | alpha=0.120[0m
+[32m[2026-05-15 04:50:56.925] [INFO] [main] Frame   440 | dt=  14.00ms | phys=0 | phys_avg=  0.00ms | render=  7.56ms | E:50/121/0 | fps=77 | alpha=0.860[0m
+[32m[2026-05-15 04:50:57.041] [INFO] [main] Frame   450 | dt=   7.00ms | phys=1 | phys_avg=  5.74ms | render=  7.60ms | E:50/121/0 | fps=83 | alpha=0.400[0m
+[32m[2026-05-15 04:50:57.152] [INFO] [main] Frame   460 | dt=  12.00ms | phys=1 | phys_avg=  5.52ms | render=  6.65ms | E:50/121/0 | fps=86 | alpha=0.120[0m
+[32m[2026-05-15 04:50:57.178] [INFO] [main] [MOVE] frame=463 pos=(1228,3997) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.261] [INFO] [main] Frame   470 | dt=  13.00ms | phys=0 | phys_avg=  0.00ms | render=  7.55ms | E:50/121/0 | fps=90 | alpha=0.960[0m
+[32m[2026-05-15 04:50:57.267] [INFO] [main] [MOVE] frame=471 pos=(1228,3991) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.328] [INFO] [main] [MOVE] frame=476 pos=(1228,3985) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.377] [INFO] [main] [MOVE] frame=480 pos=(1228,3980) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.384] [INFO] [main] Frame   480 | dt=  15.00ms | phys=1 | phys_avg=  5.50ms | render=  7.47ms | E:50/121/0 | fps=91 | alpha=0.040[0m
+[32m[2026-05-15 04:50:57.431] [INFO] [main] [MOVE] frame=485 pos=(1228,3973) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.481] [INFO] [main] [MOVE] frame=489 pos=(1228,3966) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.501] [INFO] [main] Frame   490 | dt=  15.00ms | phys=1 | phys_avg=  5.39ms | render=  6.92ms | E:50/121/0 | fps=81 | alpha=0.120[0m
+[32m[2026-05-15 04:50:57.516] [INFO] [main] [MOVE] frame=492 pos=(1228,3961) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.543] [INFO] [main] [MOVE] frame=494 pos=(1228,3955) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.577] [INFO] [main] [MOVE] frame=497 pos=(1228,3950) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.611] [INFO] [main] [MOVE] frame=500 pos=(1228,3943) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.618] [INFO] [main] Frame   500 | dt=  13.00ms | phys=1 | phys_avg=  6.20ms | render=  7.16ms | E:50/121/0 | fps=85 | alpha=0.140[0m
+[32m[2026-05-15 04:50:57.646] [INFO] [main] [MOVE] frame=503 pos=(1228,3937) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.681] [INFO] [main] [MOVE] frame=506 pos=(1228,3930) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.715] [INFO] [main] [MOVE] frame=509 pos=(1228,3923) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.736] [INFO] [main] Frame   510 | dt=  14.00ms | phys=1 | phys_avg=  5.96ms | render=  7.42ms | E:50/121/0 | fps=84 | alpha=0.220[0m
+[32m[2026-05-15 04:50:57.743] [INFO] [main] [MOVE] frame=511 pos=(1228,3915) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.777] [INFO] [main] [MOVE] frame=514 pos=(1228,3907) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.810] [INFO] [main] [MOVE] frame=517 pos=(1228,3899) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.843] [INFO] [main] [MOVE] frame=520 pos=(1228,3891) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.850] [INFO] [main] Frame   520 | dt=  13.00ms | phys=1 | phys_avg=  5.18ms | render=  7.70ms | E:50/121/0 | fps=84 | alpha=0.000[0m
+[32m[2026-05-15 04:50:57.884] [INFO] [main] [MOVE] frame=524 pos=(1228,3882) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.910] [INFO] [main] [MOVE] frame=526 pos=(1228,3873) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.945] [INFO] [main] [MOVE] frame=529 pos=(1228,3863) in_car=Yes[0m
+[32m[2026-05-15 04:50:57.960] [INFO] [main] Frame   530 | dt=  13.00ms | phys=0 | phys_avg=  0.00ms | render=  7.32ms | E:50/121/0 | fps=88 | alpha=0.900[0m
+[32m[2026-05-15 04:50:57.978] [INFO] [main] [MOVE] frame=532 pos=(1228,3854) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.011] [INFO] [main] [MOVE] frame=535 pos=(1228,3844) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.044] [INFO] [main] [MOVE] frame=538 pos=(1228,3835) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.071] [INFO] [main] Frame   540 | dt=   8.00ms | phys=1 | phys_avg=  5.34ms | render=  6.85ms | E:50/121/0 | fps=90 | alpha=0.320[0m
+[32m[2026-05-15 04:50:58.078] [INFO] [main] [MOVE] frame=541 pos=(1228,3825) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.111] [INFO] [main] [MOVE] frame=544 pos=(1228,3816) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.144] [INFO] [main] [MOVE] frame=547 pos=(1229,3806) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.177] [INFO] [main] Frame   550 | dt=  12.00ms | phys=0 | phys_avg=  0.00ms | render=  7.20ms | E:50/121/0 | fps=90 | alpha=0.920[0m
+[32m[2026-05-15 04:50:58.184] [INFO] [main] [MOVE] frame=551 pos=(1230,3797) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.217] [INFO] [main] [MOVE] frame=554 pos=(1232,3787) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.245] [INFO] [main] [MOVE] frame=556 pos=(1235,3778) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.281] [INFO] [main] [MOVE] frame=559 pos=(1239,3769) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.302] [INFO] [main] Frame   560 | dt=  14.00ms | phys=1 | phys_avg=  6.80ms | render=  6.83ms | E:50/121/0 | fps=94 | alpha=0.060[0m
+[32m[2026-05-15 04:50:58.317] [INFO] [main] [MOVE] frame=562 pos=(1243,3761) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.345] [INFO] [main] [MOVE] frame=564 pos=(1248,3753) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.381] [INFO] [main] [MOVE] frame=567 pos=(1254,3745) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.416] [INFO] [main] [MOVE] frame=570 pos=(1260,3738) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.423] [INFO] [main] Frame   570 | dt=   7.00ms | phys=1 | phys_avg=  6.93ms | render=  6.97ms | E:50/121/0 | fps=80 | alpha=0.320[0m
+[32m[2026-05-15 04:50:58.444] [INFO] [main] [MOVE] frame=572 pos=(1267,3732) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.479] [INFO] [main] [MOVE] frame=575 pos=(1273,3725) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.518] [INFO] [main] [MOVE] frame=578 pos=(1280,3718) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.550] [INFO] [main] [MOVE] frame=580 pos=(1287,3712) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.557] [INFO] [main] Frame   580 | dt=  18.00ms | phys=1 | phys_avg=  6.81ms | render=  6.80ms | E:50/121/0 | fps=82 | alpha=0.420[0m
+[32m[2026-05-15 04:50:58.577] [INFO] [main] [MOVE] frame=582 pos=(1290,3706) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.633] [INFO] [main] [MOVE] frame=587 pos=(1297,3699) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.677] [INFO] [main] [MOVE] frame=590 pos=(1299,3692) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.684] [INFO] [main] Frame   590 | dt=  15.00ms | phys=1 | phys_avg=  6.48ms | render=  7.31ms | E:50/121/0 | fps=74 | alpha=0.040[0m
+[32m[2026-05-15 04:50:58.761] [INFO] [main] [MOVE] frame=597 pos=(1300,3687) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.802] [INFO] [main] Frame   600 | dt=  13.00ms | phys=1 | phys_avg=  6.50ms | render=  7.01ms | E:50/121/0 | fps=78 | alpha=0.120[0m
+[32m[2026-05-15 04:50:58.844] [INFO] [main] [MOVE] frame=604 pos=(1304,3682) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.915] [INFO] [main] [MOVE] frame=610 pos=(1308,3677) in_car=Yes[0m
+[32m[2026-05-15 04:50:58.923] [INFO] [main] Frame   610 | dt=   8.00ms | phys=1 | phys_avg=  6.44ms | render=  7.54ms | E:50/121/0 | fps=84 | alpha=0.260[0m
+[32m[2026-05-15 04:50:58.978] [INFO] [main] [MOVE] frame=615 pos=(1313,3671) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.034] [INFO] [main] [MOVE] frame=620 pos=(1318,3666) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.041] [INFO] [main] Frame   620 | dt=   8.00ms | phys=1 | phys_avg=  6.19ms | render=  7.39ms | E:50/121/0 | fps=83 | alpha=0.400[0m
+[32m[2026-05-15 04:50:59.085] [INFO] [main] [MOVE] frame=624 pos=(1323,3660) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.132] [INFO] [main] [MOVE] frame=628 pos=(1329,3654) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.160] [INFO] [main] Frame   630 | dt=  14.00ms | phys=0 | phys_avg=  0.00ms | render=  7.20ms | E:50/121/0 | fps=84 | alpha=0.960[0m
+[32m[2026-05-15 04:50:59.181] [INFO] [main] [MOVE] frame=632 pos=(1335,3648) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.230] [INFO] [main] [MOVE] frame=636 pos=(1342,3640) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.264] [INFO] [main] [MOVE] frame=639 pos=(1347,3635) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.285] [INFO] [main] Frame   640 | dt=  13.00ms | phys=1 | phys_avg=  6.60ms | render=  6.89ms | E:50/121/0 | fps=84 | alpha=0.040[0m
+[32m[2026-05-15 04:50:59.300] [INFO] [main] [MOVE] frame=642 pos=(1352,3630) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.335] [INFO] [main] [MOVE] frame=645 pos=(1357,3624) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.363] [INFO] [main] [MOVE] frame=647 pos=(1363,3619) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.398] [INFO] [main] [MOVE] frame=650 pos=(1369,3613) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.405] [INFO] [main] Frame   650 | dt=  14.00ms | phys=1 | phys_avg=  6.39ms | render=  7.06ms | E:50/121/0 | fps=80 | alpha=0.300[0m
+[32m[2026-05-15 04:50:59.434] [INFO] [main] [MOVE] frame=653 pos=(1376,3607) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.465] [INFO] [main] [MOVE] frame=655 pos=(1383,3601) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.499] [INFO] [main] [MOVE] frame=657 pos=(1391,3596) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.531] [INFO] [main] [MOVE] frame=659 pos=(1399,3592) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.559] [INFO] [main] Frame   660 | dt=  18.00ms | phys=1 | phys_avg=  6.60ms | render= 10.02ms | E:50/121/0 | fps=83 | alpha=0.360[0m
+[32m[2026-05-15 04:50:59.566] [INFO] [main] [MOVE] frame=661 pos=(1408,3588) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.599] [INFO] [main] [MOVE] frame=663 pos=(1417,3585) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.634] [INFO] [main] [MOVE] frame=665 pos=(1426,3583) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.668] [INFO] [main] [MOVE] frame=667 pos=(1435,3582) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.702] [INFO] [main] [MOVE] frame=669 pos=(1445,3581) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.729] [INFO] [main] Frame   670 | dt=  18.00ms | phys=1 | phys_avg=  6.66ms | render= 10.67ms | E:50/121/0 | fps=64 | alpha=0.560[0m
+[32m[2026-05-15 04:50:59.736] [INFO] [main] [MOVE] frame=671 pos=(1454,3582) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.771] [INFO] [main] [MOVE] frame=673 pos=(1464,3583) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.806] [INFO] [main] [MOVE] frame=675 pos=(1473,3585) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.839] [INFO] [main] [MOVE] frame=677 pos=(1482,3588) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.868] [INFO] [main] [MOVE] frame=678 pos=(1491,3591) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.902] [INFO] [main] [MOVE] frame=680 pos=(1500,3594) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.913] [INFO] [main] Frame   680 | dt=  17.00ms | phys=1 | phys_avg=  7.00ms | render= 10.08ms | E:50/121/0 | fps=58 | alpha=0.480[0m
+[32m[2026-05-15 04:50:59.936] [INFO] [main] [MOVE] frame=682 pos=(1509,3597) in_car=Yes[0m
+[32m[2026-05-15 04:50:59.970] [INFO] [main] [MOVE] frame=684 pos=(1518,3600) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.002] [INFO] [main] [MOVE] frame=686 pos=(1527,3603) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.033] [INFO] [main] [MOVE] frame=688 pos=(1536,3607) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.067] [INFO] [main] [MOVE] frame=690 pos=(1545,3610) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.077] [INFO] [main] Frame   690 | dt=  17.00ms | phys=1 | phys_avg=  6.32ms | render=  9.84ms | E:50/121/0 | fps=54 | alpha=0.380[0m
+[32m[2026-05-15 04:51:00.100] [INFO] [main] [MOVE] frame=692 pos=(1554,3613) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.133] [INFO] [main] [MOVE] frame=694 pos=(1563,3617) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.166] [INFO] [main] [MOVE] frame=696 pos=(1572,3620) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.199] [INFO] [main] [MOVE] frame=698 pos=(1581,3623) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.232] [INFO] [main] [MOVE] frame=700 pos=(1589,3627) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.242] [INFO] [main] Frame   700 | dt=  16.00ms | phys=1 | phys_avg=  7.16ms | render= 10.14ms | E:50/121/0 | fps=60 | alpha=0.220[0m
+[32m[2026-05-15 04:51:00.266] [INFO] [main] [MOVE] frame=702 pos=(1598,3630) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.301] [INFO] [main] [MOVE] frame=704 pos=(1607,3633) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.334] [INFO] [main] [MOVE] frame=706 pos=(1617,3635) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.369] [INFO] [main] [MOVE] frame=708 pos=(1626,3637) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.404] [INFO] [main] [MOVE] frame=710 pos=(1635,3638) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.414] [INFO] [main] Frame   710 | dt=  17.00ms | phys=1 | phys_avg=  6.67ms | render= 10.05ms | E:50/121/0 | fps=60 | alpha=0.540[0m
+[32m[2026-05-15 04:51:00.439] [INFO] [main] [MOVE] frame=712 pos=(1645,3638) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.473] [INFO] [main] [MOVE] frame=714 pos=(1654,3637) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.504] [INFO] [main] [MOVE] frame=716 pos=(1664,3636) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.532] [INFO] [main] [MOVE] frame=718 pos=(1673,3633) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.561] [INFO] [main] [MOVE] frame=720 pos=(1682,3630) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.568] [INFO] [main] Frame   720 | dt=  14.00ms | phys=1 | phys_avg=  7.32ms | render=  7.16ms | E:50/121/0 | fps=58 | alpha=0.020[0m
+[32m[2026-05-15 04:51:00.597] [INFO] [main] [MOVE] frame=723 pos=(1690,3626) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.637] [INFO] [main] [MOVE] frame=726 pos=(1699,3622) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.671] [INFO] [main] [MOVE] frame=728 pos=(1707,3617) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.706] [INFO] [main] [MOVE] frame=730 pos=(1715,3612) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.716] [INFO] [main] Frame   730 | dt=  17.00ms | phys=1 | phys_avg=  7.26ms | render= 10.04ms | E:50/121/0 | fps=64 | alpha=0.720[0m
+[32m[2026-05-15 04:51:00.740] [INFO] [main] [MOVE] frame=732 pos=(1723,3607) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.773] [INFO] [main] [MOVE] frame=734 pos=(1732,3602) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.805] [INFO] [main] [MOVE] frame=736 pos=(1740,3597) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.837] [INFO] [main] [MOVE] frame=738 pos=(1748,3592) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.870] [INFO] [main] [MOVE] frame=740 pos=(1755,3587) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.880] [INFO] [main] Frame   740 | dt=  16.00ms | phys=1 | phys_avg=  6.25ms | render=  9.85ms | E:50/121/0 | fps=67 | alpha=0.560[0m
+[32m[2026-05-15 04:51:00.903] [INFO] [main] [MOVE] frame=742 pos=(1763,3581) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.936] [INFO] [main] [MOVE] frame=744 pos=(1770,3575) in_car=Yes[0m
+[32m[2026-05-15 04:51:00.968] [INFO] [main] [MOVE] frame=746 pos=(1776,3568) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.001] [INFO] [main] [MOVE] frame=748 pos=(1782,3560) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.036] [INFO] [main] [MOVE] frame=750 pos=(1788,3552) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.046] [INFO] [main] Frame   750 | dt=  17.00ms | phys=1 | phys_avg=  7.76ms | render= 10.28ms | E:50/121/0 | fps=61 | alpha=0.460[0m
+[32m[2026-05-15 04:51:01.072] [INFO] [main] [MOVE] frame=752 pos=(1792,3544) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.108] [INFO] [main] [MOVE] frame=754 pos=(1796,3536) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.142] [INFO] [main] [MOVE] frame=756 pos=(1800,3527) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.177] [INFO] [main] [MOVE] frame=758 pos=(1804,3518) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.202] [INFO] [main] [MOVE] frame=759 pos=(1807,3509) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.228] [INFO] [main] Frame   760 | dt=  24.00ms | phys=1 | phys_avg=  7.45ms | render=  9.80ms | E:50/121/0 | fps=60 | alpha=0.440[0m
+[32m[2026-05-15 04:51:01.236] [INFO] [main] [MOVE] frame=761 pos=(1811,3500) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.275] [INFO] [main] [MOVE] frame=763 pos=(1814,3492) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.310] [INFO] [main] [MOVE] frame=765 pos=(1817,3483) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.344] [INFO] [main] [MOVE] frame=767 pos=(1821,3474) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.371] [INFO] [main] [MOVE] frame=768 pos=(1824,3465) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.407] [INFO] [main] [MOVE] frame=770 pos=(1828,3456) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.418] [INFO] [main] Frame   770 | dt=  18.00ms | phys=1 | phys_avg=  8.17ms | render= 10.43ms | E:50/121/0 | fps=54 | alpha=0.660[0m
+[32m[2026-05-15 04:51:01.444] [INFO] [main] [MOVE] frame=772 pos=(1831,3447) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.489] [INFO] [main] [MOVE] frame=774 pos=(1836,3434) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.526] [INFO] [main] [MOVE] frame=776 pos=(1840,3425) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.568] [INFO] [main] [MOVE] frame=778 pos=(1846,3412) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.604] [INFO] [main] [MOVE] frame=780 pos=(1851,3404) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.614] [INFO] [main] Frame   780 | dt=  18.00ms | phys=1 | phys_avg=  7.53ms | render=  9.28ms | E:50/121/0 | fps=52 | alpha=0.600[0m
+[32m[2026-05-15 04:51:01.639] [INFO] [main] [MOVE] frame=782 pos=(1856,3396) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.674] [INFO] [main] [MOVE] frame=784 pos=(1863,3389) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.710] [INFO] [main] [MOVE] frame=786 pos=(1869,3383) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.745] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f065ae40>, 'is_cop': False, 'killer': None, 'position': (1912.572982625162, 3374.795786497232), 'kill_count': 1}[0m
+[32m[2026-05-15 04:51:01.745] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067da90>, 'entity_type': 'ped', 'position': (2476, 1876)}[0m
+[32m[2026-05-15 04:51:01.746] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f0658590>, 'is_cop': False, 'killer': None, 'position': (1909.371432845262, 3372.413838451184), 'kill_count': 2}[0m
+[32m[2026-05-15 04:51:01.746] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067dbe0>, 'entity_type': 'ped', 'position': (2694, 2477)}[0m
+[32m[2026-05-15 04:51:01.746] [INFO] [events] [EVENT] WANTED_LEVEL_CHANGED: {'old_level': 1, 'new_level': 0}[0m
+[32m[2026-05-15 04:51:01.746] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067dd30>, 'entity_type': 'cop_car', 'position': (1776, 4772)}[0m
+[32m[2026-05-15 04:51:01.754] [INFO] [main] [MOVE] frame=788 pos=(1881,3374) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.789] [INFO] [main] [MOVE] frame=790 pos=(1889,3369) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.799] [INFO] [main] Frame   790 | dt=  17.00ms | phys=1 | phys_avg=  7.17ms | render=  9.68ms | E:50/121/0 | fps=50 | alpha=0.700[0m
+[32m[2026-05-15 04:51:01.823] [INFO] [main] [MOVE] frame=792 pos=(1897,3365) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.858] [INFO] [main] [MOVE] frame=794 pos=(1906,3361) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.892] [INFO] [main] [MOVE] frame=796 pos=(1915,3359) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.926] [INFO] [main] [MOVE] frame=798 pos=(1924,3357) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.959] [INFO] [main] [MOVE] frame=800 pos=(1934,3355) in_car=Yes[0m
+[32m[2026-05-15 04:51:01.968] [INFO] [main] Frame   800 | dt=  16.00ms | phys=1 | phys_avg=  6.81ms | render=  9.28ms | E:50/121/0 | fps=54 | alpha=0.840[0m
+[32m[2026-05-15 04:51:01.991] [INFO] [main] [MOVE] frame=802 pos=(1943,3355) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.024] [INFO] [main] [MOVE] frame=804 pos=(1953,3354) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.057] [INFO] [main] [MOVE] frame=806 pos=(1962,3353) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.090] [INFO] [main] [MOVE] frame=808 pos=(1972,3352) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.124] [INFO] [main] [MOVE] frame=810 pos=(1981,3352) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.134] [INFO] [main] Frame   810 | dt=  17.00ms | phys=1 | phys_avg=  7.13ms | render= 10.15ms | E:50/121/0 | fps=59 | alpha=0.740[0m
+[32m[2026-05-15 04:51:02.157] [INFO] [main] [MOVE] frame=812 pos=(1991,3351) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.190] [INFO] [main] [MOVE] frame=814 pos=(2000,3351) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.224] [INFO] [main] [MOVE] frame=816 pos=(2010,3350) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.258] [INFO] [main] [MOVE] frame=818 pos=(2019,3348) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.292] [INFO] [main] [MOVE] frame=820 pos=(2028,3346) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.301] [INFO] [main] Frame   820 | dt=  17.00ms | phys=1 | phys_avg=  6.91ms | render=  9.60ms | E:50/121/0 | fps=60 | alpha=0.820[0m
+[32m[2026-05-15 04:51:02.325] [INFO] [main] [MOVE] frame=822 pos=(2037,3343) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.359] [INFO] [main] [MOVE] frame=824 pos=(2046,3339) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.393] [INFO] [main] [MOVE] frame=826 pos=(2054,3335) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.427] [INFO] [main] [MOVE] frame=828 pos=(2062,3330) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.461] [INFO] [main] [MOVE] frame=830 pos=(2070,3324) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.471] [INFO] [main] Frame   830 | dt=  17.00ms | phys=1 | phys_avg=  7.04ms | render=  9.73ms | E:50/121/0 | fps=59 | alpha=0.960[0m
+[32m[2026-05-15 04:51:02.503] [INFO] [main] [MOVE] frame=832 pos=(2080,3314) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.553] [INFO] [main] [MOVE] frame=834 pos=(2089,3303) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.589] [INFO] [main] [MOVE] frame=836 pos=(2094,3295) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.624] [INFO] [main] [MOVE] frame=838 pos=(2098,3286) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.659] [INFO] [main] [MOVE] frame=840 pos=(2101,3277) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.670] [INFO] [main] Frame   840 | dt=  18.00ms | phys=1 | phys_avg=  7.90ms | render= 10.29ms | E:50/121/0 | fps=59 | alpha=0.900[0m
+[32m[2026-05-15 04:51:02.686] [INFO] [main] [MOVE] frame=841 pos=(2104,3268) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.724] [INFO] [main] [MOVE] frame=843 pos=(2107,3259) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.761] [INFO] [main] [MOVE] frame=845 pos=(2110,3250) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.787] [INFO] [main] [MOVE] frame=846 pos=(2113,3241) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.828] [INFO] [main] [MOVE] frame=848 pos=(2115,3232) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.855] [INFO] [main] [MOVE] frame=849 pos=(2118,3223) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.883] [INFO] [main] Frame   850 | dt=  27.00ms | phys=1 | phys_avg=  8.69ms | render=  9.89ms | E:50/121/0 | fps=49 | alpha=0.620[0m
+[32m[2026-05-15 04:51:02.892] [INFO] [main] [MOVE] frame=851 pos=(2120,3213) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.929] [INFO] [main] [MOVE] frame=853 pos=(2123,3204) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.957] [INFO] [main] [MOVE] frame=854 pos=(2126,3195) in_car=Yes[0m
+[32m[2026-05-15 04:51:02.993] [INFO] [main] [MOVE] frame=856 pos=(2128,3186) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.028] [INFO] [main] [MOVE] frame=858 pos=(2131,3177) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.054] [INFO] [main] [MOVE] frame=859 pos=(2133,3168) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.082] [INFO] [main] Frame   860 | dt=  25.00ms | phys=1 | phys_avg=  7.63ms | render= 10.02ms | E:50/121/0 | fps=47 | alpha=0.560[0m
+[32m[2026-05-15 04:51:03.090] [INFO] [main] [MOVE] frame=861 pos=(2136,3159) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.126] [INFO] [main] [MOVE] frame=863 pos=(2138,3149) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.161] [INFO] [main] [MOVE] frame=865 pos=(2141,3140) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.204] [INFO] [main] [MOVE] frame=867 pos=(2145,3127) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.240] [INFO] [main] [MOVE] frame=869 pos=(2147,3117) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.268] [INFO] [main] Frame   870 | dt=  18.00ms | phys=1 | phys_avg=  8.69ms | render=  8.89ms | E:50/121/0 | fps=50 | alpha=0.780[0m
+[32m[2026-05-15 04:51:03.277] [INFO] [main] [MOVE] frame=871 pos=(2150,3108) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.320] [INFO] [main] [MOVE] frame=873 pos=(2154,3095) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.356] [INFO] [main] [MOVE] frame=875 pos=(2156,3085) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.392] [INFO] [main] [MOVE] frame=877 pos=(2159,3076) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.427] [INFO] [main] [MOVE] frame=879 pos=(2162,3067) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.453] [INFO] [main] [MOVE] frame=880 pos=(2164,3058) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.463] [INFO] [main] Frame   880 | dt=  18.00ms | phys=2 | phys_avg=  7.72ms | render= 10.20ms | E:50/121/0 | fps=53 | alpha=0.000[0m
+[32m[2026-05-15 04:51:03.489] [INFO] [main] [MOVE] frame=882 pos=(2167,3049) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.526] [INFO] [main] [MOVE] frame=884 pos=(2169,3040) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.569] [INFO] [main] [MOVE] frame=886 pos=(2172,3026) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.606] [INFO] [main] [MOVE] frame=888 pos=(2173,3016) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.641] [INFO] [main] [MOVE] frame=890 pos=(2173,3007) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.651] [INFO] [main] Frame   890 | dt=  18.00ms | phys=1 | phys_avg=  7.97ms | render= 10.08ms | E:50/121/0 | fps=51 | alpha=0.820[0m
+[32m[2026-05-15 04:51:03.685] [INFO] [main] [MOVE] frame=892 pos=(2173,2992) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.723] [INFO] [main] [MOVE] frame=894 pos=(2173,2983) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.758] [INFO] [main] [MOVE] frame=896 pos=(2172,2973) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.787] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.cat.Cat object at 0x7f65f065bb60>, 'is_cop': False, 'killer': None, 'position': (2187.7606001139934, 2924.1367505104936), 'kill_count': 3}[0m
+[32m[2026-05-15 04:51:03.787] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f062fcb0>, 'is_cop': False, 'killer': None, 'position': (2194.9972896603963, 2956.322351946181), 'kill_count': 4}[0m
+[32m[2026-05-15 04:51:03.788] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067de80>, 'entity_type': 'ped', 'position': (4524, 1541)}[0m
+[32m[2026-05-15 04:51:03.788] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067dfd0>, 'entity_type': 'roadblock_car', 'position': (1828, 3819.0247681478395)}[0m
+[32m[2026-05-15 04:51:03.790] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e270>, 'entity_type': 'roadblock_car', 'position': (2972, 3681.6299482415525)}[0m
+[32m[2026-05-15 04:51:03.793] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e120>, 'entity_type': 'roadblock_car', 'position': (2372, 3846.2315629561863)}[0m
+[32m[2026-05-15 04:51:03.813] [INFO] [main] [MOVE] frame=898 pos=(2172,2959) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.843] [INFO] [main] [MOVE] frame=899 pos=(2172,2950) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.876] [INFO] [main] [MOVE] frame=900 pos=(2173,2940) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.886] [INFO] [main] Frame   900 | dt=  32.00ms | phys=2 | phys_avg= 10.46ms | render=  9.78ms | E:53/121/0 | fps=52 | alpha=0.020[0m
+[32m[2026-05-15 04:51:03.927] [INFO] [main] [MOVE] frame=902 pos=(2176,2926) in_car=Yes[0m
+[32m[2026-05-15 04:51:03.978] [INFO] [main] [MOVE] frame=904 pos=(2180,2913) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.009] [INFO] [main] [MOVE] frame=905 pos=(2184,2904) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.061] [INFO] [main] [MOVE] frame=907 pos=(2191,2892) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.151] [INFO] [main] [MOVE] frame=908 pos=(2204,2877) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.192] [INFO] [main] [MOVE] frame=909 pos=(2214,2868) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.222] [INFO] [main] [MOVE] frame=910 pos=(2222,2863) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.232] [INFO] [main] Frame   910 | dt=  41.00ms | phys=2 | phys_avg= 10.30ms | render=  9.70ms | E:53/121/0 | fps=42 | alpha=0.840[0m
+[32m[2026-05-15 04:51:04.252] [INFO] [main] [MOVE] frame=911 pos=(2231,2858) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.281] [INFO] [main] [MOVE] frame=912 pos=(2239,2854) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.310] [INFO] [main] [MOVE] frame=913 pos=(2248,2851) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.359] [INFO] [main] [MOVE] frame=915 pos=(2262,2848) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.408] [INFO] [main] [MOVE] frame=917 pos=(2276,2846) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.445] [INFO] [main] [MOVE] frame=919 pos=(2286,2845) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.473] [INFO] [main] [MOVE] frame=920 pos=(2295,2844) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.483] [INFO] [main] Frame   920 | dt=  19.00ms | phys=2 | phys_avg=  8.57ms | render=  9.65ms | E:53/121/0 | fps=28 | alpha=0.080[0m
+[32m[2026-05-15 04:51:04.504] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e3c0>, 'entity_type': 'roadblock_car', 'position': (3247.79695030311, 3628)}[0m
+[32m[2026-05-15 04:51:04.504] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e510>, 'entity_type': 'roadblock_car', 'position': (1561.5798915792498, 3628)}[0m
+[32m[2026-05-15 04:51:04.513] [INFO] [main] [MOVE] frame=922 pos=(2305,2843) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.541] [INFO] [main] [MOVE] frame=923 pos=(2314,2842) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.590] [INFO] [main] [MOVE] frame=925 pos=(2328,2840) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.639] [INFO] [main] [MOVE] frame=927 pos=(2342,2839) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.679] [INFO] [main] [MOVE] frame=929 pos=(2352,2838) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.708] [INFO] [main] [MOVE] frame=930 pos=(2361,2836) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.718] [INFO] [main] Frame   930 | dt=  20.00ms | phys=2 | phys_avg=  9.59ms | render=  9.60ms | E:55/121/0 | fps=39 | alpha=0.180[0m
+[32m[2026-05-15 04:51:04.760] [INFO] [main] [MOVE] frame=932 pos=(2375,2834) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.791] [INFO] [main] [MOVE] frame=933 pos=(2384,2831) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.842] [INFO] [main] [MOVE] frame=935 pos=(2398,2826) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.895] [INFO] [main] [MOVE] frame=937 pos=(2410,2819) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.926] [INFO] [main] [MOVE] frame=938 pos=(2418,2814) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.977] [INFO] [main] [MOVE] frame=940 pos=(2430,2806) in_car=Yes[0m
+[32m[2026-05-15 04:51:04.987] [INFO] [main] Frame   940 | dt=  21.00ms | phys=2 | phys_avg= 10.07ms | render=  9.70ms | E:55/121/0 | fps=42 | alpha=0.200[0m
+[32m[2026-05-15 04:51:05.007] [INFO] [main] [MOVE] frame=941 pos=(2438,2801) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.057] [INFO] [main] [MOVE] frame=943 pos=(2450,2793) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.108] [INFO] [main] [MOVE] frame=945 pos=(2461,2785) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.159] [INFO] [main] [MOVE] frame=947 pos=(2473,2777) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.211] [INFO] [main] [MOVE] frame=949 pos=(2485,2769) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.243] [INFO] [main] [MOVE] frame=950 pos=(2493,2763) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.254] [INFO] [main] Frame   950 | dt=  32.00ms | phys=2 | phys_avg= 11.09ms | render= 10.16ms | E:55/121/0 | fps=37 | alpha=0.040[0m
+[32m[2026-05-15 04:51:05.294] [INFO] [main] [MOVE] frame=952 pos=(2504,2755) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.325] [INFO] [main] [MOVE] frame=953 pos=(2512,2750) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.377] [INFO] [main] [MOVE] frame=955 pos=(2524,2742) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.428] [INFO] [main] [MOVE] frame=957 pos=(2536,2733) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.459] [INFO] [main] [MOVE] frame=958 pos=(2543,2728) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.511] [INFO] [main] [MOVE] frame=960 pos=(2555,2720) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.522] [INFO] [main] Frame   960 | dt=  21.00ms | phys=2 | phys_avg= 10.24ms | render= 10.58ms | E:55/121/0 | fps=37 | alpha=0.180[0m
+[32m[2026-05-15 04:51:05.543] [INFO] [main] [MOVE] frame=961 pos=(2563,2714) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.574] [INFO] [main] [MOVE] frame=962 pos=(2570,2708) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.626] [INFO] [main] [MOVE] frame=964 pos=(2580,2698) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.637] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e660>, 'entity_type': 'roadblock_car', 'position': (3094.6424981340074, 1772)}[0m
+[32m[2026-05-15 04:51:05.678] [INFO] [main] [MOVE] frame=966 pos=(2589,2687) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.709] [INFO] [main] [MOVE] frame=967 pos=(2595,2679) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.740] [INFO] [main] [MOVE] frame=968 pos=(2599,2671) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.790] [INFO] [main] [MOVE] frame=970 pos=(2604,2658) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.800] [INFO] [main] Frame   970 | dt=  20.00ms | phys=2 | phys_avg=  9.34ms | render= 10.52ms | E:56/121/0 | fps=37 | alpha=0.040[0m
+[32m[2026-05-15 04:51:05.831] [INFO] [main] [MOVE] frame=972 pos=(2607,2649) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.861] [INFO] [main] [MOVE] frame=973 pos=(2609,2639) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.891] [INFO] [main] [MOVE] frame=974 pos=(2611,2630) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.940] [INFO] [main] [MOVE] frame=976 pos=(2614,2616) in_car=Yes[0m
+[32m[2026-05-15 04:51:05.981] [INFO] [main] [MOVE] frame=978 pos=(2616,2607) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.010] [INFO] [main] [MOVE] frame=979 pos=(2618,2598) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.040] [INFO] [main] Frame   980 | dt=  29.00ms | phys=1 | phys_avg=  9.55ms | render= 10.04ms | E:56/121/0 | fps=35 | alpha=0.920[0m
+[32m[2026-05-15 04:51:06.059] [INFO] [main] [MOVE] frame=981 pos=(2620,2584) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.108] [INFO] [main] [MOVE] frame=983 pos=(2623,2570) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.156] [INFO] [main] [MOVE] frame=985 pos=(2626,2556) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.196] [INFO] [main] [MOVE] frame=987 pos=(2627,2546) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.218] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e7b0>, 'entity_type': 'roadblock_car', 'position': (1772, 1785.3011606943342)}[0m
+[32m[2026-05-15 04:51:06.226] [INFO] [main] [MOVE] frame=988 pos=(2629,2537) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.240] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067e900>, 'entity_type': 'roadblock_car', 'position': (2972, 1591.7596262394295)}[0m
+[32m[2026-05-15 04:51:06.277] [INFO] [main] [MOVE] frame=990 pos=(2632,2523) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.287] [INFO] [main] Frame   990 | dt=  22.00ms | phys=2 | phys_avg=  8.87ms | render=  9.92ms | E:58/121/0 | fps=42 | alpha=0.260[0m
+[32m[2026-05-15 04:51:06.325] [INFO] [main] [MOVE] frame=992 pos=(2634,2509) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.365] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f82c3770>, 'is_cop': False, 'killer': None, 'position': (2658.726513017304, 2501.31732814715), 'kill_count': 5}[0m
+[32m[2026-05-15 04:51:06.365] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067ea50>, 'entity_type': 'ped', 'position': (3676, 4276)}[0m
+[32m[2026-05-15 04:51:06.373] [INFO] [main] [MOVE] frame=994 pos=(2637,2495) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.385] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067eba0>, 'entity_type': 'roadblock_car', 'position': (2428, 1785.357668279537)}[0m
+[32m[2026-05-15 04:51:06.421] [INFO] [main] [MOVE] frame=996 pos=(2639,2481) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.460] [INFO] [main] [MOVE] frame=998 pos=(2641,2471) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.509] [INFO] [main] [MOVE] frame=1000 pos=(2644,2457) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.519] [INFO] [main] Frame  1000 | dt=  19.00ms | phys=2 | phys_avg=  9.72ms | render= 10.00ms | E:59/121/0 | fps=40 | alpha=0.120[0m
+[32m[2026-05-15 04:51:06.558] [INFO] [main] [MOVE] frame=1002 pos=(2647,2444) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.608] [INFO] [main] [MOVE] frame=1004 pos=(2651,2430) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.689] [INFO] [main] [MOVE] frame=1006 pos=(2659,2413) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.719] [INFO] [main] [MOVE] frame=1007 pos=(2664,2405) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.750] [INFO] [main] [MOVE] frame=1008 pos=(2670,2397) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.781] [INFO] [main] [MOVE] frame=1009 pos=(2676,2390) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.812] [INFO] [main] [MOVE] frame=1010 pos=(2683,2384) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.824] [INFO] [main] Frame  1010 | dt=  31.00ms | phys=2 | phys_avg= 10.17ms | render= 12.76ms | E:59/121/0 | fps=42 | alpha=0.300[0m
+[32m[2026-05-15 04:51:06.845] [INFO] [main] [MOVE] frame=1011 pos=(2691,2378) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.879] [INFO] [main] [MOVE] frame=1012 pos=(2699,2373) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.894] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067ecf0>, 'entity_type': 'roadblock_car', 'position': (3628, 1585.3470958327052)}[0m
+[32m[2026-05-15 04:51:06.909] [INFO] [main] [MOVE] frame=1013 pos=(2707,2368) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.937] [INFO] [main] [MOVE] frame=1014 pos=(2715,2364) in_car=Yes[0m
+[32m[2026-05-15 04:51:06.978] [INFO] [main] [MOVE] frame=1016 pos=(2724,2359) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.008] [INFO] [main] [MOVE] frame=1017 pos=(2732,2355) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.058] [INFO] [main] [MOVE] frame=1019 pos=(2745,2348) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.086] [INFO] [main] [MOVE] frame=1020 pos=(2753,2344) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.100] [INFO] [main] Frame  1020 | dt=  29.00ms | phys=2 | phys_avg=  7.47ms | render= 13.24ms | E:60/121/0 | fps=32 | alpha=0.040[0m
+[32m[2026-05-15 04:51:07.126] [INFO] [main] [MOVE] frame=1022 pos=(2762,2340) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.153] [INFO] [main] [MOVE] frame=1023 pos=(2770,2335) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.189] [INFO] [main] [MOVE] frame=1025 pos=(2779,2331) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.226] [INFO] [main] [MOVE] frame=1027 pos=(2787,2327) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.271] [INFO] [main] [MOVE] frame=1029 pos=(2800,2320) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.351] [INFO] [main] Frame  1030 | dt=  26.00ms | phys=1 | phys_avg=  7.17ms | render= 62.17ms | E:60/121/0 | fps=36 | alpha=0.640[0m
+[32m[2026-05-15 04:51:07.379] [INFO] [main] [MOVE] frame=1031 pos=(2821,2309) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.410] [INFO] [main] [MOVE] frame=1032 pos=(2834,2303) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.453] [INFO] [main] [MOVE] frame=1034 pos=(2846,2296) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.490] [INFO] [main] [MOVE] frame=1036 pos=(2854,2291) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.527] [INFO] [main] [MOVE] frame=1038 pos=(2862,2285) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.552] [INFO] [main] [MOVE] frame=1039 pos=(2869,2279) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.582] [INFO] [main] Frame  1040 | dt=  26.00ms | phys=1 | phys_avg=  7.63ms | render= 11.13ms | E:60/121/0 | fps=39 | alpha=0.560[0m
+[32m[2026-05-15 04:51:07.590] [INFO] [main] [MOVE] frame=1041 pos=(2875,2272) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.627] [INFO] [main] [MOVE] frame=1043 pos=(2881,2265) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.652] [INFO] [main] [MOVE] frame=1044 pos=(2887,2257) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.687] [INFO] [main] [MOVE] frame=1046 pos=(2891,2248) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.719] [INFO] [main] [MOVE] frame=1048 pos=(2895,2240) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.751] [INFO] [main] [MOVE] frame=1050 pos=(2898,2231) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.760] [INFO] [main] Frame  1050 | dt=  16.00ms | phys=1 | phys_avg=  7.70ms | render=  8.56ms | E:60/121/0 | fps=43 | alpha=0.420[0m
+[32m[2026-05-15 04:51:07.784] [INFO] [main] [MOVE] frame=1052 pos=(2900,2221) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.816] [INFO] [main] [MOVE] frame=1054 pos=(2901,2212) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.849] [INFO] [main] [MOVE] frame=1056 pos=(2901,2202) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.881] [INFO] [main] [MOVE] frame=1058 pos=(2901,2193) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.914] [INFO] [main] [MOVE] frame=1060 pos=(2901,2183) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.922] [INFO] [main] Frame  1060 | dt=  16.00ms | phys=1 | phys_avg=  7.55ms | render=  8.63ms | E:60/121/0 | fps=56 | alpha=0.080[0m
+[32m[2026-05-15 04:51:07.946] [INFO] [main] [MOVE] frame=1062 pos=(2900,2174) in_car=Yes[0m
+[32m[2026-05-15 04:51:07.986] [INFO] [main] [MOVE] frame=1065 pos=(2899,2164) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.019] [INFO] [main] [MOVE] frame=1067 pos=(2898,2155) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.053] [INFO] [main] [MOVE] frame=1069 pos=(2898,2145) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.077] [INFO] [main] Frame  1070 | dt=  17.00ms | phys=1 | phys_avg=  8.39ms | render=  8.16ms | E:60/121/0 | fps=61 | alpha=0.380[0m
+[32m[2026-05-15 04:51:08.087] [INFO] [main] [MOVE] frame=1071 pos=(2897,2136) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.121] [INFO] [main] [MOVE] frame=1073 pos=(2896,2127) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.155] [INFO] [main] [MOVE] frame=1075 pos=(2895,2117) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.190] [INFO] [main] [MOVE] frame=1077 pos=(2894,2108) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.224] [INFO] [main] [MOVE] frame=1079 pos=(2893,2098) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.249] [INFO] [main] Frame  1080 | dt=  17.00ms | phys=1 | phys_avg=  9.00ms | render=  7.72ms | E:60/121/0 | fps=64 | alpha=0.700[0m
+[32m[2026-05-15 04:51:08.258] [INFO] [main] [MOVE] frame=1081 pos=(2892,2089) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.292] [INFO] [main] [MOVE] frame=1083 pos=(2891,2079) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.326] [INFO] [main] [MOVE] frame=1085 pos=(2891,2070) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.360] [INFO] [main] [MOVE] frame=1087 pos=(2890,2060) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.396] [INFO] [main] [MOVE] frame=1089 pos=(2889,2051) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.421] [INFO] [main] Frame  1090 | dt=  17.00ms | phys=1 | phys_avg=  9.07ms | render=  8.13ms | E:60/121/0 | fps=58 | alpha=0.960[0m
+[32m[2026-05-15 04:51:08.430] [INFO] [main] [MOVE] frame=1091 pos=(2887,2042) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.457] [INFO] [main] [MOVE] frame=1092 pos=(2885,2032) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.494] [INFO] [main] [MOVE] frame=1094 pos=(2882,2023) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.528] [INFO] [main] [MOVE] frame=1096 pos=(2878,2014) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.571] [INFO] [main] [MOVE] frame=1098 pos=(2871,2002) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.606] [INFO] [main] [MOVE] frame=1100 pos=(2866,1994) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.614] [INFO] [main] Frame  1100 | dt=  17.00ms | phys=1 | phys_avg=  8.93ms | render=  8.31ms | E:60/121/0 | fps=58 | alpha=0.600[0m
+[32m[2026-05-15 04:51:08.641] [INFO] [main] [MOVE] frame=1102 pos=(2860,1987) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.677] [INFO] [main] [MOVE] frame=1104 pos=(2853,1980) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.711] [INFO] [main] [MOVE] frame=1106 pos=(2847,1973) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.752] [INFO] [main] [MOVE] frame=1108 pos=(2836,1963) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.786] [INFO] [main] [MOVE] frame=1110 pos=(2830,1957) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.793] [INFO] [main] Frame  1110 | dt=  17.00ms | phys=1 | phys_avg=  8.14ms | render=  7.88ms | E:60/121/0 | fps=51 | alpha=0.460[0m
+[32m[2026-05-15 04:51:08.818] [INFO] [main] [MOVE] frame=1112 pos=(2823,1950) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.857] [INFO] [main] [MOVE] frame=1114 pos=(2816,1944) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.903] [INFO] [main] [MOVE] frame=1116 pos=(2805,1934) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.941] [INFO] [main] [MOVE] frame=1118 pos=(2798,1928) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.979] [INFO] [main] [MOVE] frame=1120 pos=(2791,1922) in_car=Yes[0m
+[32m[2026-05-15 04:51:08.989] [INFO] [main] Frame  1120 | dt=  18.00ms | phys=1 | phys_avg=  8.01ms | render= 10.39ms | E:60/121/0 | fps=55 | alpha=0.980[0m
+[32m[2026-05-15 04:51:09.005] [INFO] [main] [MOVE] frame=1121 pos=(2784,1915) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.042] [INFO] [main] [MOVE] frame=1123 pos=(2777,1909) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.088] [INFO] [main] [MOVE] frame=1125 pos=(2767,1899) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.125] [INFO] [main] [MOVE] frame=1127 pos=(2760,1893) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.171] [INFO] [main] [MOVE] frame=1129 pos=(2749,1883) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.200] [INFO] [main] Frame  1130 | dt=  26.00ms | phys=1 | phys_avg=  7.84ms | render= 11.07ms | E:60/121/0 | fps=51 | alpha=0.640[0m
+[32m[2026-05-15 04:51:09.209] [INFO] [main] [MOVE] frame=1131 pos=(2742,1877) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.254] [INFO] [main] [MOVE] frame=1133 pos=(2732,1867) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.291] [INFO] [main] [MOVE] frame=1135 pos=(2725,1861) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.321] [INFO] [main] [MOVE] frame=1136 pos=(2718,1854) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.357] [INFO] [main] [MOVE] frame=1138 pos=(2711,1848) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.402] [INFO] [main] [MOVE] frame=1140 pos=(2700,1838) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.413] [INFO] [main] Frame  1140 | dt=  19.00ms | phys=2 | phys_avg=  7.04ms | render= 11.05ms | E:60/121/0 | fps=47 | alpha=0.000[0m
+[32m[2026-05-15 04:51:09.440] [INFO] [main] [MOVE] frame=1142 pos=(2693,1832) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.478] [INFO] [main] [MOVE] frame=1144 pos=(2686,1825) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.504] [INFO] [main] [MOVE] frame=1145 pos=(2680,1818) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.540] [INFO] [main] [MOVE] frame=1147 pos=(2674,1811) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.577] [INFO] [main] [MOVE] frame=1149 pos=(2668,1803) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.602] [INFO] [main] [MOVE] frame=1150 pos=(2663,1795) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.612] [INFO] [main] Frame  1150 | dt=  18.00ms | phys=2 | phys_avg=  7.11ms | render= 10.16ms | E:60/121/0 | fps=46 | alpha=0.060[0m
+[32m[2026-05-15 04:51:09.641] [INFO] [main] [MOVE] frame=1152 pos=(2659,1786) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.669] [INFO] [main] [MOVE] frame=1153 pos=(2656,1778) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.710] [INFO] [main] [MOVE] frame=1155 pos=(2653,1768) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.739] [INFO] [main] [MOVE] frame=1156 pos=(2652,1759) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.781] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067da90>, 'is_cop': False, 'killer': None, 'position': (2632.3418218916363, 1712.589661457156), 'kill_count': 6}[0m
+[32m[2026-05-15 04:51:09.781] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f067ee40>, 'entity_type': 'ped', 'position': (4727, 1188)}[0m
+[32m[2026-05-15 04:51:09.789] [INFO] [main] [MOVE] frame=1158 pos=(2650,1745) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.836] [INFO] [main] [MOVE] frame=1160 pos=(2650,1731) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.849] [INFO] [main] Frame  1160 | dt=  20.00ms | phys=2 | phys_avg=  6.59ms | render= 13.13ms | E:60/121/0 | fps=50 | alpha=0.100[0m
+[32m[2026-05-15 04:51:09.877] [INFO] [main] [MOVE] frame=1162 pos=(2650,1721) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.904] [INFO] [main] [MOVE] frame=1163 pos=(2649,1712) in_car=Yes[0m
+[32m[2026-05-15 04:51:09.952] [INFO] [main] [MOVE] frame=1165 pos=(2649,1697) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.061] [INFO] [main] [MOVE] frame=1167 pos=(2645,1674) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.095] [INFO] [main] [MOVE] frame=1168 pos=(2640,1660) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.123] [INFO] [main] [MOVE] frame=1169 pos=(2637,1652) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.157] [INFO] [main] Frame  1170 | dt=  27.00ms | phys=1 | phys_avg=  6.80ms | render= 13.81ms | E:60/121/0 | fps=42 | alpha=0.880[0m
+[32m[2026-05-15 04:51:10.171] [INFO] [main] [MOVE] frame=1171 pos=(2629,1640) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.221] [INFO] [main] [MOVE] frame=1173 pos=(2620,1629) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.269] [INFO] [main] [MOVE] frame=1175 pos=(2610,1619) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.309] [INFO] [main] [MOVE] frame=1177 pos=(2602,1613) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.339] [INFO] [main] [MOVE] frame=1178 pos=(2594,1608) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.389] [INFO] [main] [MOVE] frame=1180 pos=(2581,1602) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.403] [INFO] [main] Frame  1180 | dt=  22.00ms | phys=2 | phys_avg=  7.59ms | render= 13.06ms | E:60/121/0 | fps=32 | alpha=0.160[0m
+[32m[2026-05-15 04:51:10.439] [INFO] [main] [MOVE] frame=1182 pos=(2568,1598) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.491] [INFO] [main] [MOVE] frame=1184 pos=(2553,1596) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.521] [INFO] [main] [MOVE] frame=1185 pos=(2544,1595) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.570] [INFO] [main] [MOVE] frame=1187 pos=(2530,1596) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.620] [INFO] [main] [MOVE] frame=1189 pos=(2516,1598) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.654] [INFO] [main] Frame  1190 | dt=  28.00ms | phys=1 | phys_avg=  8.11ms | render= 12.91ms | E:60/121/0 | fps=40 | alpha=0.820[0m
+[32m[2026-05-15 04:51:10.670] [INFO] [main] [MOVE] frame=1191 pos=(2502,1600) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.709] [INFO] [events] [EVENT] PICKUP_COLLECTED: {'pickup': [2476, 1612, 'hp', 0.0], 'type': 'hp', 'position': (2476, 1612)}[0m
+[32m[2026-05-15 04:51:10.709] [INFO] [main] [MOVE] frame=1193 pos=(2492,1602) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.755] [INFO] [main] [MOVE] frame=1195 pos=(2478,1604) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.793] [INFO] [main] [MOVE] frame=1197 pos=(2469,1606) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.821] [INFO] [main] [MOVE] frame=1198 pos=(2459,1608) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.862] [INFO] [main] [MOVE] frame=1200 pos=(2450,1609) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.872] [INFO] [main] Frame  1200 | dt=  21.00ms | phys=1 | phys_avg=  9.14ms | render=  9.95ms | E:60/121/0 | fps=39 | alpha=0.900[0m
+[32m[2026-05-15 04:51:10.888] [INFO] [main] [MOVE] frame=1201 pos=(2441,1611) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.926] [INFO] [main] [MOVE] frame=1203 pos=(2431,1613) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.954] [INFO] [main] [MOVE] frame=1204 pos=(2422,1614) in_car=Yes[0m
+[32m[2026-05-15 04:51:10.992] [INFO] [main] [MOVE] frame=1206 pos=(2413,1616) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.040] [INFO] [main] [MOVE] frame=1208 pos=(2399,1618) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.079] [INFO] [main] [MOVE] frame=1210 pos=(2389,1620) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.091] [INFO] [main] Frame  1210 | dt=  20.00ms | phys=1 | phys_avg=  9.03ms | render= 11.08ms | E:60/121/0 | fps=46 | alpha=0.980[0m
+[32m[2026-05-15 04:51:11.109] [INFO] [main] [MOVE] frame=1211 pos=(2380,1622) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.158] [INFO] [main] [MOVE] frame=1213 pos=(2366,1624) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.208] [INFO] [main] [MOVE] frame=1215 pos=(2352,1627) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.257] [INFO] [main] [MOVE] frame=1217 pos=(2338,1630) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.295] [INFO] [main] [MOVE] frame=1219 pos=(2329,1632) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.323] [INFO] [main] [MOVE] frame=1220 pos=(2320,1635) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.334] [INFO] [main] Frame  1220 | dt=  20.00ms | phys=2 | phys_avg=  8.05ms | render= 11.01ms | E:60/121/0 | fps=45 | alpha=0.140[0m
+[32m[2026-05-15 04:51:11.362] [INFO] [main] [MOVE] frame=1222 pos=(2311,1638) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.389] [INFO] [main] [MOVE] frame=1223 pos=(2302,1643) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.428] [INFO] [main] [MOVE] frame=1225 pos=(2294,1648) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.456] [INFO] [main] [MOVE] frame=1226 pos=(2287,1654) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.495] [INFO] [main] [MOVE] frame=1228 pos=(2280,1660) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.522] [INFO] [main] [MOVE] frame=1229 pos=(2273,1667) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.551] [INFO] [main] Frame  1230 | dt=  26.00ms | phys=1 | phys_avg=  7.27ms | render= 11.47ms | E:60/121/0 | fps=41 | alpha=0.640[0m
+[32m[2026-05-15 04:51:11.559] [INFO] [main] [MOVE] frame=1231 pos=(2268,1675) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.603] [INFO] [main] [MOVE] frame=1233 pos=(2261,1687) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.639] [INFO] [main] [MOVE] frame=1235 pos=(2257,1696) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.676] [INFO] [main] [MOVE] frame=1237 pos=(2253,1704) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.701] [INFO] [main] [MOVE] frame=1238 pos=(2250,1713) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.736] [INFO] [main] [MOVE] frame=1240 pos=(2247,1722) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.747] [INFO] [main] Frame  1240 | dt=  18.00ms | phys=1 | phys_avg=  6.02ms | render= 10.57ms | E:60/121/0 | fps=45 | alpha=0.580[0m
+[32m[2026-05-15 04:51:11.770] [INFO] [main] [MOVE] frame=1242 pos=(2244,1732) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.781] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067ef90>, 'entity_type': 'cop_car', 'position': (2972, 3547)}[0m
+[32m[2026-05-15 04:51:11.804] [INFO] [main] [MOVE] frame=1244 pos=(2241,1741) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.840] [INFO] [main] [MOVE] frame=1246 pos=(2238,1750) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.876] [INFO] [main] [MOVE] frame=1248 pos=(2235,1758) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.901] [INFO] [main] [MOVE] frame=1249 pos=(2231,1767) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.931] [INFO] [main] Frame  1250 | dt=  24.00ms | phys=1 | phys_avg=  6.83ms | render= 12.24ms | E:61/121/0 | fps=51 | alpha=0.440[0m
+[32m[2026-05-15 04:51:11.938] [INFO] [main] [MOVE] frame=1251 pos=(2227,1775) in_car=Yes[0m
+[32m[2026-05-15 04:51:11.976] [INFO] [main] [MOVE] frame=1253 pos=(2221,1783) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.019] [INFO] [main] [MOVE] frame=1255 pos=(2212,1794) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.056] [INFO] [main] [MOVE] frame=1257 pos=(2205,1799) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.093] [INFO] [main] [MOVE] frame=1259 pos=(2198,1802) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.120] [INFO] [main] [MOVE] frame=1260 pos=(2191,1805) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.132] [INFO] [main] Frame  1260 | dt=  20.00ms | phys=2 | phys_avg=  7.26ms | render= 11.50ms | E:61/121/0 | fps=54 | alpha=0.080[0m
+[32m[2026-05-15 04:51:12.158] [INFO] [main] [MOVE] frame=1262 pos=(2183,1807) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.199] [INFO] [main] [MOVE] frame=1264 pos=(2172,1809) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.235] [INFO] [main] [MOVE] frame=1266 pos=(2164,1811) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.273] [INFO] [main] [MOVE] frame=1268 pos=(2155,1813) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.309] [INFO] [main] [MOVE] frame=1270 pos=(2147,1814) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.320] [INFO] [main] Frame  1270 | dt=  18.00ms | phys=1 | phys_avg=  6.95ms | render= 10.90ms | E:61/121/0 | fps=49 | alpha=0.840[0m
+[32m[2026-05-15 04:51:12.354] [INFO] [main] [MOVE] frame=1272 pos=(2135,1816) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.393] [INFO] [main] [MOVE] frame=1274 pos=(2126,1819) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.444] [INFO] [main] [MOVE] frame=1276 pos=(2113,1823) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.469] [INFO] [main] [MOVE] frame=1277 pos=(2104,1826) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.508] [INFO] [main] [MOVE] frame=1279 pos=(2095,1830) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.538] [INFO] [main] Frame  1280 | dt=  19.00ms | phys=1 | phys_avg=  7.33ms | render= 11.78ms | E:61/121/0 | fps=52 | alpha=0.860[0m
+[32m[2026-05-15 04:51:12.552] [INFO] [main] [MOVE] frame=1281 pos=(2082,1835) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.590] [INFO] [main] [MOVE] frame=1283 pos=(2073,1839) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.627] [INFO] [main] [MOVE] frame=1285 pos=(2065,1843) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.654] [INFO] [main] [MOVE] frame=1286 pos=(2057,1849) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.691] [INFO] [main] [MOVE] frame=1288 pos=(2049,1855) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.737] [INFO] [main] [MOVE] frame=1290 pos=(2039,1865) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.748] [INFO] [main] Frame  1290 | dt=  19.00ms | phys=2 | phys_avg=  7.43ms | render= 11.51ms | E:61/121/0 | fps=46 | alpha=0.100[0m
+[32m[2026-05-15 04:51:12.776] [INFO] [main] [MOVE] frame=1292 pos=(2034,1872) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.803] [INFO] [main] [MOVE] frame=1293 pos=(2028,1880) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.841] [INFO] [main] [MOVE] frame=1295 pos=(2024,1888) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.889] [INFO] [main] [MOVE] frame=1297 pos=(2017,1901) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.926] [INFO] [main] [MOVE] frame=1299 pos=(2013,1910) in_car=Yes[0m
+[32m[2026-05-15 04:51:12.956] [INFO] [main] Frame  1300 | dt=  19.00ms | phys=1 | phys_avg=  7.71ms | render= 10.68ms | E:61/121/0 | fps=47 | alpha=0.940[0m
+[32m[2026-05-15 04:51:12.971] [INFO] [main] [MOVE] frame=1301 pos=(2008,1923) in_car=Yes[0m
+[32m[2026-05-15 04:51:13.032] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f0e0>, 'entity_type': 'cop_car', 'position': (3572, 3056)}[0m
+[32m[2026-05-15 04:51:13.059] [INFO] [main] [MOVE] frame=1305 pos=(2006,1916) in_car=No[0m
+[32m[2026-05-15 04:51:13.107] [INFO] [main] [MOVE] frame=1307 pos=(2006,1905) in_car=No[0m
+[32m[2026-05-15 04:51:13.155] [INFO] [main] [MOVE] frame=1309 pos=(2006,1894) in_car=No[0m
+[32m[2026-05-15 04:51:13.186] [INFO] [main] Frame  1310 | dt=  27.00ms | phys=1 | phys_avg=  7.88ms | render= 11.57ms | E:62/121/0 | fps=48 | alpha=0.740[0m
+[32m[2026-05-15 04:51:13.194] [INFO] [main] [MOVE] frame=1311 pos=(2006,1887) in_car=No[0m
+[32m[2026-05-15 04:51:13.221] [INFO] [main] [MOVE] frame=1312 pos=(2006,1879) in_car=No[0m
+[32m[2026-05-15 04:51:13.260] [INFO] [main] [MOVE] frame=1314 pos=(2006,1872) in_car=No[0m
+[32m[2026-05-15 04:51:13.286] [INFO] [main] [MOVE] frame=1315 pos=(2006,1865) in_car=No[0m
+[32m[2026-05-15 04:51:13.324] [INFO] [main] [MOVE] frame=1317 pos=(2006,1857) in_car=No[0m
+[32m[2026-05-15 04:51:13.368] [INFO] [main] [MOVE] frame=1319 pos=(2006,1846) in_car=No[0m
+[32m[2026-05-15 04:51:13.399] [INFO] [main] Frame  1320 | dt=  25.00ms | phys=1 | phys_avg=  6.46ms | render= 12.36ms | E:62/121/0 | fps=43 | alpha=0.520[0m
+[32m[2026-05-15 04:51:13.406] [INFO] [main] [MOVE] frame=1321 pos=(2006,1839) in_car=No[0m
+[32m[2026-05-15 04:51:13.451] [INFO] [main] [MOVE] frame=1323 pos=(2006,1828) in_car=No[0m
+[32m[2026-05-15 04:51:13.491] [INFO] [main] [MOVE] frame=1325 pos=(2006,1821) in_car=No[0m
+[32m[2026-05-15 04:51:13.536] [INFO] [main] [MOVE] frame=1327 pos=(2006,1810) in_car=No[0m
+[32m[2026-05-15 04:51:13.576] [INFO] [main] [MOVE] frame=1329 pos=(2006,1802) in_car=No[0m
+[32m[2026-05-15 04:51:13.602] [INFO] [main] [MOVE] frame=1330 pos=(2006,1795) in_car=No[0m
+[32m[2026-05-15 04:51:13.615] [INFO] [main] Frame  1330 | dt=  20.00ms | phys=2 | phys_avg=  6.88ms | render= 12.43ms | E:62/121/0 | fps=46 | alpha=0.120[0m
+[32m[2026-05-15 04:51:13.641] [INFO] [main] [MOVE] frame=1332 pos=(2006,1788) in_car=No[0m
+[32m[2026-05-15 04:51:13.668] [INFO] [main] [MOVE] frame=1333 pos=(2006,1780) in_car=No[0m
+[32m[2026-05-15 04:51:13.707] [INFO] [main] [MOVE] frame=1335 pos=(2006,1773) in_car=No[0m
+[32m[2026-05-15 04:51:13.753] [INFO] [main] [MOVE] frame=1337 pos=(2006,1762) in_car=No[0m
+[32m[2026-05-15 04:51:13.792] [INFO] [main] [MOVE] frame=1339 pos=(2006,1755) in_car=No[0m
+[32m[2026-05-15 04:51:13.821] [INFO] [main] [MOVE] frame=1340 pos=(2006,1747) in_car=No[0m
+[32m[2026-05-15 04:51:13.833] [INFO] [main] Frame  1340 | dt=  19.00ms | phys=2 | phys_avg=  7.34ms | render= 12.57ms | E:62/121/0 | fps=46 | alpha=0.080[0m
+[32m[2026-05-15 04:51:13.862] [INFO] [main] [MOVE] frame=1342 pos=(2006,1740) in_car=No[0m
+[32m[2026-05-15 04:51:13.890] [INFO] [main] [MOVE] frame=1343 pos=(2000,1735) in_car=No[0m
+[32m[2026-05-15 04:51:13.936] [INFO] [main] [MOVE] frame=1345 pos=(1991,1732) in_car=No[0m
+[32m[2026-05-15 04:51:13.976] [INFO] [main] [MOVE] frame=1347 pos=(1983,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.002] [INFO] [main] [MOVE] frame=1348 pos=(1976,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.038] [INFO] [main] [MOVE] frame=1350 pos=(1969,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.049] [INFO] [main] Frame  1350 | dt=  18.00ms | phys=1 | phys_avg=  6.77ms | render= 11.09ms | E:62/121/0 | fps=46 | alpha=0.580[0m
+[32m[2026-05-15 04:51:14.074] [INFO] [main] [MOVE] frame=1352 pos=(1961,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.111] [INFO] [main] [MOVE] frame=1354 pos=(1954,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.136] [INFO] [main] [MOVE] frame=1355 pos=(1947,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.173] [INFO] [main] [MOVE] frame=1357 pos=(1939,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.209] [INFO] [main] [MOVE] frame=1359 pos=(1932,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.239] [INFO] [main] Frame  1360 | dt=  19.00ms | phys=1 | phys_avg=  6.64ms | render= 11.20ms | E:62/121/0 | fps=46 | alpha=0.980[0m
+[32m[2026-05-15 04:51:14.253] [INFO] [main] [MOVE] frame=1361 pos=(1921,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.283] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f230>, 'entity_type': 'cop_car', 'position': (1182, 3572)}[0m
+[32m[2026-05-15 04:51:14.289] [INFO] [main] [MOVE] frame=1363 pos=(1914,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.326] [INFO] [main] [MOVE] frame=1365 pos=(1906,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.368] [INFO] [main] [MOVE] frame=1367 pos=(1895,1732) in_car=No[0m
+[32m[2026-05-15 04:51:14.405] [INFO] [main] [MOVE] frame=1369 pos=(1890,1737) in_car=No[0m
+[32m[2026-05-15 04:51:14.435] [INFO] [main] Frame  1370 | dt=  18.00ms | phys=1 | phys_avg=  7.02ms | render= 11.16ms | E:63/121/0 | fps=52 | alpha=0.680[0m
+[32m[2026-05-15 04:51:14.442] [INFO] [main] [MOVE] frame=1371 pos=(1885,1743) in_car=No[0m
+[32m[2026-05-15 04:51:14.486] [INFO] [main] [MOVE] frame=1373 pos=(1877,1750) in_car=No[0m
+[32m[2026-05-15 04:51:14.521] [INFO] [main] [MOVE] frame=1375 pos=(1872,1756) in_car=No[0m
+[32m[2026-05-15 04:51:14.557] [INFO] [main] [MOVE] frame=1377 pos=(1867,1761) in_car=No[0m
+[32m[2026-05-15 04:51:14.601] [INFO] [main] [MOVE] frame=1379 pos=(1859,1769) in_car=No[0m
+[32m[2026-05-15 04:51:14.630] [INFO] [main] Frame  1380 | dt=  25.00ms | phys=1 | phys_avg=  6.73ms | render= 11.00ms | E:63/121/0 | fps=51 | alpha=0.500[0m
+[32m[2026-05-15 04:51:14.637] [INFO] [main] [MOVE] frame=1381 pos=(1854,1774) in_car=No[0m
+[32m[2026-05-15 04:51:14.674] [INFO] [main] [MOVE] frame=1383 pos=(1849,1779) in_car=No[0m
+[32m[2026-05-15 04:51:14.718] [INFO] [main] [MOVE] frame=1385 pos=(1841,1787) in_car=No[0m
+[32m[2026-05-15 04:51:14.755] [INFO] [main] [MOVE] frame=1387 pos=(1836,1792) in_car=No[0m
+[32m[2026-05-15 04:51:14.790] [INFO] [main] [MOVE] frame=1389 pos=(1830,1797) in_car=No[0m
+[32m[2026-05-15 04:51:14.819] [INFO] [main] Frame  1390 | dt=  19.00ms | phys=1 | phys_avg=  5.87ms | render= 10.85ms | E:63/121/0 | fps=51 | alpha=0.900[0m
+[32m[2026-05-15 04:51:14.825] [INFO] [main] [MOVE] frame=1391 pos=(1825,1802) in_car=No[0m
+[32m[2026-05-15 04:51:14.860] [INFO] [main] [MOVE] frame=1393 pos=(1820,1807) in_car=No[0m
+[32m[2026-05-15 04:51:14.883] [INFO] [main] [MOVE] frame=1394 pos=(1815,1813) in_car=No[0m
+[32m[2026-05-15 04:51:14.919] [INFO] [main] [MOVE] frame=1396 pos=(1810,1818) in_car=No[0m
+[32m[2026-05-15 04:51:14.955] [INFO] [main] [MOVE] frame=1398 pos=(1807,1823) in_car=No[0m
+[32m[2026-05-15 04:51:14.991] [INFO] [main] [MOVE] frame=1400 pos=(1807,1828) in_car=No[0m
+[32m[2026-05-15 04:51:15.002] [INFO] [main] Frame  1400 | dt=  17.00ms | phys=1 | phys_avg=  6.25ms | render= 10.38ms | E:63/121/0 | fps=53 | alpha=0.820[0m
+[32m[2026-05-15 04:51:15.026] [INFO] [main] [MOVE] frame=1402 pos=(1807,1833) in_car=No[0m
+[32m[2026-05-15 04:51:15.066] [INFO] [main] [MOVE] frame=1404 pos=(1804,1841) in_car=No[0m
+[32m[2026-05-15 04:51:15.101] [INFO] [main] [MOVE] frame=1406 pos=(1799,1846) in_car=No[0m
+[32m[2026-05-15 04:51:15.136] [INFO] [main] [MOVE] frame=1408 pos=(1794,1852) in_car=No[0m
+[32m[2026-05-15 04:51:15.171] [INFO] [main] [MOVE] frame=1410 pos=(1789,1857) in_car=No[0m
+[32m[2026-05-15 04:51:15.182] [INFO] [main] Frame  1410 | dt=  17.00ms | phys=1 | phys_avg=  5.90ms | render= 11.32ms | E:63/121/0 | fps=54 | alpha=0.560[0m
+[32m[2026-05-15 04:51:15.205] [INFO] [main] [MOVE] frame=1412 pos=(1784,1862) in_car=No[0m
+[32m[2026-05-15 04:51:15.240] [INFO] [main] [MOVE] frame=1414 pos=(1779,1867) in_car=No[0m
+[32m[2026-05-15 04:51:15.274] [INFO] [main] [MOVE] frame=1416 pos=(1779,1874) in_car=No[0m
+[32m[2026-05-15 04:51:15.309] [INFO] [main] [MOVE] frame=1418 pos=(1779,1882) in_car=No[0m
+[32m[2026-05-15 04:51:15.351] [INFO] [main] [MOVE] frame=1420 pos=(1779,1893) in_car=No[0m
+[32m[2026-05-15 04:51:15.362] [INFO] [main] Frame  1420 | dt=  18.00ms | phys=2 | phys_avg=  6.08ms | render= 11.02ms | E:63/121/0 | fps=55 | alpha=0.000[0m
+[32m[2026-05-15 04:51:15.386] [INFO] [main] [MOVE] frame=1422 pos=(1779,1900) in_car=No[0m
+[32m[2026-05-15 04:51:15.422] [INFO] [main] [MOVE] frame=1424 pos=(1779,1907) in_car=No[0m
+[32m[2026-05-15 04:51:15.457] [INFO] [main] [MOVE] frame=1426 pos=(1779,1915) in_car=No[0m
+[32m[2026-05-15 04:51:15.540] [INFO] [main] Frame  1430 | dt=  18.00ms | phys=1 | phys_avg=  7.69ms | render= 10.94ms | E:63/121/0 | fps=55 | alpha=0.980[0m
+[32m[2026-05-15 04:51:15.541] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f380>, 'entity_type': 'cop_car', 'position': (987, 3028)}[0m
+[32m[2026-05-15 04:51:15.736] [INFO] [main] Frame  1440 | dt=  18.00ms | phys=1 | phys_avg=  7.42ms | render= 10.78ms | E:64/121/0 | fps=56 | alpha=0.860[0m
+[32m[2026-05-15 04:51:15.933] [INFO] [main] Frame  1450 | dt=  25.00ms | phys=1 | phys_avg=  6.90ms | render= 12.18ms | E:64/121/0 | fps=50 | alpha=0.560[0m
+[32m[2026-05-15 04:51:16.052] [INFO] [main] [MOVE] frame=1457 pos=(1786,1915) in_car=No[0m
+[32m[2026-05-15 04:51:16.086] [INFO] [main] [MOVE] frame=1459 pos=(1793,1915) in_car=No[0m
+[32m[2026-05-15 04:51:16.114] [INFO] [main] Frame  1460 | dt=  17.00ms | phys=1 | phys_avg=  6.33ms | render= 10.81ms | E:64/121/0 | fps=51 | alpha=0.540[0m
+[32m[2026-05-15 04:51:16.120] [INFO] [main] [MOVE] frame=1461 pos=(1801,1915) in_car=No[0m
+[32m[2026-05-15 04:51:16.155] [INFO] [main] [MOVE] frame=1463 pos=(1806,1910) in_car=No[0m
+[32m[2026-05-15 04:51:16.189] [INFO] [main] [MOVE] frame=1465 pos=(1811,1904) in_car=No[0m
+[32m[2026-05-15 04:51:16.223] [INFO] [main] [MOVE] frame=1467 pos=(1811,1897) in_car=No[0m
+[32m[2026-05-15 04:51:16.257] [INFO] [main] [MOVE] frame=1469 pos=(1811,1890) in_car=No[0m
+[32m[2026-05-15 04:51:16.286] [INFO] [main] Frame  1470 | dt=  17.00ms | phys=1 | phys_avg=  6.58ms | render= 10.80ms | E:64/121/0 | fps=55 | alpha=0.800[0m
+[32m[2026-05-15 04:51:16.292] [INFO] [main] [MOVE] frame=1471 pos=(1811,1882) in_car=No[0m
+[32m[2026-05-15 04:51:16.327] [INFO] [main] [MOVE] frame=1473 pos=(1811,1875) in_car=No[0m
+[32m[2026-05-15 04:51:16.350] [INFO] [main] [MOVE] frame=1474 pos=(1811,1868) in_car=No[0m
+[32m[2026-05-15 04:51:16.384] [INFO] [main] [MOVE] frame=1476 pos=(1811,1860) in_car=No[0m
+[32m[2026-05-15 04:51:16.419] [INFO] [main] [MOVE] frame=1478 pos=(1811,1853) in_car=No[0m
+[32m[2026-05-15 04:51:16.453] [INFO] [main] [MOVE] frame=1480 pos=(1811,1846) in_car=No[0m
+[32m[2026-05-15 04:51:16.464] [INFO] [main] Frame  1480 | dt=  17.00ms | phys=1 | phys_avg=  6.15ms | render= 10.68ms | E:64/121/0 | fps=58 | alpha=0.540[0m
+[32m[2026-05-15 04:51:16.488] [INFO] [main] [MOVE] frame=1482 pos=(1811,1838) in_car=No[0m
+[32m[2026-05-15 04:51:16.523] [INFO] [main] [MOVE] frame=1484 pos=(1811,1831) in_car=No[0m
+[32m[2026-05-15 04:51:16.557] [INFO] [main] [MOVE] frame=1486 pos=(1811,1824) in_car=No[0m
+[32m[2026-05-15 04:51:16.593] [INFO] [main] [MOVE] frame=1488 pos=(1811,1816) in_car=No[0m
+[32m[2026-05-15 04:51:16.617] [INFO] [main] [MOVE] frame=1489 pos=(1811,1809) in_car=No[0m
+[32m[2026-05-15 04:51:16.645] [INFO] [main] Frame  1490 | dt=  24.00ms | phys=1 | phys_avg=  6.04ms | render= 10.98ms | E:64/121/0 | fps=56 | alpha=0.460[0m
+[32m[2026-05-15 04:51:16.651] [INFO] [main] [MOVE] frame=1491 pos=(1811,1802) in_car=No[0m
+[32m[2026-05-15 04:51:16.686] [INFO] [main] [MOVE] frame=1493 pos=(1811,1794) in_car=No[0m
+[32m[2026-05-15 04:51:16.704] [INFO] [main] [MOVE] frame=1494 pos=(1772,1785) in_car=Yes[0m
+[32m[2026-05-15 04:51:16.784] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f4d0>, 'entity_type': 'cop_car', 'position': (3628, 1848)}[0m
+[32m[2026-05-15 04:51:16.818] [INFO] [main] Frame  1500 | dt=  17.00ms | phys=1 | phys_avg=  6.28ms | render= 10.69ms | E:65/121/0 | fps=54 | alpha=0.780[0m
+[32m[2026-05-15 04:51:17.014] [INFO] [main] Frame  1510 | dt=  18.00ms | phys=2 | phys_avg=  6.73ms | render= 11.19ms | E:65/121/0 | fps=58 | alpha=0.060[0m
+[32m[2026-05-15 04:51:17.187] [INFO] [main] Frame  1520 | dt=  17.00ms | phys=1 | phys_avg=  6.06ms | render= 11.26ms | E:65/121/0 | fps=51 | alpha=0.860[0m
+[32m[2026-05-15 04:51:17.192] [INFO] [main] [MOVE] frame=1521 pos=(1772,1791) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.284] [INFO] [main] [MOVE] frame=1526 pos=(1772,1797) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.351] [INFO] [main] [MOVE] frame=1530 pos=(1772,1803) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.362] [INFO] [main] Frame  1530 | dt=  18.00ms | phys=1 | phys_avg=  5.66ms | render= 10.94ms | E:65/121/0 | fps=57 | alpha=0.420[0m
+[32m[2026-05-15 04:51:17.419] [INFO] [main] [MOVE] frame=1534 pos=(1772,1809) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.470] [INFO] [main] [MOVE] frame=1537 pos=(1772,1815) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.522] [INFO] [main] [MOVE] frame=1540 pos=(1772,1822) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.533] [INFO] [main] Frame  1540 | dt=  17.00ms | phys=1 | phys_avg=  6.43ms | render= 10.43ms | E:65/121/0 | fps=57 | alpha=0.620[0m
+[32m[2026-05-15 04:51:17.572] [INFO] [main] [MOVE] frame=1543 pos=(1772,1829) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.606] [INFO] [main] [MOVE] frame=1545 pos=(1772,1834) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.640] [INFO] [main] [MOVE] frame=1547 pos=(1772,1839) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.674] [INFO] [main] [MOVE] frame=1549 pos=(1772,1845) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.702] [INFO] [main] Frame  1550 | dt=  17.00ms | phys=1 | phys_avg=  5.77ms | render= 10.37ms | E:65/121/0 | fps=58 | alpha=0.880[0m
+[32m[2026-05-15 04:51:17.708] [INFO] [main] [MOVE] frame=1551 pos=(1772,1851) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.743] [INFO] [main] [MOVE] frame=1553 pos=(1772,1857) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.776] [INFO] [main] [MOVE] frame=1555 pos=(1772,1863) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.799] [INFO] [main] [MOVE] frame=1556 pos=(1772,1870) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.833] [INFO] [main] [MOVE] frame=1558 pos=(1772,1877) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.867] [INFO] [main] [MOVE] frame=1560 pos=(1772,1885) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.878] [INFO] [main] Frame  1560 | dt=  17.00ms | phys=1 | phys_avg=  6.24ms | render= 10.97ms | E:65/121/0 | fps=58 | alpha=0.320[0m
+[32m[2026-05-15 04:51:17.901] [INFO] [main] [MOVE] frame=1562 pos=(1772,1892) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.935] [INFO] [main] [MOVE] frame=1564 pos=(1772,1900) in_car=Yes[0m
+[32m[2026-05-15 04:51:17.969] [INFO] [main] [MOVE] frame=1566 pos=(1772,1909) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.003] [INFO] [main] [MOVE] frame=1568 pos=(1772,1917) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.031] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f620>, 'entity_type': 'cop_car', 'position': (602, 992)}[0m
+[32m[2026-05-15 04:51:18.038] [INFO] [main] [MOVE] frame=1570 pos=(1772,1926) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.048] [INFO] [main] Frame  1570 | dt=  18.00ms | phys=1 | phys_avg=  7.10ms | render= 10.38ms | E:66/121/0 | fps=57 | alpha=0.580[0m
+[32m[2026-05-15 04:51:18.073] [INFO] [main] [MOVE] frame=1572 pos=(1772,1935) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.109] [INFO] [main] [MOVE] frame=1574 pos=(1772,1945) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.145] [INFO] [main] [MOVE] frame=1576 pos=(1772,1954) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.170] [INFO] [main] [MOVE] frame=1577 pos=(1772,1964) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.188] [INFO] [main] [MOVE] frame=1578 pos=(1772,1969) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.207] [INFO] [main] [MOVE] frame=1579 pos=(1772,1975) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.225] [INFO] [main] [MOVE] frame=1580 pos=(1772,1980) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.235] [INFO] [main] Frame  1580 | dt=  18.00ms | phys=1 | phys_avg=  7.43ms | render= 10.15ms | E:66/121/0 | fps=58 | alpha=0.740[0m
+[32m[2026-05-15 04:51:18.243] [INFO] [main] [MOVE] frame=1581 pos=(1772,1985) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.261] [INFO] [main] [MOVE] frame=1582 pos=(1772,1991) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.279] [INFO] [main] [MOVE] frame=1583 pos=(1772,1996) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.305] [INFO] [main] [MOVE] frame=1584 pos=(1772,2007) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.322] [INFO] [main] [MOVE] frame=1585 pos=(1772,2013) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.340] [INFO] [main] [MOVE] frame=1586 pos=(1772,2019) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.359] [INFO] [main] [MOVE] frame=1587 pos=(1772,2024) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.377] [INFO] [main] [MOVE] frame=1588 pos=(1772,2030) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.403] [INFO] [main] [MOVE] frame=1589 pos=(1772,2042) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.421] [INFO] [main] [MOVE] frame=1590 pos=(1772,2048) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.431] [INFO] [main] Frame  1590 | dt=  25.00ms | phys=1 | phys_avg=  7.14ms | render= 10.78ms | E:66/121/0 | fps=53 | alpha=0.500[0m
+[32m[2026-05-15 04:51:18.439] [INFO] [main] [MOVE] frame=1591 pos=(1772,2054) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.458] [INFO] [main] [MOVE] frame=1592 pos=(1772,2060) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.477] [INFO] [main] [MOVE] frame=1593 pos=(1772,2066) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.504] [INFO] [main] [MOVE] frame=1594 pos=(1772,2078) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.522] [INFO] [main] [MOVE] frame=1595 pos=(1772,2084) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.542] [INFO] [main] [MOVE] frame=1596 pos=(1772,2090) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.561] [INFO] [main] [MOVE] frame=1597 pos=(1772,2096) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.588] [INFO] [main] [MOVE] frame=1598 pos=(1772,2108) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.607] [INFO] [main] [MOVE] frame=1599 pos=(1772,2114) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.627] [INFO] [main] [MOVE] frame=1600 pos=(1772,2120) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.637] [INFO] [main] Frame  1600 | dt=  19.00ms | phys=1 | phys_avg=  8.46ms | render= 10.52ms | E:66/121/0 | fps=51 | alpha=0.860[0m
+[32m[2026-05-15 04:51:18.654] [INFO] [main] [MOVE] frame=1601 pos=(1772,2132) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.675] [INFO] [main] [MOVE] frame=1602 pos=(1772,2138) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.695] [INFO] [main] [MOVE] frame=1603 pos=(1772,2144) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.723] [INFO] [main] [MOVE] frame=1604 pos=(1772,2156) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.742] [INFO] [main] [MOVE] frame=1605 pos=(1772,2162) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.762] [INFO] [main] [MOVE] frame=1606 pos=(1772,2168) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.790] [INFO] [main] [MOVE] frame=1607 pos=(1772,2180) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.810] [INFO] [main] [MOVE] frame=1608 pos=(1772,2186) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.829] [INFO] [main] [MOVE] frame=1609 pos=(1772,2192) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.857] [INFO] [main] [MOVE] frame=1610 pos=(1772,2204) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.868] [INFO] [main] Frame  1610 | dt=  19.00ms | phys=2 | phys_avg=  8.82ms | render= 11.37ms | E:66/121/0 | fps=48 | alpha=0.060[0m
+[32m[2026-05-15 04:51:18.878] [INFO] [main] [MOVE] frame=1611 pos=(1772,2210) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.906] [INFO] [main] [MOVE] frame=1612 pos=(1772,2222) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.925] [INFO] [main] [MOVE] frame=1613 pos=(1772,2228) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.945] [INFO] [main] [MOVE] frame=1614 pos=(1772,2234) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.973] [INFO] [main] [MOVE] frame=1615 pos=(1772,2246) in_car=Yes[0m
+[32m[2026-05-15 04:51:18.992] [INFO] [main] [MOVE] frame=1616 pos=(1772,2252) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.012] [INFO] [main] [MOVE] frame=1617 pos=(1772,2258) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.040] [INFO] [main] [MOVE] frame=1618 pos=(1772,2270) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.059] [INFO] [main] [MOVE] frame=1619 pos=(1772,2276) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.079] [INFO] [main] [MOVE] frame=1620 pos=(1772,2282) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.089] [INFO] [main] Frame  1620 | dt=  20.00ms | phys=1 | phys_avg=  8.81ms | render= 10.21ms | E:66/121/0 | fps=43 | alpha=0.920[0m
+[32m[2026-05-15 04:51:19.106] [INFO] [main] [MOVE] frame=1621 pos=(1772,2294) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.126] [INFO] [main] [MOVE] frame=1622 pos=(1772,2300) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.145] [INFO] [main] [MOVE] frame=1623 pos=(1772,2306) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.173] [INFO] [main] [MOVE] frame=1624 pos=(1772,2318) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.192] [INFO] [main] [MOVE] frame=1625 pos=(1772,2324) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.211] [INFO] [main] [MOVE] frame=1626 pos=(1772,2330) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.239] [INFO] [main] [MOVE] frame=1627 pos=(1772,2342) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.259] [INFO] [main] [MOVE] frame=1628 pos=(1772,2348) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.278] [INFO] [main] [MOVE] frame=1629 pos=(1772,2354) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.289] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f770>, 'entity_type': 'cop_car', 'position': (3608, 2428)}[0m
+[32m[2026-05-15 04:51:19.305] [INFO] [main] [MOVE] frame=1630 pos=(1772,2366) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.316] [INFO] [main] Frame  1630 | dt=  20.00ms | phys=2 | phys_avg=  8.27ms | render= 10.15ms | E:67/121/0 | fps=45 | alpha=0.060[0m
+[32m[2026-05-15 04:51:19.324] [INFO] [main] [MOVE] frame=1631 pos=(1772,2372) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.343] [INFO] [main] [MOVE] frame=1632 pos=(1772,2378) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.363] [INFO] [main] [MOVE] frame=1633 pos=(1772,2384) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.391] [INFO] [main] [MOVE] frame=1634 pos=(1772,2396) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.410] [INFO] [main] [MOVE] frame=1635 pos=(1772,2402) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.429] [INFO] [main] [MOVE] frame=1636 pos=(1772,2408) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.457] [INFO] [main] [MOVE] frame=1637 pos=(1772,2420) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.476] [INFO] [main] [MOVE] frame=1638 pos=(1772,2426) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.505] [INFO] [main] [MOVE] frame=1639 pos=(1772,2438) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.528] [INFO] [main] [MOVE] frame=1640 pos=(1772,2444) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.541] [INFO] [main] Frame  1640 | dt=  30.00ms | phys=1 | phys_avg=  9.15ms | render= 12.77ms | E:67/121/0 | fps=44 | alpha=0.860[0m
+[32m[2026-05-15 04:51:19.557] [INFO] [main] [MOVE] frame=1641 pos=(1772,2456) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.579] [INFO] [main] [MOVE] frame=1642 pos=(1772,2462) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.607] [INFO] [main] [MOVE] frame=1643 pos=(1772,2474) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.629] [INFO] [main] [MOVE] frame=1644 pos=(1772,2480) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.655] [INFO] [main] [MOVE] frame=1645 pos=(1772,2492) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.676] [INFO] [main] [MOVE] frame=1646 pos=(1772,2498) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.701] [INFO] [main] [MOVE] frame=1647 pos=(1772,2510) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.719] [INFO] [main] [MOVE] frame=1648 pos=(1772,2516) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.737] [INFO] [main] [MOVE] frame=1649 pos=(1772,2522) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.755] [INFO] [main] [MOVE] frame=1650 pos=(1772,2528) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.765] [INFO] [main] Frame  1650 | dt=  18.00ms | phys=1 | phys_avg=  7.25ms | render= 10.31ms | E:67/121/0 | fps=44 | alpha=0.600[0m
+[32m[2026-05-15 04:51:19.773] [INFO] [main] [MOVE] frame=1651 pos=(1772,2534) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.791] [INFO] [main] [MOVE] frame=1652 pos=(1772,2540) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.808] [INFO] [main] [MOVE] frame=1653 pos=(1772,2546) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.826] [INFO] [main] [MOVE] frame=1654 pos=(1772,2552) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.844] [INFO] [main] [MOVE] frame=1655 pos=(1772,2558) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.861] [INFO] [main] [MOVE] frame=1656 pos=(1772,2564) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.887] [INFO] [main] [MOVE] frame=1657 pos=(1772,2576) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.906] [INFO] [main] [MOVE] frame=1658 pos=(1772,2582) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.925] [INFO] [main] [MOVE] frame=1659 pos=(1772,2588) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.944] [INFO] [main] [MOVE] frame=1660 pos=(1772,2594) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.954] [INFO] [main] Frame  1660 | dt=  19.00ms | phys=1 | phys_avg=  8.19ms | render= 10.45ms | E:67/121/0 | fps=44 | alpha=0.820[0m
+[32m[2026-05-15 04:51:19.963] [INFO] [main] [MOVE] frame=1661 pos=(1772,2600) in_car=Yes[0m
+[32m[2026-05-15 04:51:19.992] [INFO] [main] [MOVE] frame=1662 pos=(1772,2612) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.012] [INFO] [main] [MOVE] frame=1663 pos=(1772,2618) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.040] [INFO] [main] [MOVE] frame=1664 pos=(1772,2630) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.060] [INFO] [main] [MOVE] frame=1665 pos=(1772,2636) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.079] [INFO] [main] [MOVE] frame=1666 pos=(1772,2642) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.107] [INFO] [main] [MOVE] frame=1667 pos=(1772,2654) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.126] [INFO] [main] [MOVE] frame=1668 pos=(1772,2660) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.145] [INFO] [main] [MOVE] frame=1669 pos=(1772,2666) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.173] [INFO] [main] [MOVE] frame=1670 pos=(1772,2678) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.183] [INFO] [main] Frame  1670 | dt=  19.00ms | phys=2 | phys_avg=  8.86ms | render=  9.95ms | E:67/121/0 | fps=53 | alpha=0.020[0m
+[32m[2026-05-15 04:51:20.193] [INFO] [main] [MOVE] frame=1671 pos=(1772,2684) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.212] [INFO] [main] [MOVE] frame=1672 pos=(1772,2690) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.241] [INFO] [main] [MOVE] frame=1673 pos=(1772,2702) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.261] [INFO] [main] [MOVE] frame=1674 pos=(1772,2708) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.280] [INFO] [main] [MOVE] frame=1675 pos=(1772,2714) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.309] [INFO] [main] [MOVE] frame=1676 pos=(1772,2726) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.329] [INFO] [main] [MOVE] frame=1677 pos=(1772,2732) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.357] [INFO] [main] [MOVE] frame=1678 pos=(1772,2744) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.377] [INFO] [main] [MOVE] frame=1679 pos=(1772,2750) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.396] [INFO] [main] [MOVE] frame=1680 pos=(1772,2756) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.406] [INFO] [main] Frame  1680 | dt=  20.00ms | phys=1 | phys_avg=  9.02ms | render= 10.22ms | E:67/121/0 | fps=43 | alpha=0.940[0m
+[32m[2026-05-15 04:51:20.425] [INFO] [main] [MOVE] frame=1681 pos=(1772,2768) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.445] [INFO] [main] [MOVE] frame=1682 pos=(1772,2774) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.473] [INFO] [main] [MOVE] frame=1683 pos=(1772,2786) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.493] [INFO] [main] [MOVE] frame=1684 pos=(1772,2792) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.512] [INFO] [main] [MOVE] frame=1685 pos=(1772,2798) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.534] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067f8c0>, 'entity_type': 'cop_car', 'position': (1828, 4977)}[0m
+[32m[2026-05-15 04:51:20.542] [INFO] [main] [MOVE] frame=1686 pos=(1772,2810) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.561] [INFO] [main] [MOVE] frame=1687 pos=(1772,2816) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.589] [INFO] [main] [MOVE] frame=1688 pos=(1772,2828) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.608] [INFO] [main] [MOVE] frame=1689 pos=(1773,2834) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.628] [INFO] [main] [MOVE] frame=1690 pos=(1773,2840) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.638] [INFO] [main] Frame  1690 | dt=  20.00ms | phys=1 | phys_avg=  9.01ms | render= 10.15ms | E:68/121/0 | fps=44 | alpha=0.920[0m
+[32m[2026-05-15 04:51:20.656] [INFO] [main] [MOVE] frame=1691 pos=(1774,2852) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.676] [INFO] [main] [MOVE] frame=1692 pos=(1774,2858) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.695] [INFO] [main] [MOVE] frame=1693 pos=(1775,2864) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.722] [INFO] [main] [MOVE] frame=1694 pos=(1776,2876) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.741] [INFO] [main] [MOVE] frame=1695 pos=(1777,2882) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.761] [INFO] [main] [MOVE] frame=1696 pos=(1777,2888) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.789] [INFO] [main] [MOVE] frame=1697 pos=(1779,2900) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.808] [INFO] [main] [MOVE] frame=1698 pos=(1779,2906) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.827] [INFO] [main] [MOVE] frame=1699 pos=(1780,2912) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.855] [INFO] [main] [MOVE] frame=1700 pos=(1781,2924) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.867] [INFO] [main] Frame  1700 | dt=  20.00ms | phys=2 | phys_avg=  8.63ms | render= 11.37ms | E:68/121/0 | fps=42 | alpha=0.000[0m
+[32m[2026-05-15 04:51:20.876] [INFO] [main] [MOVE] frame=1701 pos=(1782,2930) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.896] [INFO] [main] [MOVE] frame=1702 pos=(1782,2936) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.924] [INFO] [main] [MOVE] frame=1703 pos=(1784,2948) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.944] [INFO] [main] [MOVE] frame=1704 pos=(1784,2954) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.963] [INFO] [main] [MOVE] frame=1705 pos=(1785,2960) in_car=Yes[0m
+[32m[2026-05-15 04:51:20.991] [INFO] [main] [MOVE] frame=1706 pos=(1786,2972) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.010] [INFO] [main] [MOVE] frame=1707 pos=(1787,2978) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.030] [INFO] [main] [MOVE] frame=1708 pos=(1788,2984) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.060] [INFO] [main] [MOVE] frame=1709 pos=(1789,2995) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.079] [INFO] [main] [MOVE] frame=1710 pos=(1789,3001) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.089] [INFO] [main] Frame  1710 | dt=  29.00ms | phys=1 | phys_avg=  8.59ms | render= 10.39ms | E:68/121/0 | fps=43 | alpha=0.920[0m
+[32m[2026-05-15 04:51:21.108] [INFO] [main] [MOVE] frame=1711 pos=(1791,3013) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.128] [INFO] [main] [MOVE] frame=1712 pos=(1791,3019) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.156] [INFO] [main] [MOVE] frame=1713 pos=(1793,3031) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.176] [INFO] [main] [MOVE] frame=1714 pos=(1793,3037) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.196] [INFO] [main] [MOVE] frame=1715 pos=(1794,3043) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.224] [INFO] [main] [MOVE] frame=1716 pos=(1795,3055) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.244] [INFO] [main] [MOVE] frame=1717 pos=(1796,3061) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.264] [INFO] [main] [MOVE] frame=1718 pos=(1797,3067) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.300] [INFO] [main] [MOVE] frame=1719 pos=(1798,3079) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.332] [INFO] [main] [MOVE] frame=1720 pos=(1799,3091) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.344] [INFO] [main] Frame  1720 | dt=  34.00ms | phys=2 | phys_avg= 10.57ms | render= 11.71ms | E:68/121/0 | fps=45 | alpha=0.320[0m
+[32m[2026-05-15 04:51:21.368] [INFO] [main] [MOVE] frame=1721 pos=(1800,3103) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.401] [INFO] [main] [MOVE] frame=1722 pos=(1802,3115) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.436] [INFO] [main] [MOVE] frame=1723 pos=(1803,3127) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.469] [INFO] [main] [MOVE] frame=1724 pos=(1804,3139) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.502] [INFO] [main] [MOVE] frame=1725 pos=(1805,3151) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.534] [INFO] [main] [MOVE] frame=1726 pos=(1805,3163) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.567] [INFO] [main] [MOVE] frame=1727 pos=(1805,3175) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.604] [INFO] [main] [MOVE] frame=1728 pos=(1804,3187) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.639] [INFO] [main] [MOVE] frame=1729 pos=(1803,3199) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.672] [INFO] [main] [MOVE] frame=1730 pos=(1801,3209) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.683] [INFO] [main] Frame  1730 | dt=  35.00ms | phys=2 | phys_avg= 10.34ms | render= 11.46ms | E:68/121/0 | fps=39 | alpha=0.840[0m
+[32m[2026-05-15 04:51:21.703] [INFO] [main] [MOVE] frame=1731 pos=(1800,3219) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.735] [INFO] [main] [MOVE] frame=1732 pos=(1798,3228) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.766] [INFO] [main] [MOVE] frame=1733 pos=(1796,3236) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.787] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067fa10>, 'entity_type': 'cop_car', 'position': (1939, 5398)}[0m
+[32m[2026-05-15 04:51:21.796] [INFO] [main] [MOVE] frame=1734 pos=(1795,3245) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.828] [INFO] [main] [MOVE] frame=1735 pos=(1793,3254) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.859] [INFO] [main] [MOVE] frame=1736 pos=(1791,3263) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.914] [INFO] [main] [MOVE] frame=1738 pos=(1788,3275) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.944] [INFO] [main] [MOVE] frame=1739 pos=(1786,3285) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.975] [INFO] [main] [MOVE] frame=1740 pos=(1784,3294) in_car=Yes[0m
+[32m[2026-05-15 04:51:21.987] [INFO] [main] Frame  1740 | dt=  31.00ms | phys=2 | phys_avg=  9.70ms | render= 11.84ms | E:69/121/0 | fps=29 | alpha=0.020[0m
+[32m[2026-05-15 04:51:21.997] [INFO] [main] [MOVE] frame=1741 pos=(1783,3300) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.030] [INFO] [main] [MOVE] frame=1742 pos=(1782,3309) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.062] [INFO] [main] [MOVE] frame=1743 pos=(1780,3317) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.093] [INFO] [main] [MOVE] frame=1744 pos=(1778,3326) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.146] [INFO] [main] [MOVE] frame=1746 pos=(1775,3340) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.177] [INFO] [main] [MOVE] frame=1747 pos=(1773,3349) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.211] [INFO] [main] [MOVE] frame=1748 pos=(1772,3359) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.245] [INFO] [main] [MOVE] frame=1749 pos=(1771,3369) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.276] [INFO] [main] [MOVE] frame=1750 pos=(1770,3378) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.287] [INFO] [main] Frame  1750 | dt=  31.00ms | phys=2 | phys_avg= 10.23ms | render= 11.03ms | E:69/121/0 | fps=33 | alpha=0.020[0m
+[32m[2026-05-15 04:51:22.332] [INFO] [main] [MOVE] frame=1752 pos=(1771,3390) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.369] [INFO] [main] [MOVE] frame=1753 pos=(1772,3399) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.404] [INFO] [main] [MOVE] frame=1754 pos=(1773,3407) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.437] [INFO] [main] [MOVE] frame=1755 pos=(1775,3416) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.469] [INFO] [main] [MOVE] frame=1756 pos=(1777,3425) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.502] [INFO] [main] [MOVE] frame=1757 pos=(1780,3431) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.534] [INFO] [main] [MOVE] frame=1758 pos=(1782,3436) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.565] [INFO] [main] [MOVE] frame=1759 pos=(1785,3442) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.610] [INFO] [main] Frame  1760 | dt=  32.00ms | phys=2 | phys_avg=  9.36ms | render= 13.15ms | E:69/121/0 | fps=33 | alpha=0.460[0m
+[32m[2026-05-15 04:51:22.629] [INFO] [main] [MOVE] frame=1761 pos=(1789,3451) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.692] [INFO] [main] [MOVE] frame=1763 pos=(1793,3459) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.724] [INFO] [main] [MOVE] frame=1764 pos=(1795,3466) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.778] [INFO] [main] [MOVE] frame=1766 pos=(1798,3474) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.809] [INFO] [main] [MOVE] frame=1767 pos=(1800,3480) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.862] [INFO] [main] [MOVE] frame=1769 pos=(1802,3486) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.895] [INFO] [main] [MOVE] frame=1770 pos=(1804,3493) in_car=Yes[0m
+[32m[2026-05-15 04:51:22.907] [INFO] [main] Frame  1770 | dt=  32.00ms | phys=2 | phys_avg=  9.28ms | render= 12.58ms | E:69/121/0 | fps=30 | alpha=0.220[0m
+[32m[2026-05-15 04:51:22.958] [INFO] [main] [MOVE] frame=1772 pos=(1808,3503) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.033] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067fb60>, 'entity_type': 'cop_car', 'position': (3628, 2581)}[0m
+[32m[2026-05-15 04:51:23.042] [INFO] [main] [MOVE] frame=1775 pos=(1812,3512) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.094] [INFO] [main] [MOVE] frame=1777 pos=(1815,3519) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.124] [INFO] [main] [MOVE] frame=1778 pos=(1818,3525) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.175] [INFO] [main] [MOVE] frame=1780 pos=(1821,3533) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.188] [INFO] [main] Frame  1780 | dt=  22.00ms | phys=2 | phys_avg=  7.99ms | render= 12.85ms | E:70/121/0 | fps=33 | alpha=0.260[0m
+[32m[2026-05-15 04:51:23.205] [INFO] [main] [MOVE] frame=1781 pos=(1823,3539) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.255] [INFO] [main] [MOVE] frame=1783 pos=(1827,3549) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.306] [INFO] [main] [MOVE] frame=1785 pos=(1832,3559) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.360] [INFO] [main] [MOVE] frame=1787 pos=(1837,3569) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.391] [INFO] [main] [MOVE] frame=1788 pos=(1841,3576) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.441] [INFO] [main] [MOVE] frame=1790 pos=(1848,3587) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.454] [INFO] [main] Frame  1790 | dt=  22.00ms | phys=2 | phys_avg=  8.60ms | render= 12.32ms | E:70/121/0 | fps=35 | alpha=0.160[0m
+[32m[2026-05-15 04:51:23.492] [INFO] [main] [MOVE] frame=1792 pos=(1856,3597) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.542] [INFO] [main] [MOVE] frame=1794 pos=(1864,3608) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.573] [INFO] [main] [MOVE] frame=1795 pos=(1871,3615) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.624] [INFO] [main] [MOVE] frame=1797 pos=(1881,3626) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.654] [INFO] [main] [MOVE] frame=1798 pos=(1889,3633) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.705] [INFO] [main] [MOVE] frame=1800 pos=(1902,3643) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.717] [INFO] [main] Frame  1800 | dt=  22.00ms | phys=2 | phys_avg=  7.96ms | render= 12.01ms | E:70/121/0 | fps=37 | alpha=0.120[0m
+[32m[2026-05-15 04:51:23.755] [INFO] [main] [MOVE] frame=1802 pos=(1916,3652) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.805] [INFO] [main] [MOVE] frame=1804 pos=(1930,3662) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.826] [INFO] [main] [MOVE] frame=1805 pos=(1935,3665) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.844] [INFO] [main] [MOVE] frame=1806 pos=(1940,3668) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.863] [INFO] [main] [MOVE] frame=1807 pos=(1945,3671) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.890] [INFO] [main] [MOVE] frame=1808 pos=(1955,3678) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.909] [INFO] [main] [MOVE] frame=1809 pos=(1961,3681) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.928] [INFO] [main] [MOVE] frame=1810 pos=(1966,3684) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.937] [INFO] [main] Frame  1810 | dt=  18.00ms | phys=1 | phys_avg=  9.32ms | render=  9.08ms | E:70/121/0 | fps=37 | alpha=0.800[0m
+[32m[2026-05-15 04:51:23.946] [INFO] [main] [MOVE] frame=1811 pos=(1971,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:23.975] [INFO] [main] [MOVE] frame=1812 pos=(1980,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:24.027] [INFO] [main] [MOVE] frame=1814 pos=(1988,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:24.172] [INFO] [main] Frame  1820 | dt=  29.00ms | phys=1 | phys_avg=  9.35ms | render= 10.04ms | E:70/121/0 | fps=45 | alpha=0.900[0m
+[32m[2026-05-15 04:51:24.289] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067fcb0>, 'entity_type': 'cop_car', 'position': (3572, 4077)}[0m
+[32m[2026-05-15 04:51:24.307] [INFO] [main] [MOVE] frame=1826 pos=(1994,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:24.407] [INFO] [main] Frame  1830 | dt=  30.00ms | phys=1 | phys_avg= 10.13ms | render=  9.46ms | E:71/121/0 | fps=42 | alpha=0.940[0m
+[32m[2026-05-15 04:51:24.527] [INFO] [main] [MOVE] frame=1835 pos=(1999,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:24.671] [INFO] [main] Frame  1840 | dt=  20.00ms | phys=2 | phys_avg= 10.39ms | render=  9.87ms | E:71/121/0 | fps=42 | alpha=0.180[0m
+[32m[2026-05-15 04:51:24.746] [INFO] [main] [MOVE] frame=1843 pos=(2004,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:24.935] [INFO] [main] Frame  1850 | dt=  29.00ms | phys=2 | phys_avg=  9.38ms | render= 10.36ms | E:71/121/0 | fps=37 | alpha=0.020[0m
+[32m[2026-05-15 04:51:24.992] [INFO] [main] [MOVE] frame=1853 pos=(2010,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:25.167] [INFO] [main] Frame  1860 | dt=  19.00ms | phys=2 | phys_avg=  9.72ms | render=  9.23ms | E:71/121/0 | fps=38 | alpha=0.000[0m
+[32m[2026-05-15 04:51:25.207] [INFO] [main] [MOVE] frame=1862 pos=(2015,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:25.405] [INFO] [main] Frame  1870 | dt=  21.00ms | phys=2 | phys_avg=  9.36ms | render= 10.25ms | E:71/121/0 | fps=42 | alpha=0.220[0m
+[32m[2026-05-15 04:51:25.444] [INFO] [main] [MOVE] frame=1872 pos=(2020,3688) in_car=Yes[0m
+[32m[2026-05-15 04:51:25.532] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f067fe00>, 'entity_type': 'cop_car', 'position': (3502, 4828)}[0m
+[32m[2026-05-15 04:51:25.629] [INFO] [main] [MOVE] frame=1880 pos=(2025,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:25.639] [INFO] [main] Frame  1880 | dt=  28.00ms | phys=1 | phys_avg= 10.35ms | render=  9.99ms | E:72/121/0 | fps=42 | alpha=0.860[0m
+[32m[2026-05-15 04:51:25.775] [INFO] [main] [MOVE] frame=1886 pos=(2031,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:25.874] [INFO] [main] Frame  1890 | dt=  19.00ms | phys=1 | phys_avg= 10.02ms | render= 10.51ms | E:72/121/0 | fps=42 | alpha=0.900[0m
+[32m[2026-05-15 04:51:25.893] [INFO] [main] [MOVE] frame=1891 pos=(2036,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.011] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f029c050>, 'entity_type': 'car', 'position': (2428, 4481)}[0m
+[32m[2026-05-15 04:51:26.011] [INFO] [main] [MOVE] frame=1896 pos=(2042,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.111] [INFO] [main] [MOVE] frame=1900 pos=(2049,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.121] [INFO] [main] Frame  1900 | dt=  21.00ms | phys=2 | phys_avg=  9.99ms | render=  9.82ms | E:72/121/0 | fps=42 | alpha=0.180[0m
+[32m[2026-05-15 04:51:26.193] [INFO] [main] [MOVE] frame=1903 pos=(2056,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.263] [INFO] [main] [MOVE] frame=1906 pos=(2062,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.313] [INFO] [main] [MOVE] frame=1908 pos=(2067,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.364] [INFO] [main] [MOVE] frame=1910 pos=(2073,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.375] [INFO] [main] Frame  1910 | dt=  30.00ms | phys=1 | phys_avg= 10.09ms | render= 10.84ms | E:72/121/0 | fps=40 | alpha=0.900[0m
+[32m[2026-05-15 04:51:26.414] [INFO] [main] [MOVE] frame=1912 pos=(2079,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.464] [INFO] [main] [MOVE] frame=1914 pos=(2085,3689) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.515] [INFO] [main] [MOVE] frame=1916 pos=(2092,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.624] [INFO] [main] Frame  1920 | dt=  19.00ms | phys=1 | phys_avg= 10.44ms | render=  9.40ms | E:72/121/0 | fps=39 | alpha=0.960[0m
+[32m[2026-05-15 04:51:26.785] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f82c0590>, 'entity_type': 'cop_car', 'position': (807, 2972)}[0m
+[32m[2026-05-15 04:51:26.796] [INFO] [main] [MOVE] frame=1927 pos=(2097,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.880] [INFO] [main] [MOVE] frame=1930 pos=(2102,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:26.889] [INFO] [main] Frame  1930 | dt=  21.00ms | phys=2 | phys_avg= 10.85ms | render=  9.26ms | E:73/121/0 | fps=39 | alpha=0.200[0m
+[32m[2026-05-15 04:51:26.963] [INFO] [main] [MOVE] frame=1933 pos=(2109,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.015] [INFO] [main] [MOVE] frame=1935 pos=(2115,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.081] [INFO] [main] [MOVE] frame=1937 pos=(2122,3687) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.145] [INFO] [main] [MOVE] frame=1939 pos=(2132,3686) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.188] [INFO] [main] Frame  1940 | dt=  32.00ms | phys=2 | phys_avg= 10.99ms | render=  9.89ms | E:73/121/0 | fps=37 | alpha=0.020[0m
+[32m[2026-05-15 04:51:27.199] [INFO] [main] [MOVE] frame=1941 pos=(2139,3685) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.231] [INFO] [main] [MOVE] frame=1942 pos=(2144,3684) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.263] [INFO] [main] [MOVE] frame=1943 pos=(2150,3683) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.297] [INFO] [main] [MOVE] frame=1944 pos=(2156,3682) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.332] [INFO] [main] [MOVE] frame=1945 pos=(2162,3681) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.366] [INFO] [main] [MOVE] frame=1946 pos=(2169,3679) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.402] [INFO] [main] [MOVE] frame=1947 pos=(2175,3677) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.437] [INFO] [main] [MOVE] frame=1948 pos=(2182,3675) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.471] [INFO] [main] [MOVE] frame=1949 pos=(2189,3672) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.506] [INFO] [main] [MOVE] frame=1950 pos=(2196,3670) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.515] [INFO] [main] Frame  1950 | dt=  34.00ms | phys=2 | phys_avg= 12.00ms | render=  9.41ms | E:73/121/0 | fps=33 | alpha=0.580[0m
+[32m[2026-05-15 04:51:27.539] [INFO] [main] [MOVE] frame=1951 pos=(2204,3667) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.571] [INFO] [main] [MOVE] frame=1952 pos=(2212,3664) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.603] [INFO] [main] [MOVE] frame=1953 pos=(2220,3661) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.633] [INFO] [main] [MOVE] frame=1954 pos=(2228,3658) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.664] [INFO] [main] [MOVE] frame=1955 pos=(2237,3655) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.694] [INFO] [main] [MOVE] frame=1956 pos=(2245,3651) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.743] [INFO] [main] [MOVE] frame=1958 pos=(2259,3646) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.794] [INFO] [main] [MOVE] frame=1960 pos=(2274,3640) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.803] [INFO] [main] Frame  1960 | dt=  20.00ms | phys=2 | phys_avg= 10.01ms | render=  9.03ms | E:73/121/0 | fps=30 | alpha=0.160[0m
+[32m[2026-05-15 04:51:27.844] [INFO] [main] [MOVE] frame=1962 pos=(2289,3635) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.864] [INFO] [main] [MOVE] frame=1963 pos=(2294,3633) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.894] [INFO] [main] [MOVE] frame=1964 pos=(2304,3629) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.914] [INFO] [main] [MOVE] frame=1965 pos=(2310,3627) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.946] [INFO] [main] [MOVE] frame=1966 pos=(2320,3622) in_car=Yes[0m
+[32m[2026-05-15 04:51:27.979] [INFO] [main] [MOVE] frame=1967 pos=(2332,3618) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.012] [INFO] [main] [MOVE] frame=1968 pos=(2343,3614) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.034] [INFO] [main] [MOVE] frame=1969 pos=(2348,3612) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.047] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f029c1a0>, 'entity_type': 'cop_car', 'position': (4172, 4457)}[0m
+[32m[2026-05-15 04:51:28.070] [INFO] [main] [MOVE] frame=1970 pos=(2360,3607) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.082] [INFO] [main] Frame  1970 | dt=  24.00ms | phys=2 | phys_avg= 11.67ms | render= 12.50ms | E:74/121/0 | fps=34 | alpha=0.420[0m
+[32m[2026-05-15 04:51:28.105] [INFO] [main] [MOVE] frame=1971 pos=(2371,3603) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.141] [INFO] [main] [MOVE] frame=1972 pos=(2382,3599) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.177] [INFO] [main] [MOVE] frame=1973 pos=(2393,3594) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.223] [INFO] [main] [MOVE] frame=1974 pos=(2410,3588) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.258] [INFO] [main] [MOVE] frame=1975 pos=(2421,3584) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.296] [INFO] [main] [MOVE] frame=1976 pos=(2432,3579) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.342] [INFO] [main] [MOVE] frame=1977 pos=(2449,3573) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.390] [INFO] [main] [MOVE] frame=1978 pos=(2466,3567) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.426] [INFO] [main] [MOVE] frame=1979 pos=(2478,3563) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.474] [INFO] [main] [MOVE] frame=1980 pos=(2495,3559) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.487] [INFO] [main] Frame  1980 | dt=  37.00ms | phys=3 | phys_avg= 11.54ms | render= 12.83ms | E:74/121/0 | fps=35 | alpha=0.060[0m
+[32m[2026-05-15 04:51:28.512] [INFO] [main] [MOVE] frame=1981 pos=(2507,3556) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.567] [INFO] [main] [MOVE] frame=1982 pos=(2525,3554) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.614] [INFO] [main] [MOVE] frame=1983 pos=(2543,3553) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.663] [INFO] [main] [MOVE] frame=1984 pos=(2561,3553) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.710] [INFO] [main] [MOVE] frame=1985 pos=(2579,3554) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.757] [INFO] [main] [MOVE] frame=1986 pos=(2596,3555) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.793] [INFO] [main] [MOVE] frame=1987 pos=(2608,3556) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.843] [INFO] [main] [MOVE] frame=1988 pos=(2626,3557) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.892] [INFO] [main] [MOVE] frame=1989 pos=(2644,3558) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.941] [INFO] [main] [MOVE] frame=1990 pos=(2662,3559) in_car=Yes[0m
+[32m[2026-05-15 04:51:28.957] [INFO] [main] Frame  1990 | dt=  50.00ms | phys=3 | phys_avg= 11.20ms | render= 15.11ms | E:74/121/0 | fps=24 | alpha=0.140[0m
+[32m[2026-05-15 04:51:28.988] [INFO] [main] [MOVE] frame=1991 pos=(2680,3560) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.022] [INFO] [main] [MOVE] frame=1992 pos=(2692,3561) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.056] [INFO] [main] [MOVE] frame=1993 pos=(2704,3561) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.104] [INFO] [main] [MOVE] frame=1994 pos=(2722,3563) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.138] [INFO] [main] [MOVE] frame=1995 pos=(2734,3563) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.174] [INFO] [main] [MOVE] frame=1996 pos=(2746,3564) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.209] [INFO] [main] [MOVE] frame=1997 pos=(2758,3565) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.252] [INFO] [main] [MOVE] frame=1998 pos=(2776,3566) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.286] [INFO] [main] [MOVE] frame=1999 pos=(2788,3567) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.301] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f029c2f0>, 'entity_type': 'cop_car', 'position': (2087, 1828)}[0m
+[32m[2026-05-15 04:51:29.322] [INFO] [main] [MOVE] frame=2000 pos=(2800,3567) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.336] [INFO] [main] Frame  2000 | dt=  34.00ms | phys=2 | phys_avg= 10.49ms | render= 14.52ms | E:75/121/0 | fps=21 | alpha=0.720[0m
+[32m[2026-05-15 04:51:29.357] [INFO] [main] [MOVE] frame=2001 pos=(2812,3568) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.404] [INFO] [main] [MOVE] frame=2002 pos=(2830,3570) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.442] [INFO] [main] [MOVE] frame=2003 pos=(2842,3571) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.491] [INFO] [main] [MOVE] frame=2004 pos=(2860,3574) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.539] [INFO] [main] [MOVE] frame=2005 pos=(2877,3579) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.588] [INFO] [main] [MOVE] frame=2006 pos=(2894,3584) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.624] [INFO] [main] [MOVE] frame=2007 pos=(2905,3589) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.658] [INFO] [main] [MOVE] frame=2008 pos=(2916,3593) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.693] [INFO] [main] [MOVE] frame=2009 pos=(2927,3598) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.742] [INFO] [main] [MOVE] frame=2010 pos=(2944,3606) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.754] [INFO] [main] Frame  2010 | dt=  34.00ms | phys=3 | phys_avg= 12.33ms | render= 12.00ms | E:75/121/0 | fps=26 | alpha=0.020[0m
+[32m[2026-05-15 04:51:29.790] [INFO] [main] [MOVE] frame=2011 pos=(2960,3613) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.824] [INFO] [main] [MOVE] frame=2012 pos=(2971,3618) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.859] [INFO] [main] [MOVE] frame=2013 pos=(2982,3623) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.895] [INFO] [main] [MOVE] frame=2014 pos=(2993,3628) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.939] [INFO] [main] [MOVE] frame=2015 pos=(3009,3634) in_car=Yes[0m
+[32m[2026-05-15 04:51:29.973] [INFO] [main] [MOVE] frame=2016 pos=(3020,3637) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.006] [INFO] [main] [MOVE] frame=2017 pos=(3030,3639) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.040] [INFO] [main] [MOVE] frame=2018 pos=(3040,3643) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.073] [INFO] [main] [MOVE] frame=2019 pos=(3051,3646) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.107] [INFO] [main] [MOVE] frame=2020 pos=(3062,3649) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.119] [INFO] [main] Frame  2020 | dt=  34.00ms | phys=2 | phys_avg= 10.42ms | render= 11.81ms | E:75/121/0 | fps=23 | alpha=0.880[0m
+[32m[2026-05-15 04:51:30.140] [INFO] [main] [MOVE] frame=2021 pos=(3074,3652) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.175] [INFO] [main] [MOVE] frame=2022 pos=(3086,3654) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.210] [INFO] [main] [MOVE] frame=2023 pos=(3098,3656) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.248] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c440>, 'entity_type': 'cop', 'position': (3008.711465259613, 3560.030054885188)}[0m
+[32m[2026-05-15 04:51:30.248] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c590>, 'entity_type': 'cop', 'position': (2935.5069300750793, 3586.3567718931313)}[0m
+[32m[2026-05-15 04:51:30.473] [INFO] [main] Frame  2030 | dt=  36.00ms | phys=2 | phys_avg= 10.70ms | render= 12.95ms | E:75/121/2 | fps=27 | alpha=0.940[0m
+[32m[2026-05-15 04:51:30.507] [INFO] [main] [MOVE] frame=2031 pos=(3102,3662) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.554] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f029c6e0>, 'entity_type': 'cop_car', 'position': (1501, 2428)}[0m
+[32m[2026-05-15 04:51:30.619] [INFO] [main] [MOVE] frame=2034 pos=(3097,3666) in_car=Yes[0m
+[32m[2026-05-15 04:51:30.707] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c830>, 'entity_type': 'cop', 'position': (2872.8266204483116, 3592.721927405954)}[0m
+[32m[2026-05-15 04:51:30.707] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c980>, 'entity_type': 'cop', 'position': (2888.7760519478015, 3668.864002731251)}[0m
+[32m[2026-05-15 04:51:30.836] [INFO] [main] Frame  2040 | dt=  33.00ms | phys=2 | phys_avg= 10.01ms | render= 12.49ms | E:76/121/4 | fps=28 | alpha=0.900[0m
+[32m[2026-05-15 04:51:31.152] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029cad0>, 'entity_type': 'cop', 'position': (3016.549389421504, 3898.5322204962104)}[0m
+[32m[2026-05-15 04:51:31.152] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029cc20>, 'entity_type': 'cop', 'position': (3089.151820095236, 3870.5878639950147)}[0m
+[32m[2026-05-15 04:51:31.169] [INFO] [main] Frame  2050 | dt=  33.00ms | phys=2 | phys_avg= 10.86ms | render= 11.70ms | E:76/121/6 | fps=27 | alpha=0.760[0m
+[32m[2026-05-15 04:51:31.257] [INFO] [main] [MOVE] frame=2053 pos=(3091,3664) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.375] [INFO] [main] [MOVE] frame=2056 pos=(3084,3657) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.399] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c590>, 'is_cop': True, 'killer': None, 'position': (3037.340302612428, 3637.1687595768135), 'kill_count': 7}[0m
+[32m[2026-05-15 04:51:31.444] [INFO] [main] [MOVE] frame=2058 pos=(3078,3652) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.468] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c440>, 'is_cop': True, 'killer': None, 'position': (3061.7253161808007, 3622.677952189158), 'kill_count': 8}[0m
+[32m[2026-05-15 04:51:31.525] [INFO] [main] [MOVE] frame=2060 pos=(3069,3645) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.538] [INFO] [main] Frame  2060 | dt=  46.00ms | phys=2 | phys_avg= 11.09ms | render= 12.80ms | E:76/121/4 | fps=30 | alpha=0.840[0m
+[32m[2026-05-15 04:51:31.606] [INFO] [main] [MOVE] frame=2062 pos=(3059,3636) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.687] [INFO] [main] [MOVE] frame=2064 pos=(3047,3628) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.722] [INFO] [main] [MOVE] frame=2065 pos=(3042,3625) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.787] [INFO] [main] [MOVE] frame=2067 pos=(3035,3619) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.800] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f029cd70>, 'entity_type': 'cop_car', 'position': (4625, 2972)}[0m
+[32m[2026-05-15 04:51:31.857] [INFO] [main] [MOVE] frame=2069 pos=(3029,3615) in_car=Yes[0m
+[32m[2026-05-15 04:51:31.871] [INFO] [events] [EVENT] KILL: {'entity': <game2d.entities.ped.Ped object at 0x7f65f029c830>, 'is_cop': True, 'killer': None, 'position': (2982.0343751283917, 3623.761212842475), 'kill_count': 9}[0m
+[32m[2026-05-15 04:51:31.906] [INFO] [main] Frame  2070 | dt=  35.00ms | phys=2 | phys_avg= 11.15ms | render= 13.21ms | E:77/121/3 | fps=27 | alpha=0.860[0m
+[32m[2026-05-15 04:51:31.938] [INFO] [main] [MOVE] frame=2071 pos=(3023,3610) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.006] [INFO] [main] [MOVE] frame=2073 pos=(3017,3606) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.104] [INFO] [main] [MOVE] frame=2076 pos=(3009,3600) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.171] [INFO] [main] [MOVE] frame=2078 pos=(3004,3597) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.237] [INFO] [main] [MOVE] frame=2080 pos=(2998,3593) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.250] [INFO] [main] Frame  2080 | dt=  34.00ms | phys=2 | phys_avg=  9.57ms | render= 12.95ms | E:77/121/3 | fps=27 | alpha=0.740[0m
+[32m[2026-05-15 04:51:32.302] [INFO] [main] [MOVE] frame=2082 pos=(2992,3590) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.369] [INFO] [main] [MOVE] frame=2084 pos=(2986,3586) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.437] [INFO] [main] [MOVE] frame=2086 pos=(2981,3583) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.505] [INFO] [main] [MOVE] frame=2088 pos=(2975,3579) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.587] [INFO] [main] Frame  2090 | dt=  35.00ms | phys=2 | phys_avg= 10.41ms | render= 14.22ms | E:77/121/3 | fps=29 | alpha=0.840[0m
+[32m[2026-05-15 04:51:32.619] [INFO] [main] [MOVE] frame=2091 pos=(2965,3573) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.690] [INFO] [main] [MOVE] frame=2093 pos=(2960,3569) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.770] [INFO] [main] [MOVE] frame=2095 pos=(2953,3565) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.839] [INFO] [main] [MOVE] frame=2097 pos=(2947,3561) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.910] [INFO] [main] [MOVE] frame=2099 pos=(2942,3558) in_car=Yes[0m
+[32m[2026-05-15 04:51:32.969] [INFO] [main] Frame  2100 | dt=  35.00ms | phys=3 | phys_avg= 10.66ms | render= 13.73ms | E:77/121/3 | fps=29 | alpha=0.040[0m
+[32m[2026-05-15 04:51:32.991] [INFO] [main] [MOVE] frame=2101 pos=(2935,3553) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.050] [INFO] [events] [EVENT] ENTITY_SPAWNED: {'entity': <game2d.entities.car.Car object at 0x7f65f029cec0>, 'entity_type': 'cop_car', 'position': (3913, 2372)}[0m
+[32m[2026-05-15 04:51:33.071] [INFO] [main] [MOVE] frame=2103 pos=(2928,3549) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.140] [INFO] [main] [MOVE] frame=2105 pos=(2923,3545) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.208] [INFO] [main] [MOVE] frame=2107 pos=(2917,3542) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.284] [INFO] [main] [MOVE] frame=2109 pos=(2910,3537) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.332] [INFO] [main] Frame  2110 | dt=  41.00ms | phys=2 | phys_avg= 10.84ms | render= 13.36ms | E:78/121/3 | fps=26 | alpha=0.480[0m
+[32m[2026-05-15 04:51:33.353] [INFO] [main] [MOVE] frame=2111 pos=(2904,3534) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.459] [INFO] [main] [MOVE] frame=2114 pos=(2896,3529) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.540] [INFO] [main] [MOVE] frame=2116 pos=(2889,3524) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.624] [INFO] [main] [MOVE] frame=2118 pos=(2882,3519) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.707] [INFO] [main] [MOVE] frame=2120 pos=(2875,3514) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.720] [INFO] [main] Frame  2120 | dt=  47.00ms | phys=2 | phys_avg= 11.18ms | render= 12.48ms | E:78/121/3 | fps=27 | alpha=0.820[0m
+[32m[2026-05-15 04:51:33.787] [INFO] [main] [MOVE] frame=2122 pos=(2867,3507) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.800] [INFO] [events] [EVENT] WANTED_LEVEL_CHANGED: {'old_level': 5, 'new_level': 4}[0m
+[32m[2026-05-15 04:51:33.847] [INFO] [main] [MOVE] frame=2124 pos=(2859,3503) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.908] [INFO] [main] [MOVE] frame=2126 pos=(2852,3498) in_car=Yes[0m
+[32m[2026-05-15 04:51:33.980] [INFO] [main] [MOVE] frame=2129 pos=(2846,3494) in_car=Yes[0m
+[32m[2026-05-15 04:51:34.021] [INFO] [main] Frame  2130 | dt=  21.00ms | phys=2 | phys_avg=  8.19ms | render= 12.05ms | E:51/121/0 | fps=25 | alpha=0.240[0m
+[32m[2026-05-15 04:51:34.058] [INFO] [main] [MOVE] frame=2132 pos=(2840,3489) in_car=Yes[0m
+[32m[2026-05-15 04:51:34.129] [INFO] [events] [EVENT] GAME_OVER: {'reason': 'player_died', 'score': 0, 'kill_count': 9}[0m
+[32m[2026-05-15 04:51:34.292] [INFO] [main] Frame  2140 | dt=  27.00ms | phys=2 | phys_avg=  0.00ms | render= 27.83ms | E:50/121/0 | fps=33 | alpha=0.500[0m
+[32m[2026-05-15 04:51:34.571] [INFO] [main] Frame  2150 | dt=  29.00ms | phys=2 | phys_avg=  0.00ms | render= 28.14ms | E:50/121/0 | fps=36 | alpha=0.300[0m
+[32m[2026-05-15 04:51:34.854] [INFO] [main] Frame  2160 | dt=  27.00ms | phys=2 | phys_avg=  0.00ms | render= 27.71ms | E:50/121/0 | fps=35 | alpha=0.220[0m
+[32m[2026-05-15 04:51:35.137] [INFO] [main] Frame  2170 | dt=  29.00ms | phys=2 | phys_avg=  0.00ms | render= 29.36ms | E:50/121/0 | fps=35 | alpha=0.140[0m
+[32m[2026-05-15 04:51:35.418] [INFO] [main] Frame  2180 | dt=  28.00ms | phys=2 | phys_avg=  0.00ms | render= 27.74ms | E:50/121/0 | fps=35 | alpha=0.060[0m
+[32m[2026-05-15 04:51:35.699] [INFO] [main] Frame  2190 | dt=  29.00ms | phys=1 | phys_avg=  0.00ms | render= 27.28ms | E:50/121/0 | fps=35 | alpha=0.980[0m
+[32m[2026-05-15 04:51:36.066] [INFO] [main] [MOVE] frame=2200 pos=(4741,2324) in_car=No[0m
+[32m[2026-05-15 04:51:36.124] [INFO] [main] Frame  2200 | dt=  97.00ms | phys=5 | phys_avg=  9.60ms | render= 57.93ms | E:50/120/0 | fps=35 | alpha=1.000[0m
+[32m[2026-05-15 04:51:36.474] [INFO] [main] Frame  2210 | dt=  30.00ms | phys=1 | phys_avg=  8.54ms | render= 11.79ms | E:50/120/0 | fps=23 | alpha=0.900[0m
+[32m[2026-05-15 04:51:36.741] [INFO] [main] Frame  2220 | dt=  31.00ms | phys=1 | phys_avg= 10.38ms | render= 11.38ms | E:50/120/0 | fps=28 | alpha=0.860[0m
+[32m[2026-05-15 04:51:37.039] [INFO] [main] Frame  2230 | dt=  32.00ms | phys=2 | phys_avg=  9.57ms | render= 11.69ms | E:50/120/0 | fps=37 | alpha=0.140[0m
+[32m[2026-05-15 04:51:37.114] [INFO] [main] [MOVE] frame=2233 pos=(4741,2313) in_car=No[0m
+[32m[2026-05-15 04:51:37.146] [INFO] [main] [MOVE] frame=2234 pos=(4741,2306) in_car=No[0m
+[32m[2026-05-15 04:51:37.178] [INFO] [main] [MOVE] frame=2235 pos=(4741,2298) in_car=No[0m
+[32m[2026-05-15 04:51:37.212] [INFO] [main] [MOVE] frame=2236 pos=(4741,2291) in_car=No[0m
+[32m[2026-05-15 04:51:37.244] [INFO] [main] [MOVE] frame=2237 pos=(4741,2284) in_car=No[0m
+[32m[2026-05-15 04:51:37.278] [INFO] [main] [MOVE] frame=2238 pos=(4741,2276) in_car=No[0m
+[32m[2026-05-15 04:51:37.313] [INFO] [main] [MOVE] frame=2239 pos=(4741,2269) in_car=No[0m
+[32m[2026-05-15 04:51:37.348] [INFO] [main] [MOVE] frame=2240 pos=(4741,2262) in_car=No[0m
+[32m[2026-05-15 04:51:37.359] [INFO] [main] Frame  2240 | dt=  35.00ms | phys=2 | phys_avg= 11.42ms | render= 11.39ms | E:50/120/0 | fps=33 | alpha=0.160[0m
+[32m[2026-05-15 04:51:37.383] [INFO] [main] [MOVE] frame=2241 pos=(4741,2254) in_car=No[0m
+[32m[2026-05-15 04:51:37.419] [INFO] [main] [MOVE] frame=2242 pos=(4741,2247) in_car=No[0m
+[32m[2026-05-15 04:51:37.454] [INFO] [main] [MOVE] frame=2243 pos=(4741,2240) in_car=No[0m
+[32m[2026-05-15 04:51:37.490] [INFO] [main] [MOVE] frame=2244 pos=(4741,2232) in_car=No[0m
+[32m[2026-05-15 04:51:37.525] [INFO] [main] [MOVE] frame=2245 pos=(4741,2225) in_car=No[0m
+[32m[2026-05-15 04:51:37.562] [INFO] [main] [MOVE] frame=2246 pos=(4741,2218) in_car=No[0m
+[32m[2026-05-15 04:51:37.611] [INFO] [main] [MOVE] frame=2247 pos=(4741,2207) in_car=No[0m
+[32m[2026-05-15 04:51:37.659] [INFO] [main] [MOVE] frame=2248 pos=(4741,2196) in_car=No[0m
+[32m[2026-05-15 04:51:37.709] [INFO] [main] [MOVE] frame=2249 pos=(4741,2185) in_car=No[0m
+[32m[2026-05-15 04:51:37.747] [INFO] [main] [MOVE] frame=2250 pos=(4741,2177) in_car=No[0m
+[32m[2026-05-15 04:51:37.759] [INFO] [main] Frame  2250 | dt=  49.00ms | phys=2 | phys_avg= 12.70ms | render= 11.63ms | E:50/120/0 | fps=31 | alpha=0.980[0m
+[32m[2026-05-15 04:51:37.797] [INFO] [main] [MOVE] frame=2251 pos=(4741,2166) in_car=No[0m
+[32m[2026-05-15 04:51:37.845] [INFO] [main] [MOVE] frame=2252 pos=(4741,2155) in_car=No[0m
+[32m[2026-05-15 04:51:37.894] [INFO] [main] [MOVE] frame=2253 pos=(4741,2144) in_car=No[0m
+[32m[2026-05-15 04:51:37.930] [INFO] [main] [MOVE] frame=2254 pos=(4741,2137) in_car=No[0m
+[32m[2026-05-15 04:51:37.978] [INFO] [main] [MOVE] frame=2255 pos=(4741,2126) in_car=No[0m
+[32m[2026-05-15 04:51:38.028] [INFO] [main] [MOVE] frame=2256 pos=(4741,2115) in_car=No[0m
+[32m[2026-05-15 04:51:38.224] [INFO] [main] Frame  2260 | dt=  37.00ms | phys=3 | phys_avg= 12.27ms | render= 12.14ms | E:50/120/0 | fps=24 | alpha=0.160[0m
+[32m[2026-05-15 04:51:38.731] [INFO] [main] Frame  2270 | dt=  52.00ms | phys=3 | phys_avg= 13.03ms | render= 11.81ms | E:50/120/0 | fps=21 | alpha=0.520[0m
+[32m[2026-05-15 04:51:39.376] [INFO] [main] Frame  2280 | dt=  65.00ms | phys=4 | phys_avg= 13.99ms | render= 11.96ms | E:50/120/0 | fps=19 | alpha=0.080[0m
+[32m[2026-05-15 04:51:40.008] [INFO] [main] Frame  2290 | dt=  50.00ms | phys=3 | phys_avg= 13.47ms | render= 11.94ms | E:50/120/0 | fps=15 | alpha=0.960[0m
+[32m[2026-05-15 04:51:40.538] [INFO] [main] Frame  2300 | dt=  50.00ms | phys=3 | phys_avg= 13.40ms | render= 13.05ms | E:50/120/0 | fps=15 | alpha=0.700[0m
+[32m[2026-05-15 04:51:41.051] [INFO] [main] Frame  2310 | dt=  51.00ms | phys=3 | phys_avg= 13.10ms | render= 12.03ms | E:50/120/0 | fps=18 | alpha=0.660[0m
+[32m[2026-05-15 04:51:41.138] [INFO] [main] [MOVE] frame=2312 pos=(4741,2104) in_car=No[0m
+[32m[2026-05-15 04:51:41.187] [INFO] [main] [MOVE] frame=2313 pos=(4741,2093) in_car=No[0m
+[32m[2026-05-15 04:51:41.236] [INFO] [main] [MOVE] frame=2314 pos=(4741,2082) in_car=No[0m
+[32m[2026-05-15 04:51:41.286] [INFO] [main] [MOVE] frame=2315 pos=(4741,2071) in_car=No[0m
+[32m[2026-05-15 04:51:41.336] [INFO] [main] [MOVE] frame=2316 pos=(4741,2060) in_car=No[0m
+[32m[2026-05-15 04:51:41.385] [INFO] [main] [MOVE] frame=2317 pos=(4741,2049) in_car=No[0m
+[32m[2026-05-15 04:51:41.436] [INFO] [main] [MOVE] frame=2318 pos=(4741,2038) in_car=No[0m
+[32m[2026-05-15 04:51:41.486] [INFO] [main] [MOVE] frame=2319 pos=(4741,2027) in_car=No[0m
+[32m[2026-05-15 04:51:41.536] [INFO] [main] [MOVE] frame=2320 pos=(4741,2016) in_car=No[0m
+[32m[2026-05-15 04:51:41.548] [INFO] [main] Frame  2320 | dt=  49.00ms | phys=3 | phys_avg= 12.63ms | render= 12.32ms | E:50/120/0 | fps=19 | alpha=0.480[0m
+[32m[2026-05-15 04:51:41.586] [INFO] [main] [MOVE] frame=2321 pos=(4741,2005) in_car=No[0m
+[32m[2026-05-15 04:51:41.635] [INFO] [main] [MOVE] frame=2322 pos=(4733,1997) in_car=No[0m
+[32m[2026-05-15 04:51:41.682] [INFO] [main] [MOVE] frame=2323 pos=(4725,1989) in_car=No[0m
+[32m[2026-05-15 04:51:41.729] [INFO] [main] [MOVE] frame=2324 pos=(4718,1982) in_car=No[0m
+[32m[2026-05-15 04:51:41.780] [INFO] [main] [MOVE] frame=2325 pos=(4710,1974) in_car=No[0m
+[32m[2026-05-15 04:51:41.830] [INFO] [main] [MOVE] frame=2326 pos=(4702,1966) in_car=No[0m
+[32m[2026-05-15 04:51:41.881] [INFO] [main] [MOVE] frame=2327 pos=(4694,1958) in_car=No[0m
+[32m[2026-05-15 04:51:41.931] [INFO] [main] [MOVE] frame=2328 pos=(4687,1951) in_car=No[0m
+[32m[2026-05-15 04:51:41.980] [INFO] [main] [MOVE] frame=2329 pos=(4679,1943) in_car=No[0m
+[32m[2026-05-15 04:51:42.030] [INFO] [main] [MOVE] frame=2330 pos=(4671,1935) in_car=No[0m
+[32m[2026-05-15 04:51:42.042] [INFO] [main] Frame  2330 | dt=  49.00ms | phys=3 | phys_avg= 12.89ms | render= 12.01ms | E:50/120/0 | fps=20 | alpha=0.120[0m
+[32m[2026-05-15 04:51:42.081] [INFO] [main] [MOVE] frame=2331 pos=(4663,1927) in_car=No[0m
+[32m[2026-05-15 04:51:42.134] [INFO] [main] [MOVE] frame=2332 pos=(4655,1919) in_car=No[0m
+[32m[2026-05-15 04:51:42.187] [INFO] [main] [MOVE] frame=2333 pos=(4648,1912) in_car=No[0m
+[32m[2026-05-15 04:51:42.244] [INFO] [main] [MOVE] frame=2334 pos=(4640,1904) in_car=No[0m
+[32m[2026-05-15 04:51:42.312] [INFO] [main] [MOVE] frame=2335 pos=(4630,1894) in_car=No[0m
+[32m[2026-05-15 04:51:42.384] [INFO] [main] [MOVE] frame=2336 pos=(4619,1883) in_car=No[0m
+[32m[2026-05-15 04:51:42.453] [INFO] [main] [MOVE] frame=2337 pos=(4609,1873) in_car=No[0m
+[32m[2026-05-15 04:51:42.522] [INFO] [main] [MOVE] frame=2338 pos=(4598,1862) in_car=No[0m
+[32m[2026-05-15 04:51:42.592] [INFO] [main] [MOVE] frame=2339 pos=(4588,1852) in_car=No[0m
+[32m[2026-05-15 04:51:42.661] [INFO] [main] [MOVE] frame=2340 pos=(4573,1852) in_car=No[0m
+[32m[2026-05-15 04:51:42.674] [INFO] [main] Frame  2340 | dt=  71.00ms | phys=4 | phys_avg= 14.32ms | render= 12.57ms | E:50/120/0 | fps=20 | alpha=0.900[0m
+[32m[2026-05-15 04:51:42.744] [INFO] [main] [MOVE] frame=2341 pos=(4555,1852) in_car=No[0m
+[32m[2026-05-15 04:51:42.829] [INFO] [main] [MOVE] frame=2342 pos=(4537,1852) in_car=No[0m
+[32m[2026-05-15 04:51:42.919] [INFO] [main] [MOVE] frame=2343 pos=(4518,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.005] [INFO] [main] [MOVE] frame=2344 pos=(4500,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.090] [INFO] [main] [MOVE] frame=2345 pos=(4482,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.179] [INFO] [main] [MOVE] frame=2346 pos=(4463,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.268] [INFO] [main] [MOVE] frame=2347 pos=(4445,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.353] [INFO] [main] [MOVE] frame=2348 pos=(4427,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.443] [INFO] [main] [MOVE] frame=2349 pos=(4408,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.532] [INFO] [main] [MOVE] frame=2350 pos=(4390,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.544] [INFO] [main] Frame  2350 | dt=  89.00ms | phys=5 | phys_avg= 15.50ms | render= 11.73ms | E:50/120/0 | fps=15 | alpha=1.000[0m
+[32m[2026-05-15 04:51:43.620] [INFO] [main] [MOVE] frame=2351 pos=(4372,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.713] [INFO] [main] [MOVE] frame=2352 pos=(4353,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.803] [INFO] [main] [MOVE] frame=2353 pos=(4335,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.898] [INFO] [main] [MOVE] frame=2354 pos=(4317,1852) in_car=No[0m
+[32m[2026-05-15 04:51:43.993] [INFO] [main] [MOVE] frame=2355 pos=(4304,1839) in_car=No[0m
+[32m[2026-05-15 04:51:44.090] [INFO] [main] [MOVE] frame=2356 pos=(4291,1826) in_car=No[0m
+[32m[2026-05-15 04:51:44.184] [INFO] [main] [MOVE] frame=2357 pos=(4278,1813) in_car=No[0m
+[32m[2026-05-15 04:51:44.277] [INFO] [main] [MOVE] frame=2358 pos=(4278,1795) in_car=No[0m
+[32m[2026-05-15 04:51:44.378] [INFO] [main] [MOVE] frame=2359 pos=(4278,1776) in_car=No[0m
+[32m[2026-05-15 04:51:44.482] [INFO] [main] [MOVE] frame=2360 pos=(4278,1758) in_car=No[0m
+[32m[2026-05-15 04:51:44.495] [INFO] [main] Frame  2360 | dt= 102.00ms | phys=5 | phys_avg= 17.84ms | render= 13.20ms | E:50/120/0 | fps=11 | alpha=1.000[0m
+[32m[2026-05-15 04:51:44.585] [INFO] [main] [MOVE] frame=2361 pos=(4278,1740) in_car=No[0m
+[32m[2026-05-15 04:51:44.689] [INFO] [main] [MOVE] frame=2362 pos=(4278,1721) in_car=No[0m
+[32m[2026-05-15 04:51:44.792] [INFO] [main] [MOVE] frame=2363 pos=(4291,1709) in_car=No[0m
+[32m[2026-05-15 04:51:44.922] [INFO] [main] [MOVE] frame=2364 pos=(4304,1696) in_car=No[0m
+[32m[2026-05-15 04:51:45.022] [INFO] [main] [MOVE] frame=2365 pos=(4317,1683) in_car=No[0m
+[32m[2026-05-15 04:51:45.123] [INFO] [main] [MOVE] frame=2366 pos=(4330,1670) in_car=No[0m
+[32m[2026-05-15 04:51:45.223] [INFO] [main] [MOVE] frame=2367 pos=(4343,1657) in_car=No[0m
+[32m[2026-05-15 04:51:45.328] [INFO] [main] [MOVE] frame=2368 pos=(4356,1644) in_car=No[0m
+[32m[2026-05-15 04:51:45.436] [INFO] [main] [MOVE] frame=2369 pos=(4369,1631) in_car=No[0m
+[32m[2026-05-15 04:51:45.540] [INFO] [main] [MOVE] frame=2370 pos=(4382,1618) in_car=No[0m
+[32m[2026-05-15 04:51:45.555] [INFO] [main] Frame  2370 | dt= 108.00ms | phys=5 | phys_avg= 17.93ms | render= 14.66ms | E:50/120/0 | fps=10 | alpha=1.000[0m
+[32m[2026-05-15 04:51:45.645] [INFO] [main] [MOVE] frame=2371 pos=(4394,1605) in_car=No[0m
+[32m[2026-05-15 04:51:45.753] [INFO] [main] [MOVE] frame=2372 pos=(4407,1592) in_car=No[0m
+[32m[2026-05-15 04:51:45.858] [INFO] [main] [MOVE] frame=2373 pos=(4420,1579) in_car=No[0m
+[32m[2026-05-15 04:51:45.962] [INFO] [main] [MOVE] frame=2374 pos=(4433,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.063] [INFO] [main] [MOVE] frame=2375 pos=(4452,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.162] [INFO] [main] [MOVE] frame=2376 pos=(4470,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.262] [INFO] [main] [MOVE] frame=2377 pos=(4488,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.379] [INFO] [main] [MOVE] frame=2378 pos=(4507,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.485] [INFO] [main] [MOVE] frame=2379 pos=(4525,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.586] [INFO] [main] [MOVE] frame=2380 pos=(4543,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.601] [INFO] [main] Frame  2380 | dt= 106.00ms | phys=5 | phys_avg= 17.16ms | render= 15.32ms | E:50/120/0 | fps=9 | alpha=1.000[0m
+[32m[2026-05-15 04:51:46.687] [INFO] [main] [MOVE] frame=2381 pos=(4562,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.788] [INFO] [main] [MOVE] frame=2382 pos=(4580,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.886] [INFO] [main] [MOVE] frame=2383 pos=(4598,1566) in_car=No[0m
+[32m[2026-05-15 04:51:46.986] [INFO] [main] [MOVE] frame=2384 pos=(4617,1566) in_car=No[0m
+[32m[2026-05-15 04:51:47.081] [INFO] [main] [MOVE] frame=2385 pos=(4635,1566) in_car=No[0m
+[32m[2026-05-15 04:51:47.180] [INFO] [main] [MOVE] frame=2386 pos=(4653,1566) in_car=No[0m
+[32m[2026-05-15 04:51:47.273] [INFO] [main] [MOVE] frame=2387 pos=(4672,1566) in_car=No[0m
+[32m[2026-05-15 04:51:47.469] [INFO] [main] [MOVE] frame=2389 pos=(4672,1579) in_car=No[0m
+[32m[2026-05-15 04:51:47.558] [INFO] [main] [MOVE] frame=2390 pos=(4672,1592) in_car=No[0m
+[32m[2026-05-15 04:51:47.570] [INFO] [main] Frame  2390 | dt=  99.00ms | phys=5 | phys_avg= 15.65ms | render= 11.17ms | E:50/120/0 | fps=9 | alpha=1.000[0m
+[32m[2026-05-15 04:51:47.652] [INFO] [main] [MOVE] frame=2391 pos=(4672,1605) in_car=No[0m
+[32m[2026-05-15 04:51:47.746] [INFO] [main] [MOVE] frame=2392 pos=(4672,1618) in_car=No[0m
+[32m[2026-05-15 04:51:47.839] [INFO] [main] [MOVE] frame=2393 pos=(4685,1631) in_car=No[0m
+[32m[2026-05-15 04:51:47.931] [INFO] [main] [MOVE] frame=2394 pos=(4698,1644) in_car=No[0m
+[32m[2026-05-15 04:51:48.026] [INFO] [main] [MOVE] frame=2395 pos=(4711,1657) in_car=No[0m
+[32m[2026-05-15 04:51:48.118] [INFO] [main] [MOVE] frame=2396 pos=(4724,1670) in_car=No[0m
+[32m[2026-05-15 04:51:48.212] [INFO] [main] [MOVE] frame=2397 pos=(4737,1683) in_car=No[0m
+[32m[2026-05-15 04:51:48.308] [INFO] [main] [MOVE] frame=2398 pos=(4749,1696) in_car=No[0m
+[32m[2026-05-15 04:51:48.403] [INFO] [main] [MOVE] frame=2399 pos=(4762,1709) in_car=No[0m
+[32m[2026-05-15 04:51:48.502] [INFO] [main] [MOVE] frame=2400 pos=(4775,1721) in_car=No[0m
+[32m[2026-05-15 04:51:48.514] [INFO] [main] Frame  2400 | dt=  96.00ms | phys=5 | phys_avg= 17.30ms | render= 12.32ms | E:50/120/0 | fps=10 | alpha=1.000[0m
+[32m[2026-05-15 04:51:48.597] [INFO] [main] [MOVE] frame=2401 pos=(4788,1734) in_car=No[0m
+[32m[2026-05-15 04:51:48.696] [INFO] [main] [MOVE] frame=2402 pos=(4801,1747) in_car=No[0m
+[32m[2026-05-15 04:51:48.790] [INFO] [main] [MOVE] frame=2403 pos=(4814,1760) in_car=No[0m
+[32m[2026-05-15 04:51:48.885] [INFO] [main] [MOVE] frame=2404 pos=(4827,1773) in_car=No[0m
+[32m[2026-05-15 04:51:48.978] [INFO] [main] [MOVE] frame=2405 pos=(4840,1786) in_car=No[0m
+[32m[2026-05-15 04:51:49.066] [INFO] [main] [MOVE] frame=2406 pos=(4853,1799) in_car=No[0m
+[32m[2026-05-15 04:51:49.153] [INFO] [main] [MOVE] frame=2407 pos=(4866,1812) in_car=No[0m
+[32m[2026-05-15 04:51:49.240] [INFO] [main] [MOVE] frame=2408 pos=(4866,1831) in_car=No[0m
+[32m[2026-05-15 04:51:49.414] [INFO] [main] Frame  2410 | dt=  82.00ms | phys=5 | phys_avg= 13.78ms | render= 11.57ms | E:50/120/0 | fps=10 | alpha=1.000[0m
+[32m[2026-05-15 04:51:50.225] [INFO] [main] Frame  2420 | dt=  80.00ms | phys=5 | phys_avg= 14.06ms | render= 12.06ms | E:50/120/0 | fps=11 | alpha=1.000[0m
+[32m[2026-05-15 04:51:51.059] [INFO] [main] Frame  2430 | dt=  83.00ms | phys=5 | phys_avg= 14.28ms | render= 11.52ms | E:50/120/0 | fps=12 | alpha=1.000[0m
+[32m[2026-05-15 04:51:51.892] [INFO] [main] Frame  2440 | dt=  84.00ms | phys=5 | phys_avg= 14.40ms | render= 12.03ms | E:50/120/0 | fps=11 | alpha=1.000[0m

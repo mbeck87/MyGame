@@ -23,6 +23,211 @@ SPECIAL_LIMITS = {
     "fastfood": 8,
     "highrise": 16,
 }
+
+
+def _pre_render_amusement_park_sprites(state):
+    """Pre-render static amusement park elements into sprites for faster rendering.
+    This renders the base, paths, buildings, stands, and static decorations once
+    instead of redrawing them every frame.
+    """
+    from game2d.render.world_bg import (
+        _draw_flat_path, _draw_park_gate, _draw_ticket_building,
+        _draw_wc_building, _draw_fountain, _draw_lottery_stand,
+        _draw_claw_machine_base, _draw_strongman_base, _draw_pirate_ship_base,
+        _draw_bumper_arena, _draw_swing_ride_base, _draw_planter, _draw_bench,
+        _amusement_new_layout, _draw_food_stand
+    )
+    
+    state.amusement_park_sprites[:] = []
+    
+    for park in state.amusement_parks:
+        # Create a surface large enough to hold the entire park
+        # Add some padding for elements that might extend beyond the park rect
+        padding = 200
+        surf = pygame.Surface(
+            (park.w + padding * 2, park.h + padding * 2),
+            pygame.SRCALPHA
+        )
+        
+        # Render offset: we render at (padding, padding) so elements at (0,0) in park space
+        # go to (padding, padding) on the surface
+        render_offset_x = padding
+        render_offset_y = padding
+        
+        # Helper to adjust positions from world to sprite space
+        def adjust_pos(rx, ry):
+            return rx - park.x + render_offset_x, ry - park.y + render_offset_y
+        
+        # Draw base rectangle
+        pygame.draw.rect(surf, (52, 122, 78), (render_offset_x, render_offset_y, park.w, park.h))
+        pygame.draw.rect(surf, (174, 78, 92), (render_offset_x, render_offset_y, park.w, park.h), 5)
+        
+        # Get cached path segments
+        park_idx = state.amusement_parks.index(park)
+        if park_idx < len(state.amusement_path_segments):
+            cached_segments = state.amusement_path_segments[park_idx]
+            path_segments = cached_segments
+        else:
+            from game2d.world.geometry import amusement_path_segments
+            path_segments = amusement_path_segments(park)
+        
+        # Draw paths (shifted by render offset)
+        for path in path_segments:
+            shifted_path = [(x + render_offset_x - park.x, y + render_offset_y - park.y) for x, y in path]
+            _draw_flat_path(surf, shifted_path, (128, 86, 52), 42)
+        for path in path_segments:
+            shifted_path = [(x + render_offset_x - park.x, y + render_offset_y - park.y) for x, y in path]
+            _draw_flat_path(surf, shifted_path, (214, 178, 118), 28)
+        for path in path_segments:
+            for i, (x, y) in enumerate(path[::10]):
+                px = x + render_offset_x - park.x
+                py = y + render_offset_y - park.y
+                pygame.draw.circle(surf, (246, 216, 92), (int(px), int(py)), 4)
+                pygame.draw.circle(surf, (78, 54, 42), (int(px), int(py + 7)), 2)
+        
+        # Draw stands for this park
+        for x, y, kind in state.amusement_stands:
+            if park.collidepoint(x, y):
+                _draw_food_stand(surf, x - park.x + render_offset_x, y - park.y + render_offset_y, kind)
+        
+        # Calculate layout positions relative to park
+        outer_right = park.right - int(park.w * 0.12)
+        outer_bottom = park.bottom - int(park.h * 0.12)
+        outer_left = park.left + int(park.w * 0.12)
+        center_x = park.centerx
+        center_y = park.top + int(park.h * 0.50)
+        
+        # Draw static park elements
+        _draw_park_gate(surf, outer_right - park.x + render_offset_x, park.bottom - park.y + render_offset_y - 20)
+        _draw_ticket_building(surf, 
+            outer_right - park.x + render_offset_x - int((outer_right - outer_left) * 0.25), 
+            outer_bottom - park.y + render_offset_y - 42)
+        _draw_wc_building(surf, 
+            outer_right - park.x + render_offset_x - int((outer_right - outer_left) * 0.50), 
+            outer_bottom - park.y + render_offset_y - 42)
+        
+        # Draw fountain at center (static)
+        _draw_fountain(surf, center_x - park.x + render_offset_x, center_y - park.y + render_offset_y, 0)
+        
+        # Get layout for ride area markers (but don't draw ride bases - they are replaced by animated sprites)
+        layout = _amusement_new_layout(park)
+        
+        # Draw coaster area marker (static background)
+        coaster_rect = layout['coaster_area'].copy()
+        coaster_rect.x += render_offset_x - park.x
+        coaster_rect.y += render_offset_y - park.y
+        pygame.draw.rect(surf, (42, 104, 64), coaster_rect.inflate(16, 16), border_radius=10)
+        
+        # Draw lottery stand (static)
+        ls_x, ls_y, ls_w, ls_h = layout['lottery_stand']
+        _draw_lottery_stand(surf, ls_x - park.x + render_offset_x, ls_y - park.y + render_offset_y, ls_w, ls_h)
+        
+        # Note: Ride bases (ferris, carousel, swing, strongman, pirate_ship, bumper_arena, claw_machine)
+        # are NOT drawn here anymore - they are replaced by the animated sprite frames
+        
+        for px, py, color, style, flower in layout['planters']:
+            _draw_planter(surf, *adjust_pos(px, py), color, style, flower)
+        for bx, by, vertical in layout['benches']:
+            _draw_bench(surf, *adjust_pos(bx, by), vertical=vertical)
+        
+        state.amusement_park_sprites.append(surf)
+
+
+def _pre_render_amusement_park_ride_sprites(state):
+    """Pre-render animated ride sprites as sprite sheets for faster rendering.
+    Renders multiple frames for each ride animation (ferris wheel, carousel, swing, etc.)
+    and stores them for later blitting instead of redrawing every frame.
+    """
+    import math
+    from game2d.render.world_bg import (
+        _draw_ferris_wheel, _draw_carousel, _draw_new_roller_coaster,
+        _draw_strongman_dynamic, _draw_pirate_ship_dynamic,
+        _draw_bumper_cars_dynamic, _draw_swing_ride_dynamic,
+        _draw_claw_machine_dynamic, _amusement_new_layout
+    )
+    
+    # Number of frames to pre-render for each animation (36 = 10 degree steps)
+    NUM_FRAMES = 36
+    
+    # Get the first amusement park (we assume there's only one)
+    if not state.amusement_parks:
+        return
+    
+    park = state.amusement_parks[0]
+    layout = _amusement_new_layout(park)
+    
+    # Pre-render Ferris Wheel frames
+    fw_x, fw_y = layout['ferris']
+    fw_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau  # 0 to 2*pi
+        surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+        # Render at center of surface
+        _draw_ferris_wheel(surf, 100, 100, t)
+        fw_frames.append(surf)
+    state.amusement_park_ride_sprites['ferris_wheel'] = fw_frames
+    
+    # Pre-render Carousel frames
+    car_x, car_y = layout['carousel']
+    car_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau
+        surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+        _draw_carousel(surf, 100, 100, t)
+        car_frames.append(surf)
+    state.amusement_park_ride_sprites['carousel'] = car_frames
+    
+    # Pre-render Swing Ride frames
+    sw_x, sw_y = layout['swing']
+    swing_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau
+        surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+        _draw_swing_ride_dynamic(surf, 100, 100, t)
+        swing_frames.append(surf)
+    state.amusement_park_ride_sprites['swing'] = swing_frames
+    
+    # Pre-render Strongman frames
+    sm_x, sm_y = layout['strongman']
+    strongman_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau
+        surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+        _draw_strongman_dynamic(surf, 100, 100, t)
+        strongman_frames.append(surf)
+    state.amusement_park_ride_sprites['strongman'] = strongman_frames
+    
+    # Pre-render Pirate Ship frames
+    ps_x, ps_y = layout['pirate_ship']
+    pirate_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau
+        surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+        _draw_pirate_ship_dynamic(surf, 100, 100, t)
+        pirate_frames.append(surf)
+    state.amusement_park_ride_sprites['pirate_ship'] = pirate_frames
+    
+    # Pre-render Bumper Cars frames
+    ba = layout['bumper_arena']
+    bumper_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau
+        surf = pygame.Surface((400, 250), pygame.SRCALPHA)
+        _draw_bumper_cars_dynamic(surf, pygame.Rect(50, 50, 300, 150), t)
+        bumper_frames.append(surf)
+    state.amusement_park_ride_sprites['bumper_cars'] = bumper_frames
+    
+    # Pre-render Claw Machine frames
+    cm_x, cm_y, cm_w, cm_h = layout['claw_machine']
+    claw_frames = []
+    for i in range(NUM_FRAMES):
+        t = (i / NUM_FRAMES) * math.tau
+        surf = pygame.Surface((150, 150), pygame.SRCALPHA)
+        _draw_claw_machine_dynamic(surf, 25, 25, cm_w, cm_h, t)
+        claw_frames.append(surf)
+    state.amusement_park_ride_sprites['claw_machine'] = claw_frames
+
+
 SPECIAL_MINIMUMS = {
     "disco": 2,
     "supermarket": 3,
@@ -407,6 +612,9 @@ def build_world(state):
     state.parks[:] = [_build_park_rect()]
     state.amusement_parks[:] = [_build_amusement_park_rect()]
     state.airports[:] = [build_airport_rect()]
+    # Cache amusement path segments for performance
+    from game2d.world.geometry import amusement_path_segments
+    state.amusement_path_segments[:] = [amusement_path_segments(park) for park in state.amusement_parks]
     state.road_segments[:] = _build_road_segments(state)
     build_traffic_controls(state)
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]
@@ -477,6 +685,11 @@ def build_world(state):
         state.park_ducks.extend(_build_park_ducks(park))
     for park in state.amusement_parks:
         state.amusement_stands.extend(_build_amusement_stands(park))
+
+    # Pre-render statischen Amusement Park (wird in _draw_amusement_static verwendet)
+    # Die dynamischen Rides werden aus PNG-Sprites geladen (siehe load_amusement_sprites)
+    _pre_render_amusement_park_sprites(state)
+    # _pre_render_amusement_park_ride_sprites(state)  # Nicht nötig - wir laden PNGs
 
     state.AI_OBSTACLES[:] = (
         list(state.buildings)

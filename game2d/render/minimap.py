@@ -158,10 +158,15 @@ def create_minimap_static(state):
         pygame.draw.lines(panel, (150, 105, 56), False, path, 1)
     
     # Freizeitparks
-    for park in state.amusement_parks:
+    for idx, park in enumerate(state.amusement_parks):
         pr = _local_rect(park)
         pygame.draw.rect(panel, (78, 150, 92), pr)
-        for segment in amusement_path_segments(park):
+        # Use cached path segments
+        if idx < len(state.amusement_path_segments):
+            segments = state.amusement_path_segments[idx]
+        else:
+            segments = amusement_path_segments(park)
+        for segment in segments:
             path = _local_polyline(segment)
             if len(path) >= 2:
                 pygame.draw.lines(panel, (214, 178, 118), False, path, 2)
@@ -325,10 +330,15 @@ def draw_minimap(screen, state, font, static_panel=None, dynamic_panel=None, for
             path = _local_polyline(_park_path_points(park), rect)
             pygame.draw.lines(panel, (150, 105, 56), False, path, 1)
         
-        for park in state.amusement_parks:
+        for idx, park in enumerate(state.amusement_parks):
             pr = _local_rect(park, rect)
             pygame.draw.rect(panel, (78, 150, 92), pr)
-            for segment in amusement_path_segments(park):
+            # Use cached path segments
+            if idx < len(state.amusement_path_segments):
+                segments = state.amusement_path_segments[idx]
+            else:
+                segments = amusement_path_segments(park)
+            for segment in segments:
                 path = _local_polyline(segment, rect)
                 if len(path) >= 2:
                     pygame.draw.lines(panel, (214, 178, 118), False, path, 2)
@@ -465,10 +475,15 @@ def draw_minimap(screen, state, font, static_panel=None, dynamic_panel=None, for
         path = _local_polyline(_park_path_points(park), rect)
         pygame.draw.lines(panel, (150, 105, 56), False, path, 1)
 
-    for park in state.amusement_parks:
+    for idx, park in enumerate(state.amusement_parks):
         pr = _local_rect(park, rect)
         pygame.draw.rect(panel, (78, 150, 92), pr)
-        for segment in amusement_path_segments(park):
+        # Use cached path segments
+        if idx < len(state.amusement_path_segments):
+            segments = state.amusement_path_segments[idx]
+        else:
+            segments = amusement_path_segments(park)
+        for segment in segments:
             path = _local_polyline(segment, rect)
             if len(path) >= 2:
                 pygame.draw.lines(panel, (214, 178, 118), False, path, 2)

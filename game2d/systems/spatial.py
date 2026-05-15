@@ -281,6 +281,8 @@ def register_entity(obj: Any, x: float = None, y: float = None, radius: float = 
     Returns:
         Spatial grid ID for the object (used for removal)
     """
+    if obj is None:
+        return -1
     grid = get_spatial_grid()
     if x is None:
         x = getattr(obj, 'x', 0)
@@ -293,19 +295,34 @@ def register_entity(obj: Any, x: float = None, y: float = None, radius: float = 
             radius = max(r.w, r.h) / 2
         else:
             radius = 30  # Default radius
-    return grid.add(obj, x, y, radius)
+    obj_id = grid.add(obj, x, y, radius)
+    # Initialize last position for optimized updates
+    obj._last_spatial_x = x
+    obj._last_spatial_y = y
+    return obj_id
 
 
 def update_entity_position(obj: Any) -> None:
     """Update an entity's position in the spatial grid.
     
+    Only updates if position has changed significantly (> 0.1px threshold).
+    This avoids unnecessary grid operations for static entities.
+    
     Args:
         obj: Entity object with x, y attributes
     """
+    if obj is None:
+        return
     grid = get_spatial_grid()
     x = getattr(obj, 'x', 0)
     y = getattr(obj, 'y', 0)
-    grid.update(obj, x, y)
+    # Only update if position has changed significantly
+    if not (hasattr(obj, '_last_spatial_x') and 
+            abs(x - obj._last_spatial_x) < 0.1 and
+            abs(y - obj._last_spatial_y) < 0.1):
+        grid.update(obj, x, y)
+        obj._last_spatial_x = x
+        obj._last_spatial_y = y
 
 
 def unregister_entity(obj: Any) -> None:
@@ -314,8 +331,14 @@ def unregister_entity(obj: Any) -> None:
     Args:
         obj: Entity object to remove
     """
+    if obj is None:
+        return
     grid = get_spatial_grid()
     grid.remove(obj)
+    # Clean up last position tracking attributes
+    for attr in ('_last_spatial_x', '_last_spatial_y'):
+        if hasattr(obj, attr):
+            delattr(obj, attr)
 
 
 def query_entities_radius(x: float, y: float, radius: float) -> List[Any]:

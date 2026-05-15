@@ -1,0 +1,8 @@
+{
+  "ride": "carousel",
+  "frames": 36,
+  "frame_width": 200,
+  "frame_height": 200,
+  "type": "frames",
+  "speed": 2.4
+}
