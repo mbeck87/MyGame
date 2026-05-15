@@ -67,6 +67,10 @@ logger = get_logger('main')
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
 
+# Profiler UI - nur alle 500ms aktualisieren
+_profiler_last_update = 0
+_profiler_display = {}
+
 
 def _nearest_point_on_segment(px, py, ax, ay, bx, by):
     vx = bx - ax
@@ -142,7 +146,7 @@ def _spawn_traffic_and_player(state):
     # Reduzierte Start-Anzahl für bessere Performance
     NUM_START_CARS = 50
     NUM_START_PEDS = 100
-    NUM_AMUSEMENT_PEDS = 5  # Reduziert von 20 - weniger Peds im Amusement Park
+    NUM_AMUSEMENT_PEDS = 15
 
     for _ in range(NUM_START_CARS):
         kind = random_car_kind()
@@ -1526,18 +1530,117 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         # Also profile_x = (W-256) - 420 = W-676, dann +20px nach rechts = W-656, dann -40px nach links = W-696
         profile_x = W - 696
         
-        profiling_text = (
-            f"FPS {fps_val} | Phys {physics_fps if physics_fps else 'N/A'} | Frame {frame_time:.1f}ms/{avg_frame_time:.1f}ms | "
-            f"Mem {memory:.1f}MB"
-        )
-        draw_hud_text(screen, FONT, profiling_text, (profile_x, 10), (220, 200, 100))
+        # ===== Profiler UI - nur alle 500ms aktualisieren =====
+        global _profiler_last_update, _profiler_display
+        current_time = time.time()
+        update_interval = 0.5  # 500ms
         
-        # Phasenzeiten anzeigen
-        phases_text = (
-            f"Evt {event_time:.1f}ms | Upd {update_time:.1f}ms | Rnd {render_time:.1f}ms"
-        )
-        draw_hud_text(screen, FONT, phases_text, (profile_x, 30), (180, 200, 100))
-
+        # Sammel-Daten für Mittelwert
+        if '_profiler_accum' not in _profiler_display:
+            _profiler_display['_profiler_accum'] = {
+                'fps_vals': [], 'phys_vals': [], 'frame_vals': [], 'mem_vals': [],
+                'evt_vals': [], 'upd_vals': [], 'rnd_vals': [],
+                'cars_vals': [], 'peds_vals': [], 'cops_vals': [],
+                'full_cars_vals': [], 'full_peds_vals': [], 'full_cops_vals': []
+            }
+        accum = _profiler_display['_profiler_accum']
+        
+        # Aktuelle Werte sammeln
+        accum['fps_vals'].append(fps_val)
+        accum['phys_vals'].append(physics_fps if physics_fps else 0)
+        accum['frame_vals'].append(frame_time)
+        accum['mem_vals'].append(memory)
+        accum['evt_vals'].append(event_time)
+        accum['upd_vals'].append(update_time)
+        accum['rnd_vals'].append(render_time)
+        
+        cam_x, cam_y = state.cam[0], state.cam[1]
+        update_range = max(300, W // 4)
+        full_cars = sum(1 for c in state.cars if _is_in_update_range(c, cam_x, cam_y, update_range))
+        full_peds = sum(1 for p in state.peds if _is_in_update_range(p, cam_x, cam_y, update_range))
+        full_cops = sum(1 for c in state.cops if _is_in_update_range(c, cam_x, cam_y, update_range))
+        accum['cars_vals'].append(len(state.cars))
+        accum['peds_vals'].append(len(state.peds))
+        accum['cops_vals'].append(len(state.cops))
+        accum['full_cars_vals'].append(full_cars)
+        accum['full_peds_vals'].append(full_peds)
+        accum['full_cops_vals'].append(full_cops)
+        
+        # Alle 500ms: Mittelwerte berechnen und Display-Werte aktualisieren
+        if current_time - _profiler_last_update >= update_interval:
+            def calc_avg(values):
+                return sum(values) / len(values) if values else 0
+            
+            _profiler_display['fps'] = int(calc_avg(accum['fps_vals']))
+            _profiler_display['phys'] = int(calc_avg(accum['phys_vals'])) or "N/A"
+            _profiler_display['frame'] = calc_avg(accum['frame_vals'])
+            _profiler_display['mem'] = calc_avg(accum['mem_vals'])
+            _profiler_display['evt'] = calc_avg(accum['evt_vals'])
+            _profiler_display['upd'] = calc_avg(accum['upd_vals'])
+            _profiler_display['rnd'] = calc_avg(accum['rnd_vals'])
+            _profiler_display['cars'] = int(calc_avg(accum['cars_vals']))
+            _profiler_display['peds'] = int(calc_avg(accum['peds_vals']))
+            _profiler_display['cops'] = int(calc_avg(accum['cops_vals']))
+            _profiler_display['full_cars'] = int(calc_avg(accum['full_cars_vals']))
+            _profiler_display['full_peds'] = int(calc_avg(accum['full_peds_vals']))
+            _profiler_display['full_cops'] = int(calc_avg(accum['full_cops_vals']))
+            
+            # Zurücksetzen für nächste Sammelperiode
+            for key in accum:
+                accum[key] = []
+            _profiler_last_update = current_time
+        
+        # Feste Schrittweiten pro Paar (basierend auf max moeglicher Textbreite)
+        fps_step = FONT.render("FPS: 999", 1, (0,0,0)).get_width() + 10
+        phys_step = FONT.render("Phys: 999", 1, (0,0,0)).get_width() + 10
+        frame_step = FONT.render("Frame: 999.9ms", 1, (0,0,0)).get_width() + 10
+        mem_step = FONT.render("Mem: 9999.9MB", 1, (0,0,0)).get_width() + 10
+        time_step = FONT.render("Rnd: 999.9ms", 1, (0,0,0)).get_width() + 10
+        entity_step = FONT.render("Cars: 999/999", 1, (0,0,0)).get_width() + 10
+        
+        # Helper: format value with padding to prevent layout shift
+        def format_padded(value, min_chars):
+            """Formatiert Wert mit Leerzeichen, damit die Laenge konstant bleibt."""
+            return str(value).rjust(min_chars)
+        
+        # Zeile 1: FPS, Phys, Frame, Mem - mit Display-Werten
+        x = profile_x
+        phys_str = _profiler_display.get('phys', "N/A")
+        draw_hud_text(screen, FONT, f"FPS: {format_padded(_profiler_display.get('fps', fps_val), 3)}", (x, 10), (220, 200, 100))
+        x += fps_step
+        draw_hud_text(screen, FONT, f"Phys: {format_padded(phys_str, 3)}", (x, 10), (220, 200, 100))
+        x += phys_step
+        frame_avg = _profiler_display.get('frame', frame_time)
+        draw_hud_text(screen, FONT, f"Frame: {format_padded(f'{frame_avg:.1f}ms', 7)}", (x, 10), (220, 200, 100))
+        x += frame_step
+        mem_avg = _profiler_display.get('mem', memory)
+        draw_hud_text(screen, FONT, f"Mem: {format_padded(f'{mem_avg:.1f}MB', 7)}", (x, 10), (220, 200, 100))
+        
+        # Zeile 2: Evt, Upd, Rnd
+        x = profile_x
+        evt_avg = _profiler_display.get('evt', event_time)
+        draw_hud_text(screen, FONT, f"Evt: {format_padded(f'{evt_avg:.1f}ms', 6)}", (x, 30), (180, 200, 100))
+        x += time_step
+        upd_avg = _profiler_display.get('upd', update_time)
+        draw_hud_text(screen, FONT, f"Upd: {format_padded(f'{upd_avg:.1f}ms', 6)}", (x, 30), (180, 200, 100))
+        x += time_step
+        rnd_avg = _profiler_display.get('rnd', render_time)
+        draw_hud_text(screen, FONT, f"Rnd: {format_padded(f'{rnd_avg:.1f}ms', 6)}", (x, 30), (180, 200, 100))
+        
+        # Zeile 3: Entity Counts (Gesamt/Full)
+        x = profile_x
+        cars_total = _profiler_display.get('cars', len(state.cars))
+        full_cars_disp = _profiler_display.get('full_cars', full_cars)
+        draw_hud_text(screen, FONT, f"Cars: {format_padded(f'{cars_total}/{full_cars_disp}', 8)}", (x, 50), (150, 180, 100))
+        x += entity_step
+        peds_total = _profiler_display.get('peds', len(state.peds))
+        full_peds_disp = _profiler_display.get('full_peds', full_peds)
+        draw_hud_text(screen, FONT, f"Peds: {format_padded(f'{peds_total}/{full_peds_disp}', 8)}", (x, 50), (150, 180, 100))
+        x += entity_step
+        cops_total = _profiler_display.get('cops', len(state.cops))
+        full_cops_disp = _profiler_display.get('full_cops', full_cops)
+        draw_hud_text(screen, FONT, f"Cops: {format_padded(f'{cops_total}/{full_cops_disp}', 8)}", (x, 50), (150, 180, 100))
+        
         # Top 3 langsamste Funktionen - jede Zelle an fester Position
         if profiler_obj._function_stats:
             top_funcs = profiler_obj.get_top_functions(3, "total_time")
@@ -1547,19 +1650,19 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
                 col2_x = profile_x + 240  # Avg Time (ms)
                 col3_x = profile_x + 390  # Calls (150px Abstand von col2: 145px + 5px)
                 
-                # Tabellenkopf - jede Spalte einzeln rendern
-                draw_hud_text(screen, FONT, "Function Name", (col1_x, 60), (220, 200, 100))
-                draw_hud_text(screen, FONT, "Avg Time (ms)", (col2_x, 60), (220, 200, 100))
-                draw_hud_text(screen, FONT, "Calls", (col3_x, 60), (220, 200, 100))
+                # Tabellenkopf - jede Spalte einzeln rendern (20px nach unten verschoben)
+                draw_hud_text(screen, FONT, "Function Name", (col1_x, 80), (220, 200, 100))
+                draw_hud_text(screen, FONT, "Avg Time (ms)", (col2_x, 80), (220, 200, 100))
+                draw_hud_text(screen, FONT, "Calls", (col3_x, 80), (220, 200, 100))
                 
-                # Trennlinie über alle Spalten (bei col1_x beginnend)
+                # Trennlinie über alle Spalten (bei col1_x beginnend, 20px nach unten verschoben)
                 line_surface = pygame.Surface((430, 1))
                 line_surface.fill((180, 180, 180))
-                screen.blit(line_surface, (profile_x, 78))
+                screen.blit(line_surface, (profile_x, 98))
                 
-                # Funktionen - jede Zelle einzeln an ihrer Position
+                # Funktionen - jede Zelle einzeln an ihrer Position (20px nach unten verschoben)
                 for i, stat in enumerate(top_funcs):
-                    y_pos = 90 + i * 20
+                    y_pos = 110 + i * 20
                     
                     # Function Name (left-aligned, max 25 chars)
                     name = stat.name
@@ -1743,6 +1846,35 @@ def main():
         # Physik-Akkumulator aktualisieren
         physics_accumulator += raw_dt
         
+        # Profiling: Frame Start markieren (VOR Physik, damit Physik in Frame-Zeit enthalten ist)
+        # Entity Counts immer berechnen (nicht nur alle 10 Frames) für bessere Profiling-Daten
+        entity_counts = {
+            "cars": len(state.cars),
+            "peds": len(state.peds),
+            "cops": len(state.cops),
+            "bullets": len(state.bullets),
+            "rockets": len(state.rockets),
+            "wrecks": len(state.wrecks),
+            "corpses": len(state.corpses),
+            "particles": len(state.smoke_particles) + len(state.fire_particles) + len(state.blood_particles),
+            "cats": len(state.cats),
+        }
+        # Zähle voll berechnete Entities (im Update-Range)
+        if profiler.enabled:
+            update_range = UPDATE_RANGE_BUFFER
+            cam_x, cam_y = state.cam[0], state.cam[1]
+            full_cars = sum(1 for c in state.cars if _is_in_update_range(c, cam_x, cam_y, update_range))
+            full_peds = sum(1 for p in state.peds if _is_in_update_range(p, cam_x, cam_y, update_range))
+            full_cops = sum(1 for c in state.cops if _is_in_update_range(c, cam_x, cam_y, update_range))
+            full_cats = sum(1 for cat in state.cats if _is_in_update_range(cat, cam_x, cam_y, update_range))
+            full_bullets = sum(1 for b in state.bullets if _is_in_update_range({"x": b[0], "y": b[1]}, cam_x, cam_y, update_range))
+            entity_counts["full_cars"] = full_cars
+            entity_counts["full_peds"] = full_peds
+            entity_counts["full_cops"] = full_cops
+            entity_counts["full_cats"] = full_cats
+            entity_counts["full_bullets"] = full_bullets
+            profiler.start_frame()
+        
         # --- Fester Physik-Timestep: UPDATE so oft wie nötig ---
         # Begrenze auf max 5 Physik-Updates pro Frame, um Spikes beim Start/Respawn zu vermeiden
         # (z.B. wenn raw_dt sehr groß ist nach Ladezeit oder Pause)
@@ -1814,17 +1946,6 @@ def main():
                 minimap_dynamic = pygame.Surface((216, 216), pygame.SRCALPHA)
             minimap_dynamic.blit(minimap_static, (0, 0))
             update_minimap_dynamic(minimap_dynamic, state)
-        
-        # Profiling: Nur aktiv wenn enabled - Entity Counts nur alle 10 Frames berechnen
-        entity_counts = None
-        if profiler.enabled and profiler.frame_count % 10 == 0:
-            entity_counts = {"cars": len(state.cars), "peds": len(state.peds), 
-                            "bullets": len(state.bullets), "cops": len(state.cops),
-                            "particles": len(state.smoke_particles) + len(state.fire_particles) + len(state.blood_particles),
-                            "rockets": len(state.rockets), "wrecks": len(state.wrecks),
-                            "corpses": len(state.corpses)}
-        if profiler.enabled:
-            profiler.start_frame()
         
         # Non-physics updates: nutzen geclamptes raw_dt (verhindert Sprünge nach Respawn/Pause)
         effective_dt = min(raw_dt, 0.05)  # Max 50ms für Nicht-Physik-Updates
