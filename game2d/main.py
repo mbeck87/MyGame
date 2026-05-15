@@ -62,8 +62,20 @@ from game2d.systems.events import (
 )
 from game2d.systems.profiling import profiler, timed, profile
 from game2d.systems.di import provider
-from game2d.systems.logging import get_logger
+from game2d.systems.logging import get_logger, LogLevel
 logger = get_logger('main')
+# Basis-Logger für alle Warnings/Errors (immer aktiv)
+base_logger = get_logger('base')
+base_logger.set_level(LogLevel.WARNING)  # Warnings/Errors immer sichtbar
+# Gruppen-Logger für INFO-Meldungen (nur mit --log Flag aktiv)
+perf_logger = get_logger('performance')
+event_logger = get_logger('events')
+move_logger = get_logger('movement')
+# Haupt-Logger und Gruppen-Logger standardmäßig deaktiviert (nur Basis-Logger aktiv)
+logger.set_level(LogLevel.CRITICAL)
+perf_logger.set_level(LogLevel.CRITICAL)
+event_logger.set_level(LogLevel.CRITICAL)
+move_logger.set_level(LogLevel.CRITICAL)
 from game2d import settings as settings_mod
 from game2d.ui.menu import MenuController
 
@@ -350,7 +362,7 @@ def _handle_events(state, menu_ctrl, dt):
         if e.type == pygame.KEYDOWN and e.key == pygame.K_F12 and not state.game_over:
             from game2d.systems.profiling import profiler
             profiler.enabled = not profiler.enabled
-            logger.info(f"[PROFILING] {'AKTIVIERT' if profiler.enabled else 'DEAKTIVIERT'}")
+            perf_logger.info(f"[PROFILING] {'AKTIVIERT' if profiler.enabled else 'DEAKTIVIERT'}")
             continue
         if state.menu in ("pause", "options"):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_p):
@@ -1585,6 +1597,7 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
             _profiler_display['full_peds'] = int(calc_avg(accum['full_peds_vals']))
             _profiler_display['full_cops'] = int(calc_avg(accum['full_cops_vals']))
             
+
             # Zurücksetzen für nächste Sammelperiode
             for key in accum:
                 accum[key] = []
@@ -1728,7 +1741,6 @@ def _setup_event_handlers(state):
     """Registriere Event-Handler für das EventBus-System."""
     from game2d.systems.events import EventBus as _EventBus, EventType as _EventType
     bus = _EventBus()
-    event_logger = get_logger('events')
 
     # Debug-Handler: Logge wichtige Events (kann später entfernt werden)
     def debug_event_logger(event):
@@ -1769,6 +1781,21 @@ def _setup_event_handlers(state):
 
 
 def main():
+    # CLI-Flag Parsing für Logging-Gruppen
+    import sys
+    log_groups = ''
+    if '--log' in sys.argv:
+        log_idx = sys.argv.index('--log')
+        if log_idx + 1 < len(sys.argv):
+            log_groups = sys.argv[log_idx + 1]
+        else:
+            log_groups = 'p'  # Standardgruppe: Performance
+        # Gruppen-Logger basierend auf CLI-Flag aktivieren (nur INFO-Meldungen)
+        # Basis-Logger bleibt immer auf WARNING für Warnings/Errors
+        perf_logger.set_level(LogLevel.INFO if 'p' in log_groups else LogLevel.CRITICAL)
+        event_logger.set_level(LogLevel.INFO if 'e' in log_groups else LogLevel.CRITICAL)
+        move_logger.set_level(LogLevel.INFO if 'm' in log_groups else LogLevel.CRITICAL)
+    
     pygame.init()
     audio.init()
     settings = settings_mod.load()
@@ -1959,8 +1986,8 @@ def main():
         player_moved = False
         if abs(player.x - last_player_x) > 5 or abs(player.y - last_player_y) > 5:
             last_player_x, last_player_y = player.x, player.y
-            logger.info(f"[MOVE] frame={frame_counter} pos=({player.x:.0f},{player.y:.0f}) "
-                       f"in_car={'Yes' if state.in_car else 'No'}")
+            move_logger.info(f"[MOVE] frame={frame_counter} pos=({player.x:.0f},{player.y:.0f}) "
+                           f"in_car={'Yes' if state.in_car else 'No'}")
             last_player_move_frame = frame_counter
         
         # Event Handling - mit Profiling nur wenn enabled
@@ -1983,9 +2010,16 @@ def main():
         # Frame Logging via existing logger (aktivierbar mit -log Flag)
         render_ms = render_time * 1000  # Render-Zeit in ms
         if frame_counter % 10 == 0:
-            logger.info(f"Frame {frame_counter:5d} | dt={raw_dt*1000:7.2f}ms | phys={physics_updates_this_frame} | "
-                       f"phys_avg={avg_phys_ms:6.2f}ms | render={render_ms:6.2f}ms | "
-                       f"E:{len(state.cars)}/{len(state.peds)}/{len(state.cops)} | fps={fps_val} | alpha={interpolation_alpha:.3f}")
+            # Full-Counts berechnen für Logging
+            cam_x, cam_y = state.cam[0], state.cam[1]
+            update_range = max(300, W // 4)
+            full_cars = sum(1 for c in state.cars if _is_in_update_range(c, cam_x, cam_y, update_range))
+            full_peds = sum(1 for p in state.peds if _is_in_update_range(p, cam_x, cam_y, update_range))
+            full_cops = sum(1 for c in state.cops if _is_in_update_range(c, cam_x, cam_y, update_range))
+            perf_logger.info(f"Frame {frame_counter:5d} | dt={raw_dt*1000:7.2f}ms | phys={physics_updates_this_frame} | "
+                          f"phys_avg={avg_phys_ms:6.2f}ms | render={render_ms:6.2f}ms | "
+                          f"E:{len(state.cars)}/{len(state.peds)}/{len(state.cops)} | "
+                          f"F:{full_cars}/{full_peds}/{full_cops} | fps={fps_val} | alpha={interpolation_alpha:.3f}")
 
         # Profiling: Frame end markieren
         if profiler.enabled and entity_counts is not None:
