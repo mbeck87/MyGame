@@ -368,9 +368,10 @@ def _ped_point_clear(x, y):
     probe = _ped_probe_rect(x, y, radius=11)
     if not in_city(x, y, 8):
         return False
-    # Use spatial grid for building collision
-    from game2d.systems.spatial import query_buildings_radius
-    nearby_buildings = query_buildings_radius(probe.centerx, probe.centery, 20)
+    # Use rect queries so large buildings block at their edges, not only near
+    # their center cell.
+    from game2d.systems.spatial import query_buildings_rect
+    nearby_buildings = query_buildings_rect(probe)
     if any(probe.colliderect(b) for b in nearby_buildings):
         return False
     if any(probe.colliderect(w) for w in s.WATER_RECTS):
@@ -386,8 +387,8 @@ def _ped_segment_clear(a, b, allow_park=False):
     s = current()
     probe = _ped_probe_rect(a[0], a[1], b[0], b[1], radius=12)
     # Use spatial grid for building collision
-    from game2d.systems.spatial import query_buildings_radius, query_parks_radius
-    nearby_buildings = query_buildings_radius(probe.centerx, probe.centery, 20)
+    from game2d.systems.spatial import query_buildings_rect, query_parks_radius
+    nearby_buildings = query_buildings_rect(probe)
     if any(probe.colliderect(bd) for bd in nearby_buildings):
         return False
     if any(probe.colliderect(w) for w in s.WATER_RECTS):
@@ -426,12 +427,12 @@ def pedestrian_step_clear(x, y, allow_park=False):
     if not _ped_point_clear(x, y):
         return False
     if allow_park:
-        # Fast check: just verify point is inside any amusement park
-        # This is much faster than checking all path segments
+        # Park-aware routes may cross normal sidewalks and park paths. Amusement
+        # parks are denser, so keep those peds near the authored path network.
         for park in s.amusement_parks:
             if park.collidepoint(x, y):
-                return True
-        return False
+                return point_on_amusement_path(x, y, radius=28)
+        return True
     # Use spatial grid for park collision - much faster than iterating all parks
     from game2d.systems.spatial import query_parks_radius
     probe = _ped_probe_rect(x, y, radius=11)

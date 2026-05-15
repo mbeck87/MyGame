@@ -28,7 +28,7 @@ class SpatialGrid:
         self.cols = max(1, (world_w + cell_size - 1) // cell_size)
         self.rows = max(1, (world_h + cell_size - 1) // cell_size)
         self._cells: Dict[Tuple[int, int], List[Any]] = {}
-        self._obj_to_cell: Dict[int, Tuple[int, int]] = {}
+        self._obj_to_cell: Dict[int, Any] = {}
         self._next_id = 0
     
     def _cell_coords(self, x: float, y: float) -> Tuple[int, int]:
@@ -75,6 +75,32 @@ class SpatialGrid:
         obj._spatial_id = obj_id
         
         return obj_id
+
+    def add_rect(self, obj: Any, rect) -> int:
+        """Add a static rectangle object to every grid cell it covers."""
+        obj_id = self._next_id
+        self._next_id += 1
+
+        start_cx = max(0, int(rect.x // self.cell_size))
+        end_cx = min(self.cols - 1, int((rect.x + rect.w) // self.cell_size))
+        start_cy = max(0, int(rect.y // self.cell_size))
+        end_cy = min(self.rows - 1, int((rect.y + rect.h) // self.cell_size))
+
+        cell_keys = []
+        for cx in range(start_cx, end_cx + 1):
+            for cy in range(start_cy, end_cy + 1):
+                cell_key = self._cell_key(cx, cy)
+                if cell_key not in self._cells:
+                    self._cells[cell_key] = []
+                self._cells[cell_key].append(obj)
+                cell_keys.append(cell_key)
+
+        self._obj_to_cell[obj_id] = cell_keys
+        obj._spatial_x = rect.centerx
+        obj._spatial_y = rect.centery
+        obj._spatial_radius = max(rect.w, rect.h) / 2
+        obj._spatial_id = obj_id
+        return obj_id
     
     def update(self, obj: Any, x: float, y: float) -> None:
         """Update an object's position in the grid.
@@ -94,7 +120,19 @@ class SpatialGrid:
         old_cell = self._obj_to_cell[obj_id]
         new_cell = self._cell_coords(x, y)
         new_cell_key = self._cell_key(new_cell[0], new_cell[1])
-        
+
+        if isinstance(old_cell, list):
+            for cell_key in old_cell:
+                if cell_key in self._cells and obj in self._cells[cell_key]:
+                    self._cells[cell_key].remove(obj)
+            if new_cell_key not in self._cells:
+                self._cells[new_cell_key] = []
+            self._cells[new_cell_key].append(obj)
+            self._obj_to_cell[obj_id] = new_cell_key
+            obj._spatial_x = x
+            obj._spatial_y = y
+            return
+
         if old_cell != new_cell_key:
             # Remove from old cell
             if old_cell in self._cells:
@@ -124,9 +162,10 @@ class SpatialGrid:
             return
         
         cell_key = self._obj_to_cell[obj_id]
-        if cell_key in self._cells:
-            if obj in self._cells[cell_key]:
-                self._cells[cell_key].remove(obj)
+        cell_keys = cell_key if isinstance(cell_key, list) else [cell_key]
+        for key in cell_keys:
+            if key in self._cells and obj in self._cells[key]:
+                self._cells[key].remove(obj)
         
         del self._obj_to_cell[obj_id]
         
@@ -147,6 +186,7 @@ class SpatialGrid:
             List of objects within the radius
         """
         result = []
+        seen = set()
         r_sq = radius * radius
         
         # Calculate cell range to search
@@ -161,7 +201,20 @@ class SpatialGrid:
                 cell_key = self._cell_key(cx, cy)
                 if cell_key in self._cells:
                     for obj in self._cells[cell_key]:
+                        obj_key = id(obj)
+                        if obj_key in seen:
+                            continue
+                        seen.add(obj_key)
                         # Check actual distance
+                        rect = getattr(obj, 'rect', None)
+                        if rect is not None and not callable(rect):
+                            closest_x = max(rect.left, min(x, rect.right))
+                            closest_y = max(rect.top, min(y, rect.bottom))
+                            dx = closest_x - x
+                            dy = closest_y - y
+                            if dx * dx + dy * dy <= r_sq:
+                                result.append(obj)
+                            continue
                         if hasattr(obj, 'x') and hasattr(obj, 'y'):
                             ox, oy = obj.x, obj.y
                         elif hasattr(obj, '_spatial_x'):
@@ -186,6 +239,7 @@ class SpatialGrid:
             List of objects whose cells overlap with the rect's cells
         """
         result = []
+        seen = set()
         
         # Get cell range covered by rect
         start_cx = max(0, int(rect.x // self.cell_size))
@@ -198,7 +252,11 @@ class SpatialGrid:
             for cy in range(start_cy, end_cy + 1):
                 cell_key = self._cell_key(cx, cy)
                 if cell_key in self._cells:
-                    result.extend(self._cells[cell_key])
+                    for obj in self._cells[cell_key]:
+                        obj_key = id(obj)
+                        if obj_key not in seen:
+                            seen.add(obj_key)
+                            result.append(obj)
         
         return result
     
@@ -423,13 +481,7 @@ def register_building(rect, x=None, y=None, radius=None) -> int:
         Spatial grid ID for the building
     """
     grid = init_building_grid()
-    if x is None:
-        x = rect.centerx
-    if y is None:
-        y = rect.centery
-    if radius is None:
-        radius = max(rect.w, rect.h) / 2
-    return grid.add(SpatialRect(rect), x, y, radius)
+    return grid.add_rect(SpatialRect(rect), rect)
 
 
 def query_buildings_radius(x: float, y: float, radius: float) -> List[Any]:
@@ -446,7 +498,7 @@ def query_buildings_radius(x: float, y: float, radius: float) -> List[Any]:
     grid = get_building_grid()
     if grid is None:
         return []
-    return grid.query_radius(x, y, radius)
+    return [getattr(obj, 'rect', obj) for obj in grid.query_radius(x, y, radius)]
 
 
 def query_buildings_rect(rect) -> List[Any]:
@@ -461,7 +513,7 @@ def query_buildings_rect(rect) -> List[Any]:
     grid = get_building_grid()
     if grid is None:
         return []
-    return grid.query_rect(rect)
+    return [getattr(obj, 'rect', obj) for obj in grid.query_rect(rect)]
 
 
 def reset_building_grid() -> None:
@@ -516,7 +568,7 @@ def register_park(rect) -> int:
         Spatial grid ID for the park
     """
     grid = init_park_grid()
-    return grid.add(SpatialRect(rect), rect.centerx, rect.centery)
+    return grid.add_rect(SpatialRect(rect), rect)
 
 
 def query_parks_radius(x: float, y: float, radius: float) -> List[Any]:
@@ -533,7 +585,7 @@ def query_parks_radius(x: float, y: float, radius: float) -> List[Any]:
     grid = get_park_grid()
     if grid is None:
         return []
-    return grid.query_radius(x, y, radius)
+    return [getattr(obj, 'rect', obj) for obj in grid.query_radius(x, y, radius)]
 
 
 def query_parks_rect(rect) -> List[Any]:
@@ -548,7 +600,7 @@ def query_parks_rect(rect) -> List[Any]:
     grid = get_park_grid()
     if grid is None:
         return []
-    return grid.query_rect(rect)
+    return [getattr(obj, 'rect', obj) for obj in grid.query_rect(rect)]
 
 
 def reset_park_grid() -> None:

@@ -170,29 +170,6 @@ def _spawn_traffic_and_player(state):
         register_entity(car)  # Spatial Grid Registrierung
         emit_entity_spawned(car, "car")
 
-    for _ in range(NUM_START_PEDS):
-        x, y = pedestrian_spawn()
-        ped = Ped(x, y)
-        state.peds.append(ped)
-        register_entity(ped)  # Spatial Grid Registrierung
-        emit_entity_spawned(ped, "ped")
-
-    # Katze spawnen (max 1, bevorzugt im Park, nie im Wasser)
-    park = state.parks[0] if state.parks else None
-    cx, cy = pedestrian_spawn()   # sicherer Fallback
-    if park:
-        margin = 60
-        for _ in range(40):
-            px = random.randint(park.left + margin, park.right - margin)
-            py = random.randint(park.top + margin, park.bottom - margin)
-            if in_city(px, py, 20):
-                cx, cy = px, py
-                break
-    cat = Cat(cx, cy)
-    state.cats.append(cat)
-    register_entity(cat)  # Spatial Grid Registrierung
-    emit_entity_spawned(cat, "cat")
-
     player_x, player_y = safe_spawn()
     player = Ped(player_x, player_y)
     player.shirt = (40, 100, 200)
@@ -228,6 +205,29 @@ def _spawn_traffic_and_player(state):
     state.unlocked_weapons = {0, 1}
     state.fire_cd = 0
     state.cam = [player.x - W // 2, player.y - H // 2]
+
+    for _ in range(NUM_START_PEDS):
+        x, y = pedestrian_spawn(outside_view=True)
+        ped = Ped(x, y)
+        state.peds.append(ped)
+        register_entity(ped)  # Spatial Grid Registrierung
+        emit_entity_spawned(ped, "ped")
+
+    # Katze spawnen (max 1, bevorzugt im Park, nie im Wasser)
+    park = state.parks[0] if state.parks else None
+    cx, cy = pedestrian_spawn(outside_view=True)   # sicherer Fallback
+    if park:
+        margin = 60
+        for _ in range(40):
+            px = random.randint(park.left + margin, park.right - margin)
+            py = random.randint(park.top + margin, park.bottom - margin)
+            if in_city(px, py, 20):
+                cx, cy = px, py
+                break
+    cat = Cat(cx, cy)
+    state.cats.append(cat)
+    register_entity(cat)  # Spatial Grid Registrierung
+    emit_entity_spawned(cat, "cat")
 
     pickup_defs = (
         [('hp', None)] * 22 +
@@ -742,13 +742,33 @@ def _background_move_entity(entity, dt):
                 entity.y += dy / dist * step
             entity.spd *= max(0, 1 - 0.5 * dt)
     
-    elif isinstance(entity, (Ped, Cat)):
-        # Peds and Cats: move with last velocity or wander direction
-        # Use a simple velocity-based movement
+    elif isinstance(entity, Ped):
+        # Do not let freshly spawned offscreen pedestrians drift with their
+        # random initial angle. If they already have a route, keep them on it.
+        if entity.is_cop or not entity.route:
+            return
+        node_idx = entity.route[0]
+        tx, ty = current().pedestrian_nodes[node_idx]
+        dx, dy = tx - entity.x, ty - entity.y
+        dist = math.hypot(dx, dy) or 1
+        step = entity.spd * 0.55 * dt
+        entity.angle = math.degrees(math.atan2(dx, -dy))
+        if dist <= step + 2:
+            entity.x, entity.y = tx, ty
+            entity.current_node = node_idx
+            entity.route.pop(0)
+        else:
+            nx = entity.x + dx / dist * step
+            ny = entity.y + dy / dist * step
+            entity.try_follow_route(nx, ny, allow_park=True)
+
+    elif isinstance(entity, Cat):
+        # Cats keep their cheap background wander, but use the same angle basis
+        # as pedestrian sprites: 0 degrees is north, 90 degrees is east.
         spd = getattr(entity, 'spd', 50)
         angle_rad = math.radians(getattr(entity, 'angle', 0))
-        new_x = entity.x + spd * math.cos(angle_rad) * dt
-        new_y = entity.y + spd * math.sin(angle_rad) * dt
+        new_x = entity.x + spd * math.sin(angle_rad) * dt
+        new_y = entity.y - spd * math.cos(angle_rad) * dt
         # Check building collision
         test_rect = pygame.Rect(new_x - 10, new_y - 10, 20, 20)
         nearby_buildings = query_buildings_radius(new_x, new_y, 25)

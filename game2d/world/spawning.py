@@ -6,12 +6,12 @@ import pygame
 from game2d.config import (
     W, H,
     INNER_LO, INNER_HI_X, INNER_HI_Y,
-    ROAD_W, SIDEWALK_W, WORLD_W, WORLD_H,
+    ROAD_W, SIDEWALK_W, WORLD_W, WORLD_H, ROAD_LO,
 )
 from game2d.state import current
 from game2d.entities.car import car_collision_size, car_rect_at
 from game2d.world.geometry import (
-    in_city, rect_hits_city_edge, lane_center_for_car, random_pedestrian_destination,
+    in_city, rect_hits_city_edge, lane_center_for_car,
     rect_in_airport, rect_in_park_pond, rect_on_road,
 )
 
@@ -54,13 +54,25 @@ def safe_spawn():
     return ROAD_LO, ROAD_LO
 
 
-def sidewalk_spawn():
-    """Spawn nur auf Gehwegen (für Armor-Pickups)."""
+def _sidewalk_spawn_clear(state, x, y):
+    r = pygame.Rect(x - 12, y - 12, 24, 24)
+    return (
+        in_city(x, y, 20)
+        and not any(r.colliderect(b[0]) for b in state.buildings)
+        and not any(r.colliderect(park) for park in state.amusement_parks)
+        and not rect_in_park_pond(r)
+        and not rect_in_airport(r)
+    )
+
+
+def _random_sidewalk_spawn(cam=None, outside_view=False, view_margin=130):
     s = current()
-    for _ in range(300):
-        segments = [seg for seg in s.road_segments if seg.length > 90]
-        if not segments:
-            break
+    segments = [seg for seg in s.road_segments if seg.length > 90]
+    if not segments:
+        return None
+    if outside_view and cam is None:
+        cam = s.cam
+    for _ in range(500 if outside_view else 300):
         seg = random.choice(segments)
         if seg.axis == "h":
             side = -1 if random.random() < 0.5 else 1
@@ -70,32 +82,46 @@ def sidewalk_spawn():
             side = -1 if random.random() < 0.5 else 1
             x = int(seg.fixed + side * (ROAD_W//2 + SIDEWALK_W//2))
             y = random.randint(int(seg.lo + 30), int(seg.hi - 30))
-        r = pygame.Rect(x-12, y-12, 24, 24)
-        if (
-            in_city(x, y, 20)
-            and not any(r.colliderect(b[0]) for b in s.buildings)
-            and not any(r.colliderect(park) for park in s.amusement_parks)
-            and not rect_in_park_pond(r)
-            and not rect_in_airport(r)
-        ):
+        if outside_view and not _outside_view(x, y, cam, margin=view_margin):
+            continue
+        if _sidewalk_spawn_clear(s, x, y):
             return x, y
+    return None
+
+
+def sidewalk_spawn(cam=None, outside_view=False):
+    """Spawn nur auf Gehwegen (für Armor-Pickups)."""
+    point = _random_sidewalk_spawn(cam=cam, outside_view=outside_view)
+    if point is not None:
+        return point
     # Fallback: irgendwo auf der Straße
     return safe_spawn()
 
 
-def pedestrian_spawn():
+def pedestrian_spawn(cam=None, outside_view=True):
     s = current()
-    prefer_park = bool(s.pedestrian_park_nodes) and random.random() < 0.28
-    node_idx = random_pedestrian_destination(prefer_park=prefer_park)
-    if node_idx is not None:
-        x, y = s.pedestrian_nodes[node_idx]
-        r = pygame.Rect(x - 12, y - 12, 24, 24)
-        if (
-            in_city(x, y, 20)
-            and not any(r.colliderect(b[0]) for b in s.buildings)
-            and not rect_in_airport(r)
-        ):
+    point = _random_sidewalk_spawn(cam=cam, outside_view=outside_view, view_margin=160)
+    if point is not None:
+        return point
+    point = _random_sidewalk_spawn(cam=cam, outside_view=False)
+    if point is not None:
+        return point
+
+    excluded_nodes = set(s.pedestrian_park_nodes) | set(s.amusement_park_nodes)
+    node_ids = [
+        idx for idx, (x, y) in enumerate(s.pedestrian_nodes)
+        if idx not in excluded_nodes and s.pedestrian_edges.get(idx) and _sidewalk_spawn_clear(s, x, y)
+    ]
+    if outside_view:
+        if cam is None:
+            cam = s.cam
+        offscreen = [idx for idx in node_ids if _outside_view(*s.pedestrian_nodes[idx], cam, margin=160)]
+        if offscreen:
+            x, y = s.pedestrian_nodes[random.choice(offscreen)]
             return x, y
+    if node_ids:
+        x, y = s.pedestrian_nodes[random.choice(node_ids)]
+        return x, y
     return safe_spawn()
 
 
