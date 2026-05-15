@@ -42,10 +42,10 @@ def _pre_render_amusement_park_sprites(state):
     
     for park in state.amusement_parks:
         # Create a surface large enough to hold the entire park
-        # Add some padding for elements that might extend beyond the park rect
-        padding = 200
+        # No padding - surface size matches park size exactly for performance
+        padding = 0
         surf = pygame.Surface(
-            (park.w + padding * 2, park.h + padding * 2),
+            (int(park.w), int(park.h)),
             pygame.SRCALPHA
         )
         
@@ -615,6 +615,9 @@ def build_world(state):
     # Cache amusement path segments for performance
     from game2d.world.geometry import amusement_path_segments
     state.amusement_path_segments[:] = [amusement_path_segments(park) for park in state.amusement_parks]
+    # Cache amusement park layouts for performance (avoid recalculating every frame)
+    from game2d.render.world_bg import _amusement_new_layout
+    state.amusement_park_layouts[:] = [_amusement_new_layout(park) for park in state.amusement_parks]
     state.road_segments[:] = _build_road_segments(state)
     build_traffic_controls(state)
     state.park_ponds[:] = [_park_pond_points(park) for park in state.parks]

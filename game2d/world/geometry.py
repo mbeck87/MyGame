@@ -334,12 +334,17 @@ def point_on_amusement_path(x, y, radius=24):
     Uses cached segments from state.amusement_path_segments for performance.
     """
     s = current()
-    # Use cached path segments
-    park_segments = zip(s.amusement_parks, s.amusement_path_segments)
     limit = radius * radius
-    for park, segments in park_segments:
+    # Iterate through parks and their cached segments
+    for park_idx, park in enumerate(s.amusement_parks):
         if not park.collidepoint(x, y):
             continue
+        # Get cached segments for this park
+        if park_idx < len(s.amusement_path_segments):
+            segments = s.amusement_path_segments[park_idx]
+        else:
+            continue
+        # Check each path segment
         for points in segments:
             for a, b in zip(points, points[1:]):
                 if _dist_to_segment_sq(x, y, a[0], a[1], b[0], b[1]) <= limit:
@@ -421,7 +426,12 @@ def pedestrian_step_clear(x, y, allow_park=False):
     if not _ped_point_clear(x, y):
         return False
     if allow_park:
-        return point_on_amusement_path(x, y)
+        # Fast check: just verify point is inside any amusement park
+        # This is much faster than checking all path segments
+        for park in s.amusement_parks:
+            if park.collidepoint(x, y):
+                return True
+        return False
     # Use spatial grid for park collision - much faster than iterating all parks
     from game2d.systems.spatial import query_parks_radius
     probe = _ped_probe_rect(x, y, radius=11)
@@ -619,16 +629,18 @@ def random_pedestrian_destination(prefer_park=False, avoid_idx=None):
             and (reachable is None or idx in reachable)
         )
 
-    park_node_ids = set(s.pedestrian_park_nodes) | set(s.amusement_park_nodes)
+    park_node_ids = set(s.pedestrian_park_nodes)
+    # Amusement park nodes are handled separately by NUM_AMUSEMENT_PEDS, exclude from ALL spawning
+    amusement_node_ids = set(s.amusement_park_nodes)
+    all_valid_nodes = [idx for idx in range(len(s.pedestrian_nodes)) if can_choose(idx)]
+    # Filter out amusement park nodes - they should only be used by NUM_AMUSEMENT_PEDS
+    non_amusement_pool = [idx for idx in all_valid_nodes if idx not in amusement_node_ids]
+    
     if prefer_park and park_node_ids:
-        pool = [
-            idx for idx in park_node_ids
-            if can_choose(idx)
-        ]
-        if pool:
-            return random.choice(pool)
-    pool = [
-        idx for idx in range(len(s.pedestrian_nodes))
-        if can_choose(idx)
-    ]
+        # Prefer regular park nodes
+        pool = [idx for idx in park_node_ids if idx in non_amusement_pool]
+        if not pool:
+            pool = non_amusement_pool
+    else:
+        pool = non_amusement_pool
     return random.choice(pool) if pool else avoid_idx

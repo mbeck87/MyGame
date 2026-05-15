@@ -1088,6 +1088,12 @@ def _amusement_new_layout(rect):
     ferris = (outer_left + int(w * 0.22), outer_bottom - 120)
     chain_carousel = (outer_right - int(w * 0.16), outer_bottom - 135)
     return {
+        '_outer_left': outer_left,
+        '_outer_right': outer_right,
+        '_outer_bottom': outer_bottom,
+        '_inner_left': inner_left,
+        '_center_x': center_x,
+        '_center_y': center_y,
         'carousel': (outer_left + int(w * 0.10), center_y + int(h * 0.11)),
         'ferris': ferris,
         'swing': chain_carousel,
@@ -1231,56 +1237,21 @@ def _draw_amusement_static(surf, cam):
             continue
         
         # Use loaded static park sprite if available
-        # Note: Static sprites are not yet implemented as PNG files
-        # For now, we fall back to procedural rendering or use the pre-rendered surfaces
-        # The pre-rendered surfaces in state.amusement_park_sprites take precedence
         if hasattr(s, 'amusement_park_sprites') and idx < len(s.amusement_park_sprites) and s.amusement_park_sprites[idx] is not None:
             sprite = s.amusement_park_sprites[idx]
-            surf.blit(sprite, (park.x - cam[0] - 200, park.y - cam[1] - 200))
-        else:
-            # Fallback: render normally (shouldn't happen in normal gameplay)
-            pygame.draw.rect(surf, (52, 122, 78), rect)
-            pygame.draw.rect(surf, (174, 78, 92), rect, 5)
-
-            if idx < len(s.amusement_path_segments):
-                cached_segments = s.amusement_path_segments[idx]
-                path_segments = [[(x - cam[0], y - cam[1]) for x, y in segment] for segment in cached_segments]
-            else:
-                path_segments = [[(x - cam[0], y - cam[1]) for x, y in segment] for segment in _amusement_path_segments(park)]
-            for path in path_segments:
-                _draw_flat_path(surf, path, (128, 86, 52), 42)
-            for path in path_segments:
-                _draw_flat_path(surf, path, (214, 178, 118), 28)
-            for path in path_segments:
-                for path_idx, (x, y) in enumerate(path[::10]):
-                    pygame.draw.circle(surf, (246, 216, 92), (int(x), int(y)), 4)
-                    pygame.draw.circle(surf, (78, 54, 42), (int(x), int(y + 7)), 2)
-
-            for x, y, kind in s.amusement_stands:
-                if park.collidepoint(x, y):
-                    _draw_food_stand(surf, x - cam[0], y - cam[1], kind)
-
-            outer_right = rect.right - int(rect.w * 0.12)
-            outer_bottom = rect.bottom - int(rect.h * 0.12)
-            outer_left = rect.left + int(rect.w * 0.12)
-            center_x = rect.centerx
-            center_y = rect.top + int(rect.h * 0.50)
-            _draw_park_gate(surf, outer_right, rect.bottom - 20)
-            _draw_ticket_building(surf, outer_right - int((outer_right - outer_left) * 0.25), outer_bottom - 42)
-            _draw_wc_building(surf, outer_right - int((outer_right - outer_left) * 0.50), outer_bottom - 42)
-            _draw_fountain(surf, center_x, center_y, current().traffic_time)
-            layout = _amusement_new_layout(rect)
-            pygame.draw.rect(surf, (42, 104, 64), layout['coaster_area'].inflate(16, 16), border_radius=10)
-            _draw_lottery_stand(surf, *layout['lottery_stand'])
-            _draw_claw_machine_base(surf, *layout['claw_machine'])
-            _draw_strongman_base(surf, layout['strongman'][0], layout['strongman'][1])
-            _draw_pirate_ship_base(surf, layout['pirate_ship'][0], layout['pirate_ship'][1])
-            _draw_bumper_arena(surf, layout['bumper_arena'])
-            _draw_swing_ride_base(surf, layout['swing'][0], layout['swing'][1])
-            for px, py, color, style, flower in layout['planters']:
-                _draw_planter(surf, px, py, color, style, flower)
-            for bx, by, vertical in layout['benches']:
-                _draw_bench(surf, bx, by, vertical=vertical)
+            # Only blit the visible portion of the park sprite for performance
+            # Calculate visible rect in screen coordinates
+            screen_x = park.x - cam[0]
+            screen_y = park.y - cam[1]
+            # Clamp to viewport
+            src_x = max(0, -screen_x)
+            src_y = max(0, -screen_y)
+            src_w = min(sprite.get_width() - src_x, W - screen_x) if screen_x < W else 0
+            src_h = min(sprite.get_height() - src_y, H - screen_y) if screen_y < H else 0
+            if src_w > 0 and src_h > 0:
+                subsurface = sprite.subsurface((src_x, src_y, src_w, src_h))
+                surf.blit(subsurface, (screen_x + src_x, screen_y + src_y))
+        # Fallback disabled - was causing performance issues
 
 
 def _draw_amusement_dynamic(surf, cam):
@@ -1305,17 +1276,20 @@ def _draw_amusement_dynamic(surf, cam):
         rect = pygame.Rect(park.x - cam[0], park.y - cam[1], park.w, park.h)
         if rect.right < -120 or rect.left > W + 120 or rect.bottom < -120 or rect.top > H + 120:
             continue
-        layout = _amusement_new_layout(rect)
+        # Use cached layout (computed in world coordinates) and convert to screen coordinates
+        cached_layout = s.amusement_park_layouts[idx] if idx < len(s.amusement_park_layouts) else _amusement_new_layout(park)
+        # Convert world-coordinate layout to screen coordinates
+        cam_x, cam_y = cam
+        fw_x, fw_y = cached_layout['ferris'][0] - cam_x, cached_layout['ferris'][1] - cam_y
+        car_x, car_y = cached_layout['carousel'][0] - cam_x, cached_layout['carousel'][1] - cam_y
+        sw_x, sw_y = cached_layout['swing'][0] - cam_x, cached_layout['swing'][1] - cam_y
+        sm_x, sm_y = cached_layout['strongman'][0] - cam_x, cached_layout['strongman'][1] - cam_y
+        ps_x, ps_y = cached_layout['pirate_ship'][0] - cam_x, cached_layout['pirate_ship'][1] - cam_y
+        ba = pygame.Rect(cached_layout['bumper_arena'].x - cam_x, cached_layout['bumper_arena'].y - cam_y,
+                         cached_layout['bumper_arena'].w, cached_layout['bumper_arena'].h)
+        cm_x, cm_y, cm_w, cm_h = (cached_layout['claw_machine'][0] - cam_x, cached_layout['claw_machine'][1] - cam_y,
+                                   cached_layout['claw_machine'][2], cached_layout['claw_machine'][3])
         t = s.traffic_time
-        
-        # Get park-specific layout positions
-        fw_x, fw_y = layout['ferris']
-        car_x, car_y = layout['carousel']
-        sw_x, sw_y = layout['swing']
-        sm_x, sm_y = layout['strongman']
-        ps_x, ps_y = layout['pirate_ship']
-        ba = layout['bumper_arena']
-        cm_x, cm_y, cm_w, cm_h = layout['claw_machine']
         
         # Helper function to get frame index
         def get_frame_idx(ride_data, t):
@@ -1379,7 +1353,8 @@ def _draw_amusement_dynamic(surf, cam):
         # Roller Coaster (500x200, centered at 0,0)
         if 'roller_coaster' in ride_sprites:
             rc_data = ride_sprites['roller_coaster']
-            rc_rect = layout['coaster_area']
+            rc_rect = pygame.Rect(cached_layout['coaster_area'].x - cam_x, cached_layout['coaster_area'].y - cam_y,
+                                 cached_layout['coaster_area'].w, cached_layout['coaster_area'].h)
             frame_idx = get_frame_idx(rc_data, t)
             if frame_idx < len(rc_data['frames']):
                 surf.blit(rc_data['frames'][frame_idx], (rc_rect.x, rc_rect.y - 20))

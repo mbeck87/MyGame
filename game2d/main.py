@@ -142,7 +142,7 @@ def _spawn_traffic_and_player(state):
     # Reduzierte Start-Anzahl für bessere Performance
     NUM_START_CARS = 50
     NUM_START_PEDS = 100
-    NUM_AMUSEMENT_PEDS = 20
+    NUM_AMUSEMENT_PEDS = 5  # Reduziert von 20 - weniger Peds im Amusement Park
 
     for _ in range(NUM_START_CARS):
         kind = random_car_kind()
@@ -238,7 +238,7 @@ def _spawn_traffic_and_player(state):
             break
         x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
         ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
-        ped.route_replan = random.uniform(0.1, 1.0)
+        ped.route_replan = random.uniform(2.5, 5.5)  # Same as regular peds - reduced from 0.1-1.0
         ped.is_amusement = True  # Mark for simplified AI in background
         state.peds.append(ped)
         register_entity(ped)  # Spatial Grid Registrierung
