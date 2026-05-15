@@ -225,13 +225,20 @@ def _spawn_traffic_and_player(state):
         px, py = spawn_fn()
         state.pickups.append([px, py, kind, 0.0])
 
+    # Spawn Amusement Park Peds
     amusement_nodes = list(state.amusement_park_nodes)
-    for _ in range(NUM_AMUSEMENT_PEDS):
+    num_amusement_peds = NUM_AMUSEMENT_PEDS
+    if not amusement_nodes:
+        # Fallback: try regular pedestrian nodes if no amusement nodes
+        amusement_nodes = list(range(len(state.pedestrian_nodes)))
+        num_amusement_peds = min(5, NUM_AMUSEMENT_PEDS)  # Reduce count as fallback
+    for _ in range(num_amusement_peds):
         if not amusement_nodes:
             break
         x, y = state.pedestrian_nodes[random.choice(amusement_nodes)]
         ped = Ped(x + random.uniform(-10, 10), y + random.uniform(-10, 10))
         ped.route_replan = random.uniform(0.1, 1.0)
+        ped.is_amusement = True  # Mark for simplified AI in background
         state.peds.append(ped)
         register_entity(ped)  # Spatial Grid Registrierung
         emit_entity_spawned(ped, "ped")
@@ -254,11 +261,17 @@ def _spawn_ped_replacement(state, player):
 def reset_game(state):
     # Zurücksetzen der Object Pools
     reset_pools()
+    init_pools()  # Re-initialize pools after reset
     # Zurücksetzen des Spatial Grids
     reset_spatial_grid()
-    # Zurücksetzen des Building Grids
-    from game2d.systems.spatial import reset_building_grid
+    # Zurücksetzen und neuaufbauen des Building Grids
+    from game2d.systems.spatial import reset_building_grid, init_and_populate_building_grid, reset_park_grid, init_and_populate_park_grid
     reset_building_grid()
+    init_and_populate_building_grid(state.buildings)
+    # Neuaufbauen des Park Grids
+    reset_park_grid()
+    all_parks = list(state.parks) + list(state.amusement_parks)
+    init_and_populate_park_grid(all_parks)
     # Zurücksetzen des EventBus
     from game2d.systems.events import EventBus as _EventBus
     _EventBus.reset()
@@ -565,7 +578,8 @@ def _update_player_and_wanted(state, dt):
                     cop.keep_after_tier_change = True
                 elif not getattr(cop, "keep_after_tier_change", False):
                     unregister_entity(cop)
-                    state.cops.remove(cop)
+                    if cop in state.cops:
+                        state.cops.remove(cop)
         for car in list(state.cars):
             if (
                 car.is_cop
@@ -581,7 +595,8 @@ def _update_player_and_wanted(state, dt):
                     audio.stop_loop(car._siren_channel)
                     car._siren_channel = None
                 unregister_entity(car)
-                state.cars.remove(car)
+                if car in state.cars:
+                    state.cars.remove(car)
         active_tier_cars = sum(
             1 for c in state.cars
             if (
@@ -618,7 +633,8 @@ def _update_player_and_wanted(state, dt):
                 if c._siren_channel is not None:
                     audio.stop_loop(c._siren_channel)
                     c._siren_channel = None
-                state.cars.remove(c)
+                if c in state.cars:
+                    state.cars.remove(c)
 
 
 def _is_in_update_range(entity, cam_x, cam_y, update_range):
@@ -643,8 +659,76 @@ def _is_in_update_range(entity, cam_x, cam_y, update_range):
             min_y <= entity.y <= max_y)
 
 
+def _background_move_entity(entity, dt):
+    """Simple position update for background entities: movement + building collision + road constraints.
+    
+    This keeps the world alive outside the viewport without expensive AI.
+    """
+    from game2d.systems.spatial import query_buildings_radius
+    from game2d.world.geometry import rect_on_road
+    
+    if isinstance(entity, Car):
+        if entity.dead or entity.sunk or entity.driver is None:
+            return
+        # Move with current velocity
+        rad = math.radians(entity.angle)
+        new_x = entity.x + entity.spd * math.cos(rad) * dt
+        new_y = entity.y + entity.spd * math.sin(rad) * dt
+        
+        # Check building collision using spatial grid
+        test_rect = pygame.Rect(new_x - 20, new_y - 20, 40, 40)
+        nearby_buildings = query_buildings_radius(new_x, new_y, 25)
+        building_collision = False
+        for b_rect in nearby_buildings:
+            if test_rect.colliderect(b_rect):
+                building_collision = True
+                break
+        
+        # Check if new position is on road
+        on_road = rect_on_road(test_rect, margin=15)
+        
+        if not building_collision and on_road:
+            entity.x, entity.y = new_x, new_y
+            # Decay speed slightly to avoid infinite movement
+            entity.spd *= max(0, 1 - 0.3 * dt)
+        else:
+            # If hitting building or not on road, try to find road center
+            from game2d.world.geometry import lane_center_for_car
+            lx, ly = lane_center_for_car(entity.angle, entity.x, entity.y)
+            if lx is not None and ly is not None:
+                # Move towards road center
+                dx = lx - entity.x
+                dy = ly - entity.y
+                dist = math.hypot(dx, dy)
+                if dist > 1:
+                    step = min(dist, abs(entity.spd) * dt * 0.5)
+                    entity.x += dx / dist * step
+                    entity.y += dy / dist * step
+            entity.spd *= max(0, 1 - 0.5 * dt)
+    
+    elif isinstance(entity, (Ped, Cat)):
+        # Peds and Cats: move with last velocity or wander direction
+        # Use a simple velocity-based movement
+        spd = getattr(entity, 'spd', 50)
+        angle_rad = math.radians(getattr(entity, 'angle', 0))
+        new_x = entity.x + spd * math.cos(angle_rad) * dt
+        new_y = entity.y + spd * math.sin(angle_rad) * dt
+        # Check building collision
+        test_rect = pygame.Rect(new_x - 10, new_y - 10, 20, 20)
+        nearby_buildings = query_buildings_radius(new_x, new_y, 25)
+        collision = False
+        for b_rect in nearby_buildings:
+            if test_rect.colliderect(b_rect):
+                collision = True
+                break
+        if not collision:
+            entity.x, entity.y = new_x, new_y
+
+
 # Update range buffer in world units (pixels) - scales with resolution
 UPDATE_RANGE_BUFFER = max(300, W // 4)
+# Background update range - entities beyond this only get simple movement (no building collision)
+BACKGROUND_RANGE = UPDATE_RANGE_BUFFER * 2
 
 
 @profile
@@ -655,37 +739,44 @@ def _update_entities_and_physics(state, dt):
     # Calculate camera viewport for culling
     cam_x, cam_y = state.cam[0], state.cam[1]
     
-    # Update Cars - only those in range get full AI update
+    # Update Cars
     for c in state.cars:
         if c is state.in_car:
             continue
         if c in state.roadblocks:
             continue
-        in_range = _is_in_update_range(c, cam_x, cam_y, UPDATE_RANGE_BUFFER)
-        if in_range:
+        in_full_range = _is_in_update_range(c, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_full_range:
+            # Full update: AI + everything
             c.ai_update(dt)
-        # Always update position for spatial grid (entities can move even when frozen)
+        else:
+            # Background update: simple movement + building collision
+            _background_move_entity(c, dt)
         update_entity_position(c)  # Spatial Grid Position update
     
     player.animate(dt)
     
-    # Update Peds - only those in range
+    # Update Peds
     for p in state.peds:
-        in_range = _is_in_update_range(p, cam_x, cam_y, UPDATE_RANGE_BUFFER)
-        if in_range:
+        in_full_range = _is_in_update_range(p, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_full_range:
             p.update(dt, player)
             p.animate(dt)
+        else:
+            _background_move_entity(p, dt)
         update_entity_position(p)  # Spatial Grid Position update
     
-    # Update Cats - only those in range
+    # Update Cats
     for cat in state.cats:
-        in_range = _is_in_update_range(cat, cam_x, cam_y, UPDATE_RANGE_BUFFER)
-        if in_range:
+        in_full_range = _is_in_update_range(cat, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+        if in_full_range:
             cat.update(dt, player)
             cat.animate(dt)
+        else:
+            _background_move_entity(cat, dt)
         update_entity_position(cat)  # Spatial Grid Position update
     
-    # Update Cops - always update (high priority for gameplay)
+    # Update Cops - always full update (high priority for gameplay)
     for c in list(state.cops):
         wants_shoot = c.update(dt, player)
         c.animate(dt)
@@ -779,7 +870,8 @@ def _update_entities_and_physics(state, dt):
                                 audio.stop_loop(entity._siren_channel)
                                 entity._siren_channel = None
                             unregister_entity(entity)
-                            state.cops.remove(entity)
+                            if entity in state.cops:
+                                state.cops.remove(entity)
                             state.corpses.append((make_corpse(entity), entity.x, entity.y, entity.angle))
                             spawn_blood(entity.x, entity.y, 24)
                             on_kill(state, entity, is_cop=True)
@@ -794,7 +886,8 @@ def _update_entities_and_physics(state, dt):
                         audio.play('scream', pos=(entity.x, entity.y))
                         if entity.hp <= 0:
                             unregister_entity(entity)
-                            state.peds.remove(entity)
+                            if entity in state.peds:
+                                state.peds.remove(entity)
                             state.corpses.append((make_corpse(entity), entity.x, entity.y, entity.angle))
                             spawn_blood(entity.x, entity.y, 20)
                             add_money(player, random.randint(15, 60))
@@ -813,7 +906,8 @@ def _update_entities_and_physics(state, dt):
                         audio.play('scream', pos=(entity.x, entity.y))
                         if entity.hp <= 0:
                             unregister_entity(entity)
-                            state.cats.remove(entity)
+                            if entity in state.cats:
+                                state.cats.remove(entity)
                             state.corpses.append((entity.sprite.copy(), entity.x, entity.y, entity.angle))
                             spawn_blood(entity.x, entity.y, 10)
                             player.wanted = 5
@@ -830,7 +924,8 @@ def _update_entities_and_physics(state, dt):
                 audio.stop_loop(c._siren_channel)
                 c._siren_channel = None
             unregister_entity(c)
-            state.cars.remove(c)
+            if c in state.cars:
+                state.cars.remove(c)
             if not c.is_cop:
                 kind = random_car_kind()
                 min_dist = 800
@@ -1349,8 +1444,11 @@ def main():
     build_world(state)
     init_services(state)
     # Initialize building spatial grid for optimized collision detection
-    from game2d.systems.spatial import init_and_populate_building_grid
+    from game2d.systems.spatial import init_and_populate_building_grid, init_and_populate_park_grid
     init_and_populate_building_grid(state.buildings)
+    # Initialize park spatial grid (parks + amusement_parks) for pedestrian collision
+    all_parks = list(state.parks) + list(state.amusement_parks)
+    init_and_populate_park_grid(all_parks)
     menu_ctrl = MenuController(W, H, settings)
 
     # EventBus Handler registrieren

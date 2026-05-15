@@ -157,6 +157,158 @@ python -m py_compile game2d.py && echo "Syntax OK"
 
 ---
 
+## Performance Optimization Guidelines
+
+### Spatial Grid System
+The game uses a **Spatial Grid** system (`game2d/systems/spatial.py`) for efficient collision detection and range queries. This is critical for performance with many entities.
+
+#### Existing Spatial Grids:
+- **Building Grid** (`_building_grid`): For static building collision detection
+- **Entity Grid** (`_entity_grid`): For dynamic entities (cars, peds, cops, cats)
+- **Park Grid** (`_park_grid`): For park/amusement park collision detection
+
+#### Integration Rules for New Entities:
+1. **Register entities** with the spatial grid using `register_entity(obj)` in `main.py` or entity creation code
+2. **Update positions** every frame using `update_entity_position(obj)` for moving entities
+3. **Use spatial queries** instead of iterating all entities:
+   - `query_entities_radius(x, y, radius)` - Find entities within radius
+   - `query_buildings_radius(x, y, radius)` - Find buildings within radius
+   - `query_parks_radius(x, y, radius)` - Find parks within radius
+
+#### Integration Rules for New Static Objects (Buildings, Parks):
+1. **Register buildings** using `register_building(rect)` during world initialization
+2. **Register parks** using `register_park(rect)` during world initialization
+3. **Initialize grids** after world building:
+   ```python
+   from game2d.systems.spatial import (
+       init_and_populate_building_grid,
+       init_and_populate_park_grid
+   )
+   init_and_populate_building_grid(state.buildings)
+   init_and_populate_park_grid(list(state.parks) + list(state.amusement_parks))
+   ```
+4. **Reset grids on game reset** in `reset_game()`:
+   ```python
+   from game2d.systems.spatial import reset_building_grid, reset_park_grid
+   reset_building_grid()
+   reset_park_grid()
+   # Then re-populate
+   init_and_populate_building_grid(state.buildings)
+   init_and_populate_park_grid(list(state.parks) + list(state.amusement_parks))
+   ```
+
+### Viewport Culling System
+Entities outside the viewport + buffer are simplified to maintain performance:
+- **Near (0 - UPDATE_RANGE_BUFFER)**: Full update (AI + animation + all collisions)
+- **Far (UPDATE_RANGE_BUFFER+)**: Simplified movement with building collision only
+- **Buffer is dynamic**: `UPDATE_RANGE_BUFFER = max(300, W // 4)` scales with resolution
+
+#### Integration for New Entity Types:
+Add logic in `_background_move_entity()` in `main.py`:
+```python
+elif isinstance(entity, NewEntityType):
+    # Simple position update with collision
+    new_x = entity.x + entity.vx * dt
+    new_y = entity.y + entity.vy * dt
+    # Check building collision
+    test_rect = pygame.Rect(new_x - radius, new_y - radius, radius*2, radius*2)
+    nearby_buildings = query_buildings_radius(new_x, new_y, radius + 10)
+    if not any(test_rect.colliderect(b) for b in nearby_buildings):
+        entity.x, entity.y = new_x, new_y
+```
+
+### Object Pooling System
+Use object pooling (`game2d/systems/pooling.py`) for frequently created/destroyed objects:
+- **Bullets**, **Rockets**, **Particles** (blood, smoke, fire) already use pooling
+- **Pool functions**: `acquire_*()` and `release_*()`
+- **Initialize pools** at startup: `init_pools()`
+- **Reset pools** on game reset: `reset_pools()` followed by `init_pools()`
+
+#### Adding New Pooled Objects:
+1. Create pool in `pooling.py`: `object_pool = ObjectPool(creator_fn, reset_fn, initial_size)`
+2. Add acquire/release functions
+3. Initialize in `init_pools()`
+4. Reset in `reset_pools()` and re-initialize after reset
+
+### Example: Adding a New Entity Type
+
+When adding a new entity (e.g., a new vehicle type or NPC):
+
+**1. Create the entity class** in `game2d/entities/`:
+```python
+class NewEntity:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+        self.vx, self.vy = 0, 0  # For viewport culling
+        # ... other properties
+    
+    def rect(self):
+        # Implement with caching if possible
+        return pygame.Rect(self.x - 10, self.y - 10, 20, 20)
+    
+    def update(self, dt):
+        # Entity logic
+        pass
+```
+
+**2. Register with spatial grid** when spawning:
+```python
+from game2d.systems.spatial import register_entity
+new_entity = NewEntity(x, y)
+state.new_entities.append(new_entity)  # Add to state
+register_entity(new_entity)  # Register with spatial grid
+```
+
+**3. Add to viewport culling** in `_background_move_entity()`:
+```python
+elif isinstance(entity, NewEntity):
+    new_x = entity.x + entity.vx * dt
+    new_y = entity.y + entity.vy * dt
+    test_rect = pygame.Rect(new_x - 10, new_y - 10, 20, 20)
+    nearby_buildings = query_buildings_radius(new_x, new_y, 15)
+    if not any(test_rect.colliderect(b) for b in nearby_buildings):
+        entity.x, entity.y = new_x, new_y
+```
+
+**4. Add to reset** in `reset_game()`:
+```python
+state.new_entities.clear()
+```
+
+**5. Add to full update loop** in `_update_entities_and_physics()`:
+```python
+for e in state.new_entities:
+    in_range = _is_in_update_range(e, cam_x, cam_y, UPDATE_RANGE_BUFFER)
+    if in_range:
+        e.update(dt)
+    else:
+        _background_move_entity(e, dt)
+    update_entity_position(e)
+```
+
+### Example: Adding a New Building Type
+
+**1. Add to world generation** in `game2d/world/generation.py`:
+```python
+# Create building rect
+new_building = pygame.Rect(x, y, width, height)
+state.buildings.append((new_building, surface))
+```
+
+**2. Register with building spatial grid** after world build:
+```python
+from game2d.systems.spatial import register_building
+register_building(new_building)
+```
+
+**3. Ensure grid is re-populated on reset** in `reset_game()`:
+```python
+from game2d.systems.spatial import init_and_populate_building_grid
+init_and_populate_building_grid(state.buildings)
+```
+
+---
+
 ## Testing Guidelines
 
 Automated tests are not set up yet. Before opening a PR, run `python -m py_compile game2d.py` and launch the game to verify the main loop, movement, shooting, audio, and restart flow. If you add tests later, place them under `tests/` and use names like `test_player_movement.py`.

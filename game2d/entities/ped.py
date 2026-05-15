@@ -80,6 +80,7 @@ class Ped:
         self.x, self.y = x, y
         self.is_cop = is_cop
         self.cop_kind = normalize_cop_kind(cop_kind) if is_cop else None
+        self.is_amusement = False  # Set to True for amusement park peds (simplified AI)
         self.gender = "m"
         self.hair_style = "short"
         self.hair_color = (60, 40, 30)
@@ -184,6 +185,9 @@ class Ped:
             self.y = ny
 
     def try_follow_route(self, nx, ny, allow_park=False):
+        # Amusement park peds always use allow_park=True for simplified path checking
+        if getattr(self, 'is_amusement', False):
+            allow_park = True
         if pedestrian_step_clear(nx, ny, allow_park=allow_park):
             self.x = nx
             self.y = ny

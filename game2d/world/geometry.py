@@ -358,7 +358,10 @@ def _ped_point_clear(x, y):
     probe = _ped_probe_rect(x, y, radius=11)
     if not in_city(x, y, 8):
         return False
-    if any(probe.colliderect(b[0]) for b in s.buildings):
+    # Use spatial grid for building collision
+    from game2d.systems.spatial import query_buildings_radius
+    nearby_buildings = query_buildings_radius(probe.centerx, probe.centery, 20)
+    if any(probe.colliderect(b) for b in nearby_buildings):
         return False
     if any(probe.colliderect(w) for w in s.WATER_RECTS):
         return False
@@ -372,7 +375,10 @@ def _ped_point_clear(x, y):
 def _ped_segment_clear(a, b, allow_park=False):
     s = current()
     probe = _ped_probe_rect(a[0], a[1], b[0], b[1], radius=12)
-    if any(probe.colliderect(bd[0]) for bd in s.buildings):
+    # Use spatial grid for building collision
+    from game2d.systems.spatial import query_buildings_radius, query_parks_radius
+    nearby_buildings = query_buildings_radius(probe.centerx, probe.centery, 20)
+    if any(probe.colliderect(bd) for bd in nearby_buildings):
         return False
     if any(probe.colliderect(w) for w in s.WATER_RECTS):
         return False
@@ -380,9 +386,11 @@ def _ped_segment_clear(a, b, allow_park=False):
         return False
     if rect_in_airport(probe):
         return False
-    park_rects = list(s.parks) + list(s.amusement_parks)
-    if not allow_park and any(probe.colliderect(park) for park in park_rects):
-        return False
+    if not allow_park:
+        # Use spatial grid for park collision
+        nearby_parks = query_parks_radius(probe.centerx, probe.centery, 20)
+        if any(probe.colliderect(park) for park in nearby_parks):
+            return False
     return True
 
 
@@ -404,12 +412,16 @@ def _ped_walkable_segment(a, b, allow_park=False):
 
 
 def pedestrian_step_clear(x, y, allow_park=False):
-    park_rects = list(current().parks) + list(current().amusement_parks)
+    s = current()
     if not _ped_point_clear(x, y):
         return False
     if allow_park:
         return point_on_amusement_path(x, y)
-    return not any(_ped_probe_rect(x, y, radius=11).colliderect(park) for park in park_rects)
+    # Use spatial grid for park collision - much faster than iterating all parks
+    from game2d.systems.spatial import query_parks_radius
+    probe = _ped_probe_rect(x, y, radius=11)
+    nearby_parks = query_parks_radius(probe.centerx, probe.centery, 20)
+    return not any(probe.colliderect(park) for park in nearby_parks)
 
 
 def pedestrian_segment_clear(a, b, allow_park=False):

@@ -1405,7 +1405,7 @@ class Car:
                         self._run_over_ped(entity, s.peds, dmg, is_cop=False)
                 elif hasattr(entity, 'is_cop') and entity.is_cop and entity in s.cops:
                     self._run_over_ped(entity, s.cops, dmg + 12, is_cop=True)
-                elif hasattr(entity, 'hp') and not entity.is_cop and entity not in s.peds:
+                elif hasattr(entity, 'hp') and not getattr(entity, 'is_cop', False) and entity not in s.peds:
                     # Cats and other entities
                     if not self.is_cop:
                         # Try to handle as cat

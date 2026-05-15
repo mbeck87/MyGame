@@ -460,3 +460,89 @@ def init_and_populate_building_grid(buildings) -> None:
     for rect, surf in buildings:
         if surf is not None:
             register_building(rect)
+
+
+# =============================================================================
+# Park Grid Functions (for amusement parks, parks - collision optimization)
+# =============================================================================
+
+_park_grid: Optional[SpatialGrid] = None
+
+
+def init_park_grid():
+    """Initialize the global park grid for park collision detection."""
+    global _park_grid
+    if _park_grid is None:
+        from game2d.config import WORLD_W, WORLD_H
+        _park_grid = SpatialGrid(world_w=WORLD_W, world_h=WORLD_H, cell_size=300)
+    return _park_grid
+
+
+def get_park_grid() -> Optional[SpatialGrid]:
+    """Get the global park grid instance."""
+    return _park_grid
+
+
+def register_park(rect) -> int:
+    """Register a park rectangle with the park spatial grid.
+    
+    Args:
+        rect: Park rectangle (pygame.Rect)
+        
+    Returns:
+        Spatial grid ID for the park
+    """
+    grid = init_park_grid()
+    return grid.add(SpatialRect(rect), rect.centerx, rect.centery)
+
+
+def query_parks_radius(x: float, y: float, radius: float) -> List[Any]:
+    """Query all parks within a radius.
+    
+    Args:
+        x: Center X coordinate
+        y: Center Y coordinate
+        radius: Search radius
+        
+    Returns:
+        List of park rects within the radius
+    """
+    grid = get_park_grid()
+    if grid is None:
+        return []
+    return grid.query_radius(x, y, radius)
+
+
+def query_parks_rect(rect) -> List[Any]:
+    """Query all parks that might intersect with a rectangle.
+    
+    Args:
+        rect: pygame.Rect or similar with x, y, w, h attributes
+        
+    Returns:
+        List of park rects in overlapping cells
+    """
+    grid = get_park_grid()
+    if grid is None:
+        return []
+    return grid.query_rect(rect)
+
+
+def reset_park_grid() -> None:
+    """Reset/clear the park spatial grid."""
+    global _park_grid
+    if _park_grid is not None:
+        _park_grid.clear()
+    _park_grid = None
+
+
+def init_and_populate_park_grid(parks) -> None:
+    """Initialize park grid and populate with all park rects.
+    
+    Args:
+        parks: List of park rectangles
+    """
+    reset_park_grid()
+    grid = init_park_grid()
+    for park_rect in parks:
+        register_park(park_rect)
