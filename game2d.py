@@ -10,7 +10,8 @@ import os
 import sys
 
 parser = argparse.ArgumentParser(description='Mini GTA 2D')
-parser.add_argument('-log', '--log', action='store_true', help='Enable logging output')
+parser.add_argument('-log', '--log', type=str, nargs='?', const='p', 
+                    help='Enable logging output. Options: p (performance), e (events), m (movement). Combine: -log pe or -log pem')
 args = parser.parse_args()
 
 # Konfiguriere Standard-Logging (Python's logging Modul)
