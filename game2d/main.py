@@ -731,6 +731,89 @@ UPDATE_RANGE_BUFFER = max(300, W // 4)
 BACKGROUND_RANGE = UPDATE_RANGE_BUFFER * 2
 
 
+def _capture_state_snapshot(state):
+    """Erstellt einen Snapshot des aktuellen Zustands für Interpolation.
+    
+    Speichert Positionen und Winkel aller beweglichen Entities.
+    Rückgabe: dict mit allen relevanten Positionsdaten.
+    """
+    snapshot = {}
+    
+    # Player
+    p = state.player
+    snapshot['player'] = {
+        'x': p.x, 'y': p.y, 'angle': p.angle,
+        'in_car': state.in_car is not None
+    }
+    
+    # Player Car
+    if state.in_car:
+        c = state.in_car
+        snapshot['player_car'] = {
+            'x': c.x, 'y': c.y, 'angle': c.angle,
+            'dents': list(c.dents) if hasattr(c, 'dents') else []
+        }
+    else:
+        snapshot['player_car'] = None
+    
+    # Cars
+    snapshot['cars'] = []
+    for c in state.cars:
+        if c is state.in_car:
+            continue  # Wird separat behandelt
+        snapshot['cars'].append({
+            'entity': c,
+            'x': c.x, 'y': c.y, 'angle': c.angle,
+            'dents': list(c.dents) if hasattr(c, 'dents') else []
+        })
+    
+    # Peds
+    snapshot['peds'] = []
+    for p in state.peds:
+        snapshot['peds'].append({
+            'entity': p,
+            'x': p.x, 'y': p.y, 'angle': p.angle,
+            'frame_idx': p.frame_idx if hasattr(p, 'frame_idx') else 0
+        })
+    
+    # Cats
+    snapshot['cats'] = []
+    for cat in state.cats:
+        snapshot['cats'].append({
+            'entity': cat,
+            'x': cat.x, 'y': cat.y, 'angle': cat.angle,
+            'frame_idx': cat.frame_idx if hasattr(cat, 'frame_idx') else 0
+        })
+    
+    # Cops
+    snapshot['cops'] = []
+    for c in state.cops:
+        snapshot['cops'].append({
+            'entity': c,
+            'x': c.x, 'y': c.y, 'angle': c.angle,
+            'frame_idx': c.frame_idx if hasattr(c, 'frame_idx') else 0
+        })
+    
+    # Bullets
+    snapshot['bullets'] = []
+    for b in state.bullets:
+        snapshot['bullets'].append({
+            'x': b[0], 'y': b[1]
+        })
+    
+    # Rockets
+    snapshot['rockets'] = []
+    for r in state.rockets:
+        snapshot['rockets'].append({
+            'x': r[0], 'y': r[1], 'angle': r[2] if len(r) > 2 else 0
+        })
+    
+    # Camera
+    snapshot['cam'] = (state.cam[0], state.cam[1])
+    
+    return snapshot
+
+
 @profile
 def _update_entities_and_physics(state, dt):
     player = state.player
@@ -1046,10 +1129,116 @@ def _update_entities_and_physics(state, dt):
         bp[3] *= 0.92
 
 
+def _get_interpolated_entity(snapshot_list, entity, alpha):
+    """Finde eine Entity im Snapshot und gib interpolierte Position/Winkel zurück.
+    
+    Args:
+        snapshot_list: Liste der Entity-Snapshots (z.B. snapshot['cars'])
+        entity: Die aktuelle Entity
+        alpha: Interpolationsfaktor
+        
+    Returns:
+        (x, y, angle) oder (entity.x, entity.y, entity.angle) wenn nicht gefunden
+    """
+    for snap in snapshot_list:
+        if snap.get('entity') is entity:
+            x = snap['x'] + (entity.x - snap['x']) * alpha
+            y = snap['y'] + (entity.y - snap['y']) * alpha
+            angle = snap['angle'] + (entity.angle - snap['angle']) * alpha
+            return x, y, angle
+    return entity.x, entity.y, entity.angle
+
+
+def _get_interpolated_player(snapshot, player, alpha):
+    """Gib interpolierte Player-Position zurück."""
+    if not snapshot or not snapshot.get('player'):
+        return player.x, player.y, player.angle
+    prev = snapshot['player']
+    x = prev['x'] + (player.x - prev['x']) * alpha
+    y = prev['y'] + (player.y - prev['y']) * alpha
+    angle = prev['angle'] + (player.angle - prev['angle']) * alpha
+    return x, y, angle
+
+
+def _get_interpolated_player_car(snapshot, car, alpha):
+    """Gib interpolierte Player-Car-Position zurück."""
+    if not snapshot or not snapshot.get('player_car'):
+        return car.x, car.y, car.angle
+    prev = snapshot['player_car']
+    x = prev['x'] + (car.x - prev['x']) * alpha
+    y = prev['y'] + (car.y - prev['y']) * alpha
+    angle = prev['angle'] + (car.angle - prev['angle']) * alpha
+    return x, y, angle
+
+
+def _draw_entity_interpolated(entity, screen, icam, snapshot_list, alpha):
+    """Zeichne eine Entity mit interpolierter Position/Winkel.
+    
+    Temporär überscheibt die Entity-Position für das Zeichnen.
+    """
+    if alpha <= 0 or alpha >= 1 or not snapshot_list:
+        entity.draw(screen, icam)
+        return
+    
+    x, y, angle = _get_interpolated_entity(snapshot_list, entity, alpha)
+    # Temporär speichern und überschreiben
+    old_x, old_y, old_angle = entity.x, entity.y, entity.angle
+    entity.x, entity.y, entity.angle = x, y, angle
+    try:
+        entity.draw(screen, icam)
+    finally:
+        # Immer zurücksetzen
+        entity.x, entity.y, entity.angle = old_x, old_y, old_angle
+
+
+def _draw_player_interpolated(player, screen, icam, snapshot, alpha):
+    """Zeichne Player mit interpolierter Position/Winkel."""
+    if alpha <= 0 or alpha >= 1 or not snapshot:
+        player.draw(screen, icam)
+        return
+    
+    x, y, angle = _get_interpolated_player(snapshot, player, alpha)
+    old_x, old_y, old_angle = player.x, player.y, player.angle
+    player.x, player.y, player.angle = x, y, angle
+    try:
+        player.draw(screen, icam)
+    finally:
+        player.x, player.y, player.angle = old_x, old_y, old_angle
+
+
+def _draw_player_car_interpolated(car, screen, icam, snapshot, alpha):
+    """Zeichne Player-Car mit interpolierter Position/Winkel."""
+    if alpha <= 0 or alpha >= 1 or not snapshot:
+        car.draw(screen, icam)
+        return
+    
+    x, y, angle = _get_interpolated_player_car(snapshot, car, alpha)
+    old_x, old_y, old_angle = car.x, car.y, car.angle
+    car.x, car.y, car.angle = x, y, angle
+    try:
+        car.draw(screen, icam)
+    finally:
+        car.x, car.y, car.angle = old_x, old_y, old_angle
+
+
 @profile
-def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=None, dt=0.0, fps_val=None, minimap_static=None, minimap_dynamic=None):
+def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=None, dt=0.0, fps_val=None, minimap_static=None, minimap_dynamic=None, prev_snapshot=None, alpha=0.0, physics_fps=None):
+    """Render the game frame with optional interpolation for smooth rendering.
+    
+    Args:
+        prev_snapshot: Previous state snapshot for interpolation (or None)
+        alpha: Interpolation factor between prev and current state (0 = prev, 1 = current)
+        physics_fps: Physics FPS (separate from render FPS)
+    """
+    # Interpolierte Kamera-Position
+    if prev_snapshot and alpha > 0:
+        cam_x = prev_snapshot['cam'][0] + (state.cam[0] - prev_snapshot['cam'][0]) * alpha
+        cam_y = prev_snapshot['cam'][1] + (state.cam[1] - prev_snapshot['cam'][1]) * alpha
+        icam = (int(cam_x), int(cam_y))
+    else:
+        icam = (int(state.cam[0]), int(state.cam[1]))
+    
     player = state.player
-    icam = (int(state.cam[0]), int(state.cam[1]))
     draw_world_bg(screen, icam)
     view = pygame.Rect(icam[0] - 40, icam[1] - 40, W + 80, H + 80)
     for bs in state.blood_splats:
@@ -1096,28 +1285,69 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
                 wyr = dx_ * sn_ + dy_ * cs_
                 pygame.draw.circle(screen, (10, 10, 12),
                                    (int(wx + wxr - icam[0]), int(wy + wyr - icam[1])), dr_)
+    # Cars - mit Interpolation
     for c in state.cars:
         if view.collidepoint(c.x, c.y):
-            c.draw(screen, icam)
+            if c is state.in_car:
+                # Player Car wird separat behandelt
+                if prev_snapshot and alpha > 0 and alpha < 1:
+                    _draw_player_car_interpolated(c, screen, icam, prev_snapshot, alpha)
+                else:
+                    c.draw(screen, icam)
+            else:
+                if prev_snapshot and alpha > 0 and alpha < 1:
+                    _draw_entity_interpolated(c, screen, icam, prev_snapshot.get('cars', []), alpha)
+                else:
+                    c.draw(screen, icam)
     for roadblock in state.roadblocks:
         if hasattr(roadblock, 'x') and hasattr(roadblock, 'y'):
             if view.collidepoint(roadblock.x, roadblock.y):
                 roadblock.draw(screen, icam)
         else:
             roadblock.draw(screen, icam)
+    # Peds - mit Interpolation
     for p in state.peds:
         if view.collidepoint(p.x, p.y):
-            p.draw(screen, icam)
+            if prev_snapshot and alpha > 0 and alpha < 1:
+                _draw_entity_interpolated(p, screen, icam, prev_snapshot.get('peds', []), alpha)
+            else:
+                p.draw(screen, icam)
+    # Cats - mit Interpolation
     for cat in state.cats:
         if view.collidepoint(cat.x, cat.y):
-            cat.draw(screen, icam)
+            if prev_snapshot and alpha > 0 and alpha < 1:
+                _draw_entity_interpolated(cat, screen, icam, prev_snapshot.get('cats', []), alpha)
+            else:
+                cat.draw(screen, icam)
+    # Cops - mit Interpolation
     for c in state.cops:
         if view.collidepoint(c.x, c.y):
-            c.draw(screen, icam)
+            if prev_snapshot and alpha > 0 and alpha < 1:
+                _draw_entity_interpolated(c, screen, icam, prev_snapshot.get('cops', []), alpha)
+            else:
+                c.draw(screen, icam)
+    # Player - mit Interpolation
     if not state.in_car:
-        player.draw(screen, icam)
+        if prev_snapshot and alpha > 0 and alpha < 1:
+            _draw_player_interpolated(player, screen, icam, prev_snapshot, alpha)
+        else:
+            player.draw(screen, icam)
+    else:
+        # Player im Auto - Auto wurde bereits oben gezeichnet
+        pass
+    
+    # Interpolierte Player-Position für Lightsaber und andere Player-abhängige Effekte
+    if prev_snapshot and alpha > 0 and alpha < 1:
+        if state.in_car:
+            # Player ist im Auto - nutze Auto-Position
+            player_x, player_y, _ = _get_interpolated_player_car(prev_snapshot, state.in_car, alpha)
+        else:
+            player_x, player_y, _ = _get_interpolated_player(prev_snapshot, player, alpha)
+    else:
+        player_x, player_y = player.x, player.y
+    
     for sw in state.lightsaber_swings:
-        sx, sy = int(player.x - icam[0]), int(player.y - icam[1])
+        sx, sy = int(player_x - icam[0]), int(player_y - icam[1])
         if -50 < sx < W + 50 and -50 < sy < H + 50:
             t = max(0.0, min(1.0, sw[1] / sw[2]))
             center = sw[0]
@@ -1144,14 +1374,29 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         sy = int(bp[1] - icam[1])
         if -10 < sx < W + 10 and -10 < sy < H + 10:
             pygame.draw.circle(screen, (180, 0, 0), (sx, sy), bp[5])
-    for b in state.bullets:
-        sx = int(b[0] - icam[0])
-        sy = int(b[1] - icam[1])
+    # Bullets - mit Interpolation (Index-basiert)
+    bullet_snapshots = prev_snapshot.get('bullets', []) if prev_snapshot else []
+    for i, b in enumerate(state.bullets):
+        bx, by = b[0], b[1]
+        if prev_snapshot and alpha > 0 and alpha < 1 and i < len(bullet_snapshots):
+            b_snap = bullet_snapshots[i]
+            bx = b_snap['x'] + (bx - b_snap['x']) * alpha
+            by = b_snap['y'] + (by - b_snap['y']) * alpha
+        sx = int(bx - icam[0])
+        sy = int(by - icam[1])
         if -10 < sx < W + 10 and -10 < sy < H + 10:
             pygame.draw.circle(screen, (255, 230, 80), (sx, sy), 3)
-    for r in state.rockets:
-        sx = int(r[0] - icam[0])
-        sy = int(r[1] - icam[1])
+    
+    # Rockets - mit Interpolation (Index-basiert)
+    rocket_snapshots = prev_snapshot.get('rockets', []) if prev_snapshot else []
+    for i, r in enumerate(state.rockets):
+        rx, ry = r[0], r[1]
+        if prev_snapshot and alpha > 0 and alpha < 1 and i < len(rocket_snapshots):
+            r_snap = rocket_snapshots[i]
+            rx = r_snap['x'] + (rx - r_snap['x']) * alpha
+            ry = r_snap['y'] + (ry - r_snap['y']) * alpha
+        sx = int(rx - icam[0])
+        sy = int(ry - icam[1])
         if -20 < sx < W + 20 and -20 < sy < H + 20:
             ang_r = math.degrees(math.atan2(r[2], -r[3]))
             # Use cached rocket sprite
@@ -1277,7 +1522,7 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
         profile_x = W - 696
         
         profiling_text = (
-            f"FPS {fps_val} | Frame {frame_time:.1f}ms/{avg_frame_time:.1f}ms | "
+            f"FPS {fps_val} | Phys {physics_fps if physics_fps else 'N/A'} | Frame {frame_time:.1f}ms/{avg_frame_time:.1f}ms | "
             f"Mem {memory:.1f}MB"
         )
         draw_hud_text(screen, FONT, profiling_text, (profile_x, 10), (220, 200, 100))
@@ -1326,8 +1571,11 @@ def _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler_obj=
                     draw_hud_text(screen, FONT, f"{calls}", (col3_x, y_pos), (180, 180, 180))
 
     else:
-        # Standard FPS-Anzeige
-        draw_hud_text(screen, FONT, f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
+        # Standard FPS-Anzeige - zeige Render-FPS und Physik-FPS
+        if physics_fps is not None:
+            draw_hud_text(screen, FONT, f"FPS {fps_val} | Phys {physics_fps}", (W - 236, 232), (220, 220, 220))
+        else:
+            draw_hud_text(screen, FONT, f"FPS {fps_val}", (W - 236, 232), (220, 220, 220))
     if state.in_car:
         kmh = int(abs(state.in_car.spd) * 0.5)
         screen.blit(FONT.render(f"{kmh} km/h", 1, (255, 255, 255)), (W - 140, 238))
@@ -1435,6 +1683,19 @@ def main():
     minimap_dynamic = None  # Wird alle 3 Frames aktualisiert (Cars, Player, etc.)
     frame_counter = 0  # Counter für Minimap-Update-Rhythmus
 
+    # --- Fixed Timestep Physics Separation ---
+    # Physik läuft bei festen 60Hz, Rendering so schnell wie möglich
+    PHYSICS_RATE = 60  # Physik: 60 Updates pro Sekunde
+    physics_dt = 1.0 / PHYSICS_RATE  # Fixed timestep für Physik
+    physics_accumulator = 0.0  # Akkumuliert Zeit für Physik-Updates
+    physics_frame_count = 0  # Zählt Physik-Updates für FPS-Berechnung
+    physics_fps = PHYSICS_RATE  # Ziel-Physik-FPS
+    # Für State-Interpolation: speichere vorherigen Zustand
+    prev_state_snapshot = None
+    # Timer für Physik-FPS-Berechnung
+    physics_fps_timer = 0.0
+    physics_fps_count = 0
+
     player_name = name_input_screen(screen, W, H, BIG, MED, FONT)
 
     # State über DI-Provider erstellen und installieren
@@ -1456,10 +1717,56 @@ def main():
 
     _spawn_traffic_and_player(state)
     while state.running:
-        dt = clock.tick(60) / 1000
+        # Kein FPS-Limit für Rendering - läuft so schnell wie GPU kann
+        raw_dt = clock.tick(0) / 1000
         frame_counter += 1
-        # FPS einmal pro Frame berechnen (dieselbe Variable für beide Anzeigen)
-        fps_val = int(1.0 / max(dt, 0.0001))
+        
+        # Physik-Akkumulator aktualisieren
+        physics_accumulator += raw_dt
+        
+        # --- Fester Physik-Timestep: UPDATE so oft wie nötig ---
+        # Speichere State-Snapshot VOR Physik-Updates für Interpolation
+        physics_updates_this_frame = 0
+        while physics_accumulator >= physics_dt:
+            # State-Snapshot für Interpolation (nur erste Iteration)
+            if physics_updates_this_frame == 0:
+                prev_state_snapshot = _capture_state_snapshot(state)
+            
+            # Physik-Update mit festem Timestep
+            if not state.game_over and not state.menu:
+                if profiler.enabled:
+                    with timed("update_logic"):
+                        _update_player_and_wanted(state, physics_dt)
+                        _update_entities_and_physics(state, physics_dt)
+                else:
+                    _update_player_and_wanted(state, physics_dt)
+                    _update_entities_and_physics(state, physics_dt)
+            
+            physics_accumulator -= physics_dt
+            physics_updates_this_frame += 1
+            physics_frame_count += 1
+        
+        # --- Interpolationsfaktor berechnen ---
+        # alpha = wie weit wir zwischen prev_state und current_state sind (0 = prev, 1 = current)
+        interpolation_alpha = physics_accumulator / physics_dt if physics_dt > 0 else 0.0
+        
+        # FPS berechnen: Render-FPS von Pygame Clock, Physik-FPS separat
+        # Physik-FPS: wir wissen, dass wir PHYSICS_RATE anstreben, aber wir tracken es für Genauigkeit
+        # Einfacher: Physik-FPS = physics_updates_this_frame / raw_dt (für diesen Frame)
+        # Aber wir wollen einen gleitenden Durchschnitt
+        physics_fps_timer += raw_dt
+        physics_fps_count += physics_updates_this_frame
+        if physics_fps_timer >= 1.0:  # Alle Sekunden aktualisieren
+            physics_fps = int(physics_fps_count / physics_fps_timer) if physics_fps_timer > 0 else PHYSICS_RATE
+            physics_fps_timer = 0.0
+            physics_fps_count = 0
+        
+        # Render-FPS von Pygame Clock
+        clock_fps = clock.get_fps()
+        if clock_fps > 0:
+            fps_val = int(clock_fps)
+        else:
+            fps_val = int(1.0 / max(raw_dt, 0.0001))
         
         # Minimap: Statisches Surface einmalig erstellen (nachdem die Welt gebaut ist)
         if minimap_static is None:
@@ -1485,34 +1792,26 @@ def main():
         if profiler.enabled:
             profiler.start_frame()
         
+        # Non-physics updates: nutzen raw_dt (reale Zeit seit letztem Frame)
         if state.message_timer > 0:
-            state.message_timer = max(0.0, state.message_timer - dt)
+            state.message_timer = max(0.0, state.message_timer - raw_dt)
         if not state.menu:
-            state.traffic_time += dt
+            state.traffic_time += raw_dt
         
         # Event Handling - mit Profiling nur wenn enabled
         if profiler.enabled:
             with timed("handle_events"):
-                _handle_events(state, menu_ctrl, dt)
+                _handle_events(state, menu_ctrl, raw_dt)
         else:
-            _handle_events(state, menu_ctrl, dt)
-        
-        if not state.game_over and not state.menu:
-            # Update Logic - mit Profiling nur wenn enabled
-            if profiler.enabled:
-                with timed("update_logic"):
-                    _update_player_and_wanted(state, dt)
-                    _update_entities_and_physics(state, dt)
-            else:
-                _update_player_and_wanted(state, dt)
-                _update_entities_and_physics(state, dt)
+            _handle_events(state, menu_ctrl, raw_dt)
         
         # Render - mit Profiling nur wenn enabled, FPS immer gleich
+        # Übergebe prev_state_snapshot, interpolation_alpha und physics_fps für glattes Rendering
         if profiler.enabled:
             with timed("render"):
-                _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val, minimap_static, minimap_dynamic)
+                _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, raw_dt, fps_val, minimap_static, minimap_dynamic, prev_state_snapshot, interpolation_alpha, physics_fps)
         else:
-            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, dt, fps_val, minimap_static, minimap_dynamic)
+            _render_frame(screen, state, clock, menu_ctrl, FONT, BIG, MED, profiler, raw_dt, fps_val, minimap_static, minimap_dynamic, prev_state_snapshot, interpolation_alpha, physics_fps)
 
         # Profiling: Frame end markieren
         if profiler.enabled and entity_counts is not None:
